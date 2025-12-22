@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+serviceAccountKey.json
+*.log
+.DS_Store
