@@ -6,9 +6,9 @@ class Sidebar(ft.Container):
         super().__init__()
         self.page = page
         self.width = 250  # Largura fixa para Desktop
-        self.bgcolor = ft.colors.WHITE
+        self.bgcolor = ft.Colors.WHITE
         self.padding = 20
-        self.border_right = ft.border.only(right=ft.BorderSide(1, ft.colors.GREY_300))
+        self.border_right = ft.border.only(right=ft.BorderSide(1, ft.Colors.GREY_300))
         
         # Conteúdo do Menu
         self.content = ft.Column(
@@ -40,8 +40,8 @@ class Sidebar(ft.Container):
     def criar_botao(self, text, icon, route, is_logout=False):
         return ft.Container(
             content=ft.Row([
-                ft.Icon(icon, size=20, color=COLOR_SECONDARY if not is_logout else ft.colors.RED),
-                ft.Text(text, size=16, color=COLOR_TEXT if not is_logout else ft.colors.RED)
+                ft.Icon(icon, size=20, color=COLOR_SECONDARY if not is_logout else ft.Colors.RED_400),
+                ft.Text(text, size=16, color=COLOR_TEXT if not is_logout else ft.Colors.RED_400)
             ]),
             padding=10,
             border_radius=10,

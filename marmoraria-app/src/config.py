@@ -13,3 +13,7 @@ BUTTON_STYLE = ft.ButtonStyle(
     bgcolor=COLOR_PRIMARY,
     color=COLOR_WHITE,
 )
+
+# Credencial administrativa padrão (usada como fallback e para criação inicial no Firestore)
+AUTH_EMAIL = "marmoraria.central@gmail.com"
+AUTH_PASSWORD = "MarmorariaC55"
