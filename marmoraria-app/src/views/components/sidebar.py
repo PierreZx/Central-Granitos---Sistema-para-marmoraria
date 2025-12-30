@@ -1,53 +1,78 @@
 import flet as ft
-from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_TEXT
+from src.config import COLOR_PRIMARY, COLOR_TEXT
 
-class Sidebar(ft.Container):
+class Sidebar(ft.UserControl):
     def __init__(self, page):
         super().__init__()
         self.page = page
-        self.width = 250  # Largura fixa para Desktop
-        self.bgcolor = ft.Colors.WHITE
-        self.padding = 20
-        self.border_right = ft.border.only(right=ft.BorderSide(1, ft.Colors.GREY_300))
-        
-        # Conteúdo do Menu
-        self.content = ft.Column(
-            controls=[
-                # Cabeçalho do Menu com Logo Pequena
+        self.bgcolor = ft.colors.WHITE 
+
+    def navegar(self, e):
+        rota = e.control.data
+        self.page.go(rota)
+
+    def build(self):
+        # Definição dos botões do menu
+        return ft.Container(
+            width=250,
+            bgcolor=ft.colors.WHITE,
+            padding=20,
+            border=ft.border.only(right=ft.border.BorderSide(1, ft.colors.GREY_200)),
+            content=ft.Column([
                 ft.Container(
                     content=ft.Row([
-                        ft.Icon(ft.Icons.DIAMOND, color=COLOR_PRIMARY),
-                        ft.Text("CENTRAL", weight="bold", size=20, color=COLOR_TEXT)
+                        ft.Icon(ft.icons.DASHBOARD_CUSTOMIZE, color=COLOR_PRIMARY, size=30),
+                        ft.Text("Central", size=22, weight="bold", color=COLOR_PRIMARY)
                     ]),
                     padding=ft.padding.only(bottom=20)
                 ),
-                
-                ft.Divider(),
-
-                # Botões de Navegação
-                self.criar_botao("Dashboard", ft.Icons.DASHBOARD, "/dashboard"),
-                self.criar_botao("Estoque", ft.Icons.INVENTORY_2, "/estoque"),
-                self.criar_botao("Orçamentos", ft.Icons.REQUEST_QUOTE, "/orcamentos"),
-                self.criar_botao("Produção", ft.Icons.PRECISION_MANUFACTURING, "/producao"),
-                self.criar_botao("Financeiro", ft.Icons.ATTACH_MONEY, "/financeiro"),
-                
                 ft.Divider(),
                 
-                self.criar_botao("Sair", ft.Icons.EXIT_TO_APP, "/", is_logout=True),
-            ]
+                # Itens do Menu
+                self.criar_item_menu("Dashboard", ft.icons.DASHBOARD, "/dashboard"),
+                self.criar_item_menu("Estoque", ft.icons.INVENTORY_2, "/estoque"),
+                self.criar_item_menu("Orçamentos", ft.icons.REQUEST_QUOTE, "/orcamentos"),
+                self.criar_item_menu("Produção", ft.icons.PRECISION_MANUFACTURING, "/producao"),
+                self.criar_item_menu("Financeiro", ft.icons.ATTACH_MONEY, "/financeiro"),
+                
+                ft.Divider(),
+                ft.Container(expand=True), # Espaçador
+                self.criar_item_menu("Sair", ft.icons.LOGOUT, "/", cor_icone=ft.colors.RED),
+            ])
         )
 
-    def criar_botao(self, text, icon, route, is_logout=False):
+    def criar_item_menu(self, texto, icone, rota, cor_icone=None):
+        if cor_icone is None:
+            cor_icone = ft.colors.GREY_600
+            
+        estilo_botao = ft.ButtonStyle(
+            color=ft.colors.GREY_700,
+            bgcolor={ft.MaterialState.HOVERED: ft.colors.BLUE_50},
+            shape=ft.RoundedRectangleBorder(radius=10),
+            # REMOVIDO: alignment=ft.alignment.center_left (Não existe na v0.22.1)
+        )
+        
+        # Destaca o item se for a rota atual
+        if self.page.route == rota:
+            estilo_botao = ft.ButtonStyle(
+                color=COLOR_PRIMARY,
+                bgcolor=ft.colors.BLUE_50,
+                shape=ft.RoundedRectangleBorder(radius=10),
+                # REMOVIDO: alignment=ft.alignment.center_left
+            )
+            cor_icone = COLOR_PRIMARY
+
         return ft.Container(
-            content=ft.Row([
-                ft.Icon(icon, size=20, color=COLOR_SECONDARY if not is_logout else ft.Colors.RED_400),
-                ft.Text(text, size=16, color=COLOR_TEXT if not is_logout else ft.Colors.RED_400)
-            ]),
-            padding=10,
-            border_radius=10,
-            on_click=lambda e: self.navegar(route),
-            ink=True, # Efeito de clique
+            content=ft.TextButton(
+                content=ft.Row([
+                    ft.Icon(icone, size=20, color=cor_icone),
+                    ft.Text(texto, size=16)
+                ], spacing=15),
+                style=estilo_botao,
+                on_click=self.navegar,
+                data=rota,
+                width=210,
+                height=50
+            ),
+            padding=ft.padding.only(bottom=5)
         )
-
-    def navegar(self, route):
-        self.page.go(route)

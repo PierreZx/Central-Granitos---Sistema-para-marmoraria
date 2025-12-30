@@ -1,36 +1,27 @@
 import flet as ft
 from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE, AUTH_EMAIL, AUTH_PASSWORD
 from src.services import firebase_service
-from src.controllers.auth_controller import AuthController # <--- Importe isso
-
+from src.controllers.auth_controller import AuthController
 
 def LoginView(page: ft.Page):
-    """Tela de login responsiva e estilizada.
+    """Tela de login responsiva (Compatível com Flet 0.22.1)"""
 
-    Compatível com o `main.py` do projeto. Usa apenas APIs públicas do Flet
-    para evitar erros de atributo/versão.
-    """
-
-    # --- Estilos ---
     radius = 16
     shadow = ft.BoxShadow(blur_radius=18, color="#00000014", offset=ft.Offset(0, 6))
 
-    # Gradiente de fundo (usado somente no lado do formulário)
     gradiente_fundo = ft.LinearGradient(
         begin=ft.alignment.top_left,
         end=ft.alignment.bottom_right,
-        colors=[ft.Colors.BLUE_GREY_50, ft.Colors.GREY_100, ft.Colors.WHITE],
+        colors=[ft.colors.BLUE_GREY_50, ft.colors.GREY_100, ft.colors.WHITE],
     )
 
-    # --- Handlers ---
-    # Credenciais autorizadas (fallback local) - também definidas em src.config
     AUTHORIZED_EMAIL = AUTH_EMAIL
     AUTHORIZED_PASSWORD = AUTH_PASSWORD
 
     def show_snack(msg: str, success: bool = True):
         page.snack_bar = ft.SnackBar(
             content=ft.Text(msg, color=COLOR_WHITE),
-            bgcolor=ft.Colors.GREEN_400 if success else ft.Colors.RED_400,
+            bgcolor=ft.colors.GREEN_400 if success else ft.colors.RED_400,
             behavior=ft.SnackBarBehavior.FLOATING,
             duration=2000,
         )
@@ -38,7 +29,6 @@ def LoginView(page: ft.Page):
         page.update()
 
     def realizar_login(e):
-            # Feedback visual (Desabilita botão)
             btn_entrar.disabled = True
             btn_entrar.content = ft.Row(
                 [ft.ProgressRing(width=16, height=16, stroke_width=2, color=COLOR_WHITE), ft.Text("Entrando...", color=COLOR_WHITE)], 
@@ -49,18 +39,15 @@ def LoginView(page: ft.Page):
             email = campo_usuario.value
             senha = campo_senha.value
 
-            # --- AQUI ESTÁ A MUDANÇA: Chama o Backend ---
             sucesso, mensagem = AuthController.autenticar(email, senha)
 
             if sucesso:
                 show_snack(mensagem, success=True)
                 page.go("/dashboard")
             else:
-                # Reseta botão e mostra erro
                 btn_entrar.disabled = False
                 btn_entrar.content = ft.Text("Entrar", size=16, weight=ft.FontWeight.W_600)
                 
-                # Efeito de tremer (Shake) visual
                 container_form.offset = ft.Offset(-0.02, 0)
                 page.update()
                 import time
@@ -76,12 +63,12 @@ def LoginView(page: ft.Page):
     def on_submit(e):
         realizar_login(e)
 
-    # --- Componentes ---
     logo = ft.Container(
         content=ft.Image(src="logo.png", width=140, height=140, fit=ft.ImageFit.CONTAIN),
         padding=ft.padding.only(bottom=8),
     )
 
+    # CORREÇÃO: ft.icons (minúsculo)
     campo_usuario = ft.TextField(
         label="E-mail",
         hint_text="Digite seu e-mail cadastrado",
@@ -89,10 +76,10 @@ def LoginView(page: ft.Page):
         text_size=15,
         border_radius=12,
         filled=True,
-        fill_color=ft.Colors.WHITE,
+        fill_color=ft.colors.WHITE,
         focused_border_color=COLOR_PRIMARY,
         cursor_color=COLOR_PRIMARY,
-        prefix_icon=ft.Icon(ft.Icons.PERSON_OUTLINE, size=20, color=ft.Colors.GREY_500),
+        prefix_icon=ft.Icon(ft.icons.PERSON_OUTLINE, size=20, color=ft.colors.GREY_500),
         on_submit=on_submit,
     )
 
@@ -105,10 +92,10 @@ def LoginView(page: ft.Page):
         text_size=15,
         border_radius=12,
         filled=True,
-        fill_color=ft.Colors.WHITE,
+        fill_color=ft.colors.WHITE,
         focused_border_color=COLOR_PRIMARY,
         cursor_color=COLOR_PRIMARY,
-        prefix_icon=ft.Icon(ft.Icons.LOCK_OUTLINE, size=20, color=ft.Colors.GREY_500),
+        prefix_icon=ft.Icon(ft.icons.LOCK_OUTLINE, size=20, color=ft.colors.GREY_500),
         on_submit=on_submit,
     )
 
@@ -123,45 +110,42 @@ def LoginView(page: ft.Page):
     texto_esqueci_senha = ft.TextButton(text="Esqueceu sua senha?", on_click=lambda e: show_snack("Funcionalidade em breve", success=True))
 
     texto_rodape = ft.Column([
-        ft.Divider(height=1, color=ft.Colors.GREY_200),
-        ft.Text("Central Granitos © 2025", size=12, color=ft.Colors.GREY_500),
-        ft.Text("Todos os direitos reservados", size=10, color=ft.Colors.GREY_400),
+        ft.Divider(height=1, color=ft.colors.GREY_200),
+        ft.Text("Central Granitos © 2025", size=12, color=ft.colors.GREY_500),
+        ft.Text("Todos os direitos reservados", size=10, color=ft.colors.GREY_400),
     ], alignment=ft.MainAxisAlignment.CENTER)
 
-    # Card do formulário (ajustaremos largura dinamicamente no ajustar_layout)
     container_form = ft.Container(
         content=ft.Column([
             logo,
-            ft.Text("Bem-vindo de volta", size=26, weight=ft.FontWeight.W_700, color=ft.Colors.GREY_900),
-            ft.Text("Faça login para continuar", size=14, color=ft.Colors.GREY_600),
-            ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+            ft.Text("Bem-vindo de volta", size=26, weight=ft.FontWeight.W_700, color=ft.colors.GREY_900),
+            ft.Text("Faça login para continuar", size=14, color=ft.colors.GREY_600),
+            ft.Divider(height=30, color=ft.colors.TRANSPARENT),
             campo_usuario,
-            ft.Divider(height=12, color=ft.Colors.TRANSPARENT),
+            ft.Divider(height=12, color=ft.colors.TRANSPARENT),
             campo_senha,
             ft.Container(content=texto_esqueci_senha, alignment=ft.alignment.center_right),
-            ft.Divider(height=18, color=ft.Colors.TRANSPARENT),
+            ft.Divider(height=18, color=ft.colors.TRANSPARENT),
             btn_entrar,
-            ft.Divider(height=12, color=ft.Colors.TRANSPARENT),
+            ft.Divider(height=12, color=ft.colors.TRANSPARENT),
             texto_rodape,
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
-        bgcolor=ft.Colors.WHITE,
+        bgcolor=ft.colors.WHITE,
         padding=36,
         border_radius=radius,
         shadow=shadow,
     )
 
-    # Imagem lateral / topo
     container_imagem = ft.Container(
         content=ft.Stack([
             ft.Image(src="marmores.jpg", fit=ft.ImageFit.COVER, opacity=0.95),
             ft.Container(
-                gradient=ft.LinearGradient(begin=ft.alignment.center_left, end=ft.alignment.center_right, colors=["#00000099", ft.Colors.TRANSPARENT])
+                gradient=ft.LinearGradient(begin=ft.alignment.center_left, end=ft.alignment.center_right, colors=["#00000099", ft.colors.TRANSPARENT])
             )
         ]),
         expand=True,
     )
 
-    # Layouts
     layout_desktop = ft.Row(
         controls=[
             ft.Container(content=container_imagem, expand=True),
@@ -176,18 +160,14 @@ def LoginView(page: ft.Page):
         ft.Container(content=container_form, expand=True, padding=18, bgcolor=gradiente_fundo),
     ], expand=True)
 
-    # Ajustes dinâmicos para responsividade
     def ajustar_layout(e=None):
-        # largura do formulário: em desktop limitar a 480, em mobile ocupar quase toda a largura
         if page.width < 760:
-            # mobile
             page.controls.clear()
             page.controls.append(ft.Container(content=layout_mobile, expand=True))
         else:
             page.controls.clear()
             page.controls.append(ft.Container(content=layout_desktop, expand=True))
 
-        # ajustar larguras internas
         largura_form = 420 if page.width >= 760 else max(300, page.width - 48)
         campo_usuario.width = largura_form
         campo_senha.width = largura_form
@@ -196,7 +176,6 @@ def LoginView(page: ft.Page):
 
         page.update()
 
-    # inicialização
     page.on_resize = ajustar_layout
     ajustar_layout()
 

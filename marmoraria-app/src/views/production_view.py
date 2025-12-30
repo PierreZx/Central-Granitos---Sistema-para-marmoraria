@@ -9,12 +9,13 @@ def ProductionView(page: ft.Page):
         bgcolor=COLOR_BACKGROUND,
         content=ft.Column([
             ft.Text("Linha de Produção", size=28, weight="bold", color=COLOR_PRIMARY),
-            ft.Text("Acompanhe o status de corte e acabamento", color=ft.Colors.GREY_600),
+            ft.Text("Acompanhe o status de corte e acabamento", color=ft.colors.GREY_600),
             ft.Divider(),
             ft.Container(
                 content=ft.Column([
-                    ft.Icon(ft.Icons.PRECISION_MANUFACTURING, size=60, color=ft.Colors.GREY_300),
-                    ft.Text("Módulo de Produção em Construção", color=ft.Colors.GREY_400)
+                    # CORREÇÃO: ft.icons
+                    ft.Icon(ft.icons.PRECISION_MANUFACTURING, size=60, color=ft.colors.GREY_300),
+                    ft.Text("Módulo de Produção em Construção", color=ft.colors.GREY_400)
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 alignment=ft.alignment.center,
                 expand=True
@@ -22,10 +23,4 @@ def ProductionView(page: ft.Page):
         ])
     )
 
-    return ft.View(
-        route="/producao",
-        padding=0,
-        controls=[
-            ft.Row([Sidebar(page), conteudo], expand=True)
-        ]
-    )
+    return ft.View(route="/producao", padding=0, controls=[ft.Row([Sidebar(page), conteudo], expand=True)])
