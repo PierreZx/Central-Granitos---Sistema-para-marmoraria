@@ -142,3 +142,46 @@ def get_collection_count(collection_name: str) -> int:
         return results[0][0].value
     except Exception as e:
         return 0
+    
+def get_orcamentos_lista():
+    """Retorna lista de todos os orçamentos"""
+    try:
+        docs = db.collection("orcamentos").stream()
+        lista = []
+        for doc in docs:
+            d = doc.to_dict()
+            d['id'] = doc.id
+            lista.append(d)
+        return lista
+    except Exception as e:
+        print(f"Erro ao buscar orçamentos: {e}")
+        return []
+
+def add_orcamento(dados):
+    """Cria um novo orçamento"""
+    try:
+        # Adiciona data de criação se não tiver
+        from datetime import datetime
+        dados['data_criacao'] = datetime.now().isoformat()
+        dados['status'] = 'Em Aberto' # Status inicial
+        
+        doc_ref = db.collection("orcamentos").add(dados)
+        return True, doc_ref[1].id # Retorna Sucesso e o ID gerado
+    except Exception as e:
+        return False, str(e)
+
+def update_orcamento(id_doc, dados):
+    """Atualiza um orçamento existente (adicionar peças, mudar status)"""
+    try:
+        db.collection("orcamentos").document(id_doc).update(dados)
+        return True, "Atualizado com sucesso"
+    except Exception as e:
+        return False, str(e)
+
+def delete_orcamento(id_doc):
+    """Remove um orçamento"""
+    try:
+        db.collection("orcamentos").document(id_doc).delete()
+        return True
+    except Exception as e:
+        return False
