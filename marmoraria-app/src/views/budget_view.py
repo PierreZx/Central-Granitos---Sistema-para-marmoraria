@@ -1,6 +1,5 @@
 import flet as ft
 import flet.canvas as cv
-import flet.canvas as cv
 from src.views.components.sidebar import Sidebar
 from src.config import COLOR_BACKGROUND, COLOR_PRIMARY, COLOR_WHITE, COLOR_SECONDARY
 from src.services import firebase_service
@@ -208,7 +207,6 @@ def BudgetView(page: ft.Page):
         padding=30,
         bgcolor=COLOR_BACKGROUND,
         content=ft.Column([
-            ft.Text("Novo Orçamento", size=28, weight="bold", color=COLOR_PRIMARY),
             ft.Text("Novo Orçamento", size=28, weight="bold", color=COLOR_PRIMARY),
             ft.Divider(),
             ft.Row([
