@@ -63,12 +63,12 @@ def LoginView(page: ft.Page):
     def on_submit(e):
         realizar_login(e)
 
+    # --- LOGO DA EMPRESA (Atualizado para .jpg) ---
     logo = ft.Container(
-        content=ft.Image(src="logo.png", width=140, height=140, fit=ft.ImageFit.CONTAIN),
+        content=ft.Image(src="logo.jpg", width=140, height=140, fit=ft.ImageFit.CONTAIN),
         padding=ft.padding.only(bottom=8),
     )
 
-    # CORREÇÃO: ft.icons (minúsculo)
     campo_usuario = ft.TextField(
         label="E-mail",
         hint_text="Digite seu e-mail cadastrado",

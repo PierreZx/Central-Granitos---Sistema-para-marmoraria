@@ -21,7 +21,8 @@ class Sidebar(ft.UserControl):
             content=ft.Column([
                 ft.Container(
                     content=ft.Row([
-                        ft.Icon(ft.icons.DASHBOARD_CUSTOMIZE, color=COLOR_PRIMARY, size=30),
+                        # --- LOGO NA SIDEBAR (Substitui o ícone) ---
+                        ft.Image(src="logo.jpg", width=40, height=40, fit=ft.ImageFit.CONTAIN),
                         ft.Text("Central", size=22, weight="bold", color=COLOR_PRIMARY)
                     ]),
                     padding=ft.padding.only(bottom=20)
@@ -49,7 +50,6 @@ class Sidebar(ft.UserControl):
             color=ft.colors.GREY_700,
             bgcolor={ft.MaterialState.HOVERED: ft.colors.BLUE_50},
             shape=ft.RoundedRectangleBorder(radius=10),
-            # REMOVIDO: alignment=ft.alignment.center_left (Não existe na v0.22.1)
         )
         
         # Destaca o item se for a rota atual
@@ -58,7 +58,6 @@ class Sidebar(ft.UserControl):
                 color=COLOR_PRIMARY,
                 bgcolor=ft.colors.BLUE_50,
                 shape=ft.RoundedRectangleBorder(radius=10),
-                # REMOVIDO: alignment=ft.alignment.center_left
             )
             cor_icone = COLOR_PRIMARY
 
