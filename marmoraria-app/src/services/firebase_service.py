@@ -3,6 +3,7 @@ from firebase_admin import credentials, firestore
 from google.cloud.firestore import FieldFilter # <--- IMPORTANTE: Importar isso
 from pathlib import Path
 import hashlib
+import math
 
 db = None
 
@@ -185,3 +186,113 @@ def delete_orcamento(id_doc):
         return True
     except Exception as e:
         return False
+    
+def descontar_estoque_producao(orcamento):
+    """
+    Desconta a metragem das pedras usadas no orçamento diretamente do estoque.
+    Recalcula a quantidade de chapas baseado na média atual.
+    """
+    try:
+        itens = orcamento.get('itens', [])
+        
+        # Agrupa consumo por Pedra ID (caso tenha várias peças da mesma pedra)
+        consumo_por_pedra = {} 
+        
+        for item in itens:
+            cfg = item.get('config', {})
+            pedra_id = cfg.get('pedra_id')
+            area_peca = float(item.get('area', 0))
+            
+            if pedra_id and area_peca > 0:
+                if pedra_id in consumo_por_pedra:
+                    consumo_por_pedra[pedra_id] += area_peca
+                else:
+                    consumo_por_pedra[pedra_id] = area_peca
+        
+        # Atualiza no Banco
+        for p_id, area_gasta in consumo_por_pedra.items():
+            doc_ref = db.collection("estoque").document(p_id)
+            doc = doc_ref.get()
+            
+            if doc.exists:
+                dados = doc.to_dict()
+                metros_atuais = float(dados.get('metros', 0) or 0)
+                qtd_atual = int(dados.get('quantidade', 0) or 0)
+                
+                # 1. Calcula a média de tamanho por chapa (para saber qts baixar)
+                # Se não tiver dados, assume uma chapa padrão de 5m² para não dar erro
+                media_por_chapa = (metros_atuais / qtd_atual) if qtd_atual > 0 else 5.0
+                
+                # 2. Desconta os metros
+                novos_metros = metros_atuais - area_gasta
+                
+                # 3. Recalcula quantidade de chapas (arredondando para cima)
+                # Ex: Se sobrou 2.1m e a chapa média é 2m, considera 2 chapas (uma inteira e um retalho grande)
+                # Ou se preferir arredondamento matemático simples, usamos round. 
+                # Aqui usaremos ceil (teto) para ser conservador: se tem pedra, conta como chapa/retalho.
+                nova_qtd = math.ceil(novos_metros / media_por_chapa) if novos_metros > 0 else 0
+                
+                # Atualiza
+                doc_ref.update({
+                    "metros": f"{novos_metros:.2f}", # Salva como string formatada ou float, conforme seu padrão
+                    "quantidade": str(nova_qtd)
+                })
+                print(f"Estoque atualizado: -{area_gasta}m² na pedra {dados.get('nome')}")
+                
+        return True, "Estoque atualizado com sucesso!"
+        
+    except Exception as e:
+        print(f"Erro ao baixar estoque: {e}")
+        return False, str(e)
+    
+def repor_estoque_devolucao(orcamento):
+    """
+    Estorna (devolve) a metragem das pedras para o estoque quando um orçamento é cancelado/retornado.
+    """
+    try:
+        itens = orcamento.get('itens', [])
+        devolucao_por_pedra = {} 
+        
+        # Soma tudo que tem que devolver
+        for item in itens:
+            cfg = item.get('config', {})
+            pedra_id = cfg.get('pedra_id')
+            area_peca = float(item.get('area', 0))
+            
+            if pedra_id and area_peca > 0:
+                if pedra_id in devolucao_por_pedra:
+                    devolucao_por_pedra[pedra_id] += area_peca
+                else:
+                    devolucao_por_pedra[pedra_id] = area_peca
+        
+        # Atualiza no Banco
+        for p_id, area_volta in devolucao_por_pedra.items():
+            doc_ref = db.collection("estoque").document(p_id)
+            doc = doc_ref.get()
+            
+            if doc.exists:
+                dados = doc.to_dict()
+                metros_atuais = float(dados.get('metros', 0) or 0)
+                qtd_atual = int(dados.get('quantidade', 0) or 0)
+                
+                # Evita divisão por zero para achar a média
+                media_por_chapa = (metros_atuais / qtd_atual) if qtd_atual > 0 else 5.0
+                
+                # SOMA de volta (Estorno)
+                novos_metros = metros_atuais + area_volta
+                
+                # Recalcula chapas
+                # Usa math.ceil para arredondar pra cima (se tem pedra, conta como chapa/retalho)
+                import math
+                nova_qtd = math.ceil(novos_metros / media_por_chapa) if media_por_chapa > 0 else 0
+                
+                doc_ref.update({
+                    "metros": f"{novos_metros:.2f}",
+                    "quantidade": str(nova_qtd)
+                })
+                
+        return True, "Estoque estornado com sucesso!"
+        
+    except Exception as e:
+        print(f"Erro ao estornar estoque: {e}")
+        return False, str(e)

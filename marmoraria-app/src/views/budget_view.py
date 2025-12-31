@@ -59,27 +59,40 @@ def BudgetView(page: ft.Page):
         page.update()
 
     def enviar_para_producao(orc):
-        status_atual = orc.get('status', 'Em Aberto')
-        if status_atual in ["Produção", "Em Andamento", "Finalizado"]:
-            page.snack_bar = ft.SnackBar(content=ft.Text(f"Já está em '{status_atual}'!"), bgcolor="orange")
+            status_atual = orc.get('status', 'Em Aberto')
+            if status_atual in ["Produção", "Em Andamento", "Finalizado"]:
+                page.snack_bar = ft.SnackBar(content=ft.Text(f"Já está em '{status_atual}'!"), bgcolor="orange")
+                page.snack_bar.open = True
+                page.update()
+                return
+
+            # 1. TENTA ATUALIZAR STATUS
+            orc['status'] = "Produção"
+            orc['motivo_retorno'] = None 
+            
+            sucesso, msg = firebase_service.update_orcamento(orc['id'], {'status': 'Produção', 'motivo_retorno': None})
+            
+            if sucesso:
+                # 2. SE DEU CERTO, DÁ BAIXA NO ESTOQUE AUTOMATICAMENTE
+                try:
+                    ok_estoque, msg_estoque = firebase_service.descontar_estoque_producao(orc)
+                    if ok_estoque:
+                        msg_final = "Enviado para Produção e Estoque Atualizado!"
+                    else:
+                        msg_final = f"Enviado para Produção, mas erro no estoque: {msg_estoque}"
+                except Exception as ex:
+                    msg_final = f"Enviado, mas erro crítico no estoque: {ex}"
+
+                page.snack_bar = ft.SnackBar(content=ft.Text(msg_final), bgcolor="blue")
+                
+                if page.bottom_sheet and page.bottom_sheet.open:
+                    page.close_bottom_sheet()
+                render_lista_principal()
+            else:
+                page.snack_bar = ft.SnackBar(content=ft.Text(f"Erro: {msg}"), bgcolor="red")
+            
             page.snack_bar.open = True
             page.update()
-            return
-
-        orc['status'] = "Produção"
-        orc['motivo_retorno'] = None 
-        
-        sucesso, msg = firebase_service.update_orcamento(orc['id'], {'status': 'Produção', 'motivo_retorno': None})
-        
-        if sucesso:
-            page.snack_bar = ft.SnackBar(content=ft.Text("Enviado para Produção!"), bgcolor="blue")
-            if page.bottom_sheet and page.bottom_sheet.open:
-                page.close_bottom_sheet()
-                render_lista_principal()
-        else:
-            page.snack_bar = ft.SnackBar(content=ft.Text(f"Erro: {msg}"), bgcolor="red")
-        page.snack_bar.open = True
-        page.update()
 
     # --- LISTA PRINCIPAL ---
     def render_lista_principal():

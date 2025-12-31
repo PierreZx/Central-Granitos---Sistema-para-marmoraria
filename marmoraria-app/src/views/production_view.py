@@ -59,43 +59,50 @@ def ProductionView(page: ft.Page):
 
         cuba = cfg.get('cuba', {})
         if cuba.get('chk'):
-            cx, cy = sx + float(cuba.get('pos', 0)) * scale, sy + (h_px - w_px*0.4)/2 # Simplificado
-            cv_obj.shapes.append(cv.Text(cx, cy, "CORTE", style=ft.TextStyle(size=10, color="red")))
+            dist = float(cuba.get('pos', 0)) * scale
+            cw, ch = w_px * 0.4, h_px * 0.6
+            cx, cy = sx + dist, sy + (h_px - ch)/2 
+            cv_obj.shapes.append(cv.Rect(cx, cy, cw, ch, paint=ft.Paint(style=ft.PaintingStyle.STROKE, color=ft.colors.RED, stroke_dash_pattern=[5,5])))
+            cv_obj.shapes.append(cv.Text(cx, cy - 10, "CORTE", style=ft.TextStyle(size=10, color="red")))
 
-    # --- AÇÃO DE DEVOLUÇÃO ---
+    # --- AÇÃO DE DEVOLUÇÃO (COM ESTORNO DE ESTOQUE) ---
     def abrir_dialogo_devolucao(orcamento):
         txt_motivo = ft.TextField(label="Motivo da Devolução (Obrigatório)", multiline=True, min_lines=3)
         
         def confirmar_devolucao(e):
             if not txt_motivo.value:
-                txt_motivo.error_text = "Descreva o erro ou motivo."
+                txt_motivo.error_text = "Descreva o erro."
                 txt_motivo.update()
                 return
             
-            # Atualiza status e salva motivo
+            # 1. Atualiza status no banco
             firebase_service.update_orcamento(orcamento['id'], {
                 'status': 'Retornado',
                 'motivo_retorno': txt_motivo.value
             })
             
-            page.close_dialog() # Fecha o de devolução
-            # Se o visualizador estiver aberto, fecha ele também (opcional, mas bom pra UX)
-            # page.dialog.open = False (cuidado para não fechar errado)
-            
-            page.snack_bar = ft.SnackBar(ft.Text("Orçamento devolvido para correção!"), bgcolor=ft.colors.ORANGE)
+            # 2. DEVOLVE PEDRA PRO ESTOQUE (Estorno)
+            try:
+                ok_est, msg_est = firebase_service.repor_estoque_devolucao(orcamento)
+                msg_final = "Devolvido! Estoque estornado." if ok_est else f"Devolvido, mas erro estoque: {msg_est}"
+            except Exception as ex:
+                msg_final = f"Devolvido. Erro crítico estorno: {ex}"
+
+            page.close_dialog()
+            page.snack_bar = ft.SnackBar(ft.Text(msg_final), bgcolor=ft.colors.ORANGE)
             page.snack_bar.open = True
             page.update()
-            carregar_dados() # Recarrega lista
+            carregar_dados()
 
         dlg_dev = ft.AlertDialog(
-            title=ft.Text("Reportar Problema / Devolver"),
+            title=ft.Text("Devolver / Reportar"),
             content=ft.Column([
-                ft.Text("Descreva o motivo para voltar ao setor de orçamentos:"),
+                ft.Text("Motivo (Isso devolverá o material ao estoque):"),
                 txt_motivo
             ], tight=True, width=400),
             actions=[
                 ft.TextButton("Cancelar", on_click=lambda e: page.close_dialog()),
-                ft.ElevatedButton("Confirmar Devolução", bgcolor=ft.colors.RED, color=COLOR_WHITE, on_click=confirmar_devolucao)
+                ft.ElevatedButton("Confirmar", bgcolor=ft.colors.RED, color=COLOR_WHITE, on_click=confirmar_devolucao)
             ]
         )
         page.dialog = dlg_dev
@@ -107,53 +114,48 @@ def ProductionView(page: ft.Page):
         itens = orcamento.get('itens', [])
         if not itens: lista.controls.append(ft.Text("Vazio."))
         
+        def ler_instrucoes_peca(e, texto_instrucao, titulo_peca):
+            dlg_texto = ft.AlertDialog(title=ft.Text(f"Instruções: {titulo_peca}"), content=ft.Container(content=ft.Text(texto_instrucao if texto_instrucao else "Nenhuma instrução.", size=16), width=500, padding=10), actions=[ft.TextButton("Fechar", on_click=lambda e: fechar_dlg(dlg_texto))])
+            page.dialog = dlg_texto; dlg_texto.open = True; page.update()
+
+        def fechar_dlg(dlg): dlg.open = False; page.update()
+
         for i, item in enumerate(itens):
             cv_peca = cv.Canvas(width=500, height=400, shapes=[])
             desenhar_explosao(cv_peca, item)
+            instrucoes = item.get('config', {}).get('instrucoes_producao', '')
+            titulo = f"Peça {i+1}: {item['ambiente']}"
+
             lista.controls.append(ft.Container(
                 bgcolor=ft.colors.WHITE, padding=20, border_radius=10, border=ft.border.all(1, ft.colors.GREY_300),
                 content=ft.Column([
-                    ft.Text(f"Peça {i+1}: {item['ambiente']}", weight="bold"), ft.Divider(),
+                    ft.Row([
+                        ft.Text(titulo, weight="bold", size=16),
+                        ft.ElevatedButton("📋 Instruções", bgcolor=ft.colors.BLUE_GREY_50, color=ft.colors.BLUE_GREY_900, on_click=lambda e, t=instrucoes, ti=titulo: ler_instrucoes_peca(e, t, ti))
+                    ], alignment="spaceBetween"),
+                    ft.Divider(),
                     ft.Container(content=cv_peca, alignment=ft.alignment.center, bgcolor=ft.colors.GREY_50, border_radius=10)
                 ])
             ))
 
         botoes = []
         status = orcamento.get('status')
-        
-        # Botão de Devolver (Sempre visível se não estiver finalizado)
-        if status != "Finalizado":
-            botoes.append(ft.ElevatedButton("Reportar Erro / Voltar", icon=ft.icons.WARNING, bgcolor=ft.colors.RED, color=COLOR_WHITE, 
-                                            on_click=lambda e: abrir_dialogo_devolucao(orcamento)))
+        if status != "Finalizado": botoes.append(ft.ElevatedButton("Devolver / Erro", icon=ft.icons.WARNING, bgcolor=ft.colors.RED, color=COLOR_WHITE, on_click=lambda e: abrir_dialogo_devolucao(orcamento)))
+        if status in ["Produção", "Em Aberto"]: botoes.append(ft.ElevatedButton("Iniciar", icon=ft.icons.PLAY_ARROW, bgcolor=ft.colors.BLUE, color=COLOR_WHITE, on_click=lambda e: atualizar_status(orcamento, "Em Andamento")))
+        if status == "Em Andamento": botoes.append(ft.ElevatedButton("Finalizar", icon=ft.icons.CHECK, bgcolor=ft.colors.GREEN, color=COLOR_WHITE, on_click=lambda e: atualizar_status(orcamento, "Finalizado")))
 
-        if status == "Produção" or status == "Em Aberto":
-            botoes.append(ft.ElevatedButton("Iniciar", icon=ft.icons.PLAY_ARROW, bgcolor=ft.colors.BLUE, color=COLOR_WHITE, 
-                                            on_click=lambda e: atualizar_status(orcamento, "Em Andamento")))
-        
-        if status == "Em Andamento":
-            botoes.append(ft.ElevatedButton("Finalizar", icon=ft.icons.CHECK, bgcolor=ft.colors.GREEN, color=COLOR_WHITE,
-                                            on_click=lambda e: atualizar_status(orcamento, "Finalizado")))
-
-        dlg = ft.AlertDialog(
-            title=ft.Text(f"O.S.: {orcamento.get('cliente_nome')}", size=20, weight="bold"),
-            content=ft.Container(width=700, content=lista),
-            actions=[ft.TextButton("Fechar", on_click=lambda e: page.close_dialog()), *botoes],
-            actions_alignment=ft.MainAxisAlignment.END
-        )
-        page.dialog = dlg
-        dlg.open = True
-        page.update()
+        dlg = ft.AlertDialog(title=ft.Text(f"O.S.: {orcamento.get('cliente_nome')}", size=20, weight="bold"), content=ft.Container(width=700, content=lista), actions=[ft.TextButton("Fechar", on_click=lambda e: page.close_dialog()), *botoes], actions_alignment=ft.MainAxisAlignment.END)
+        page.dialog = dlg; dlg.open = True; page.update()
 
     def atualizar_status(orc, novo):
+        # Mudar status normal não mexe no estoque (apenas início e fim de processo)
         firebase_service.update_orcamento(orc['id'], {'status': novo})
-        page.close_dialog()
-        carregar_dados()
+        page.close_dialog(); carregar_dados()
 
     def render_coluna(status_filtro, titulo, cor_badge):
         lista = firebase_service.get_orcamentos_lista()
         filtrados = [o for o in lista if o.get('status') == status_filtro]
         grid = ft.GridView(expand=True, runs_count=3, max_extent=350, child_aspect_ratio=1.0, spacing=20, run_spacing=20)
-        
         if not filtrados: grid.controls.append(ft.Container(padding=40, content=ft.Text("Vazio.", color=ft.colors.GREY_400)))
         else:
             for orc in filtrados:
