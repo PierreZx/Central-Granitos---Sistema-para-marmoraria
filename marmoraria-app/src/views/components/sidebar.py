@@ -12,7 +12,23 @@ class Sidebar(ft.UserControl):
         self.page.go(rota)
 
     def build(self):
-        # Definição dos botões do menu
+        # Verifica quem está logado
+        user_role = self.page.session.get("user_role")
+        
+        # Lista de itens do menu
+        menu_items = []
+        
+        if user_role == "producao":
+            # MENU RESTRITO DA PRODUÇÃO
+            menu_items.append(self.criar_item_menu("Produção", ft.icons.PRECISION_MANUFACTURING, "/producao"))
+        else:
+            # MENU COMPLETO (ADMIN)
+            menu_items.append(self.criar_item_menu("Dashboard", ft.icons.DASHBOARD, "/dashboard"))
+            menu_items.append(self.criar_item_menu("Estoque", ft.icons.INVENTORY_2, "/estoque"))
+            menu_items.append(self.criar_item_menu("Orçamentos", ft.icons.REQUEST_QUOTE, "/orcamentos"))
+            menu_items.append(self.criar_item_menu("Produção", ft.icons.PRECISION_MANUFACTURING, "/producao"))
+            menu_items.append(self.criar_item_menu("Financeiro", ft.icons.ATTACH_MONEY, "/financeiro"))
+
         return ft.Container(
             width=250,
             bgcolor=ft.colors.WHITE,
@@ -21,7 +37,7 @@ class Sidebar(ft.UserControl):
             content=ft.Column([
                 ft.Container(
                     content=ft.Row([
-                        # --- LOGO NA SIDEBAR (Substitui o ícone) ---
+                        # Logo pequena
                         ft.Image(src="logo.jpg", width=40, height=40, fit=ft.ImageFit.CONTAIN),
                         ft.Text("Central", size=22, weight="bold", color=COLOR_PRIMARY)
                     ]),
@@ -29,15 +45,11 @@ class Sidebar(ft.UserControl):
                 ),
                 ft.Divider(),
                 
-                # Itens do Menu
-                self.criar_item_menu("Dashboard", ft.icons.DASHBOARD, "/dashboard"),
-                self.criar_item_menu("Estoque", ft.icons.INVENTORY_2, "/estoque"),
-                self.criar_item_menu("Orçamentos", ft.icons.REQUEST_QUOTE, "/orcamentos"),
-                self.criar_item_menu("Produção", ft.icons.PRECISION_MANUFACTURING, "/producao"),
-                self.criar_item_menu("Financeiro", ft.icons.ATTACH_MONEY, "/financeiro"),
+                # Renderiza os itens permitidos
+                ft.Column(menu_items, spacing=5),
                 
                 ft.Divider(),
-                ft.Container(expand=True), # Espaçador
+                ft.Container(expand=True), # Espaçador para jogar o Sair pro fundo
                 self.criar_item_menu("Sair", ft.icons.LOGOUT, "/", cor_icone=ft.colors.RED),
             ])
         )

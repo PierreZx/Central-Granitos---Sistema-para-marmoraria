@@ -4,6 +4,7 @@ from src.views.dashboard_view import DashboardView
 from src.views.inventory_view import InventoryView
 from src.views.budget_view import BudgetView
 from src.views.production_view import ProductionView
+from src.views.financial_view import FinancialView
 # from src.views.financial_view import FinancialView 
 
 def main(page: ft.Page):
@@ -41,10 +42,7 @@ def main(page: ft.Page):
             page.views.append(ProductionView(page))
             
         elif page.route == "/financeiro":
-            page.views.append(ft.View("/financeiro", [
-                ft.AppBar(title=ft.Text("Financeiro"), bgcolor=ft.colors.BROWN_700), 
-                ft.Container(content=ft.Text("Módulo Financeiro em Breve...", size=20), alignment=ft.alignment.center, expand=True)
-            ]))
+            page.views.append(FinancialView(page))
             
         else:
             page.views.append(LoginView(page))

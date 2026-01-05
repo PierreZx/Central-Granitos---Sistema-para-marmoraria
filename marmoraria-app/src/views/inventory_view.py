@@ -188,23 +188,23 @@ def InventoryView(page: ft.Page):
     carregar_dados()
 
     # --- CORREÇÃO DA SIDEBAR SUMINDO ---
-    return ft.View(
-        route="/estoque",
-        padding=0,
-        floating_action_button=btn_adicionar,
-        controls=[
+    btn_adicionar = ft.FloatingActionButton(icon=ft.icons.ADD, bgcolor=COLOR_PRIMARY, on_click=abrir_popup, tooltip="Adicionar Chapa")
+    carregar_dados()
+
+    # Cria o container principal organizando o botão junto com o título
+    conteudo = ft.Container(
+        expand=True, 
+        bgcolor=COLOR_BACKGROUND, 
+        padding=30, 
+        content=ft.Column([
             ft.Row([
-                Sidebar(page), 
-                ft.Container(
-                    expand=True, 
-                    bgcolor=COLOR_BACKGROUND, 
-                    padding=30, 
-                    content=ft.Column([
-                        ft.Text("Controle de Estoque", size=28, weight="bold", color=COLOR_PRIMARY), 
-                        ft.Divider(), 
-                        ft.Container(content=grid_produtos, expand=True)
-                    ])
-                )
-            ], expand=True) # <--- O SEGREDO ESTÁ NESTE 'expand=True'
-        ]
+                ft.Text("Controle de Estoque", size=28, weight="bold", color=COLOR_PRIMARY), 
+                btn_adicionar # Botão movido para o cabeçalho
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Divider(), 
+            ft.Container(content=grid_produtos, expand=True)
+        ])
     )
+
+    from src.views.layout_base import LayoutBase
+    return LayoutBase(page, conteudo, "Estoque")

@@ -71,8 +71,5 @@ def DashboardView(page: ft.Page):
         ], scroll=ft.ScrollMode.AUTO)
     )
 
-    return ft.View(
-        route="/dashboard",
-        padding=0,
-        controls=[ft.Row(controls=[Sidebar(page), conteudo], expand=True)]
-    )
+    from src.views.layout_base import LayoutBase
+    return LayoutBase(page, conteudo, "Dashboard")

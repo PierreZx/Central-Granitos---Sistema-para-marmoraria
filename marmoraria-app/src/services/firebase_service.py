@@ -4,6 +4,7 @@ from google.cloud.firestore import FieldFilter # <--- IMPORTANTE: Importar isso
 from pathlib import Path
 import hashlib
 import math
+import datetime
 
 db = None
 
@@ -296,3 +297,182 @@ def repor_estoque_devolucao(orcamento):
     except Exception as e:
         print(f"Erro ao estornar estoque: {e}")
         return False, str(e)
+    
+def get_saldo_caixa():
+    try:
+        doc = db.collection("financeiro_resumo").document("caixa_geral").get()
+        if doc.exists: return float(doc.to_dict().get("saldo", 0.0))
+        return 0.0
+    except: return 0.0
+
+def atualizar_saldo_banco(valor_delta):
+    """Soma ou subtrai valor do saldo geral"""
+    ref = db.collection("financeiro_resumo").document("caixa_geral")
+    doc = ref.get()
+    saldo = float(doc.to_dict().get("saldo", 0.0)) if doc.exists else 0.0
+    ref.set({"saldo": saldo + valor_delta})
+
+def add_movimentacao(tipo, valor, descricao, origem="Manual"):
+    try:
+        valor = float(valor)
+        mov = {
+            "tipo": tipo, "valor": valor, "descricao": descricao, 
+            "origem": origem, "data": datetime.datetime.now().isoformat()
+        }
+        db.collection("financeiro_extrato").add(mov)
+        
+        delta = valor if tipo == "Entrada" else -valor
+        atualizar_saldo_banco(delta)
+        return True, "Registrado!"
+    except Exception as e: return False, str(e)
+
+def update_movimentacao(id_doc, dados_antigos, dados_novos):
+    """Atualiza uma movimentação e corrige o saldo"""
+    try:
+        # 1. Reverte o impacto antigo
+        val_antigo = float(dados_antigos['valor'])
+        delta_reversao = -val_antigo if dados_antigos['tipo'] == "Entrada" else val_antigo
+        atualizar_saldo_banco(delta_reversao)
+        
+        # 2. Aplica o novo impacto
+        val_novo = float(dados_novos['valor'])
+        delta_novo = val_novo if dados_novos['tipo'] == "Entrada" else -val_novo
+        atualizar_saldo_banco(delta_novo)
+        
+        # 3. Atualiza doc
+        db.collection("financeiro_extrato").document(id_doc).update(dados_novos)
+        return True, "Movimentação atualizada!"
+    except Exception as e: return False, str(e)
+
+def delete_movimentacao(id_doc, dados):
+    """Apaga movimentação e estorna o saldo"""
+    try:
+        # Reverte impacto
+        val = float(dados['valor'])
+        delta = -val if dados['tipo'] == "Entrada" else val
+        atualizar_saldo_banco(delta)
+        
+        db.collection("financeiro_extrato").document(id_doc).delete()
+        return True, "Movimentação excluída!"
+    except Exception as e: return False, str(e)
+
+def get_extrato_lista():
+    try:
+        docs = db.collection("financeiro_extrato").stream()
+        lista = []
+        for doc in docs:
+            d = doc.to_dict(); d['id'] = doc.id
+            lista.append(d)
+        lista.sort(key=lambda x: x.get('data', ''), reverse=True)
+        return lista
+    except: return []
+
+# --- DÍVIDAS FIXAS ---
+
+def add_divida_fixa(dados):
+    try:
+        db.collection("financeiro_dividas").add(dados)
+        return True, "Agendado."
+    except Exception as e: return False, str(e)
+
+def update_divida_fixa(id_doc, dados):
+    try:
+        db.collection("financeiro_dividas").document(id_doc).update(dados)
+        return True, "Dívida atualizada."
+    except Exception as e: return False, str(e)
+
+def delete_divida_fixa(id_doc):
+    try:
+        db.collection("financeiro_dividas").document(id_doc).delete()
+        return True, "Dívida removida."
+    except Exception as e: return False, str(e)
+
+def get_dividas_pendentes():
+    try:
+        docs = db.collection("financeiro_dividas").stream()
+        lista = []
+        for doc in docs:
+            d = doc.to_dict(); d['id'] = doc.id
+            lista.append(d)
+        return lista
+    except: return []
+
+def pagar_divida_fixa(divida):
+    try:
+        valor = float(divida['valor'])
+        nome_conta = divida['nome']
+        
+        # Lógica de descrição do pagamento
+        desc_pgto = f"Pgto: {nome_conta}"
+        
+        # Se for parcelado, adiciona info no extrato (Ex: Pgto: Carro (1/6))
+        parcelas_totais = int(divida.get('parcelas_totais', 1))
+        parcela_atual = int(divida.get('parcela_atual', 1))
+        
+        if parcelas_totais > 1:
+            desc_pgto = f"Pgto: {nome_conta} ({parcela_atual}/{parcelas_totais})"
+
+        # 1. Desconta do Caixa
+        res, msg = add_movimentacao("Saida", valor, desc_pgto, origem="Dívida Fixa")
+        if not res: return False, msg
+
+        doc_ref = db.collection("financeiro_dividas").document(divida['id'])
+        
+        # 2. Lógica de Renovação
+        eh_permanente = divida.get('permanente', False)
+        
+        # DATA: Calcula próximo mês
+        try:
+            dt_atual = datetime.datetime.strptime(divida['data_vencimento'], "%d/%m/%Y")
+        except:
+            dt_atual = datetime.datetime.strptime(divida['data_vencimento'], "%Y-%m-%d")
+            
+        # Adiciona aprox 30 dias para o próximo vencimento
+        nova_data = dt_atual + datetime.timedelta(days=30)
+        nova_data_str = nova_data.strftime("%d/%m/%Y")
+
+        if eh_permanente:
+            # Se é luz/água, só joga a data pra frente
+            doc_ref.update({"data_vencimento": nova_data_str})
+            return True, "Conta paga e renovada para próximo mês."
+            
+        elif parcelas_totais > 1:
+            # Se é parcelado (ex: 4x)
+            if parcela_atual < parcelas_totais:
+                # Ainda tem parcelas (Vai para a próxima)
+                doc_ref.update({
+                    "data_vencimento": nova_data_str,
+                    "parcela_atual": parcela_atual + 1
+                })
+                return True, f"Parcela {parcela_atual} paga! Próxima vence em {nova_data_str}."
+            else:
+                # Era a última parcela (Acabou)
+                doc_ref.delete()
+                return True, "Última parcela paga! Dívida quitada."
+        else:
+            # Conta única normal (paga e some)
+            doc_ref.delete()
+            return True, "Conta paga e finalizada."
+            
+    except Exception as e: return False, str(e)
+
+# --- RECEBIMENTOS ---
+def get_orcamentos_finalizados_nao_pagos():
+    try:
+        docs = db.collection("orcamentos").stream()
+        lista = []
+        for doc in docs:
+            d = doc.to_dict(); d['id'] = doc.id
+            if d.get('status') == 'Finalizado' and not d.get('pago_financeiro', False):
+                lista.append(d)
+        return lista
+    except: return []
+
+def receber_orcamento(orcamento):
+    try:
+        valor = float(orcamento.get('total_geral', 0))
+        res, msg = add_movimentacao("Entrada", valor, f"Recebimento: {orcamento.get('cliente_nome')}", origem="Venda")
+        if not res: return False, msg
+        db.collection("orcamentos").document(orcamento['id']).update({"pago_financeiro": True})
+        return True, "Recebido!"
+    except Exception as e: return False, str(e)

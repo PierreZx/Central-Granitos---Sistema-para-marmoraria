@@ -320,4 +320,7 @@ def BudgetView(page: ft.Page):
 
     render_lista_principal()
 
-    return ft.View(route="/orcamentos", padding=0, controls=[ft.Row([Sidebar(page), conteudo_principal], expand=True)])
+        # --- ADAPTAÇÃO MOBILE ---
+    from src.views.layout_base import LayoutBase
+        # Atenção: Aqui usamos 'conteudo_principal' e o título 'Orçamentos'
+    return LayoutBase(page, conteudo_principal, "Orçamentos")

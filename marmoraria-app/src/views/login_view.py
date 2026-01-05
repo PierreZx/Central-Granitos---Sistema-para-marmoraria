@@ -4,7 +4,7 @@ from src.services import firebase_service
 from src.controllers.auth_controller import AuthController
 
 def LoginView(page: ft.Page):
-    """Tela de login responsiva (Compatível com Flet 0.22.1)"""
+    """Tela de login responsiva com acesso diferenciado para Produção"""
 
     radius = 16
     shadow = ft.BoxShadow(blur_radius=18, color="#00000014", offset=ft.Offset(0, 6))
@@ -14,9 +14,6 @@ def LoginView(page: ft.Page):
         end=ft.alignment.bottom_right,
         colors=[ft.colors.BLUE_GREY_50, ft.colors.GREY_100, ft.colors.WHITE],
     )
-
-    AUTHORIZED_EMAIL = AUTH_EMAIL
-    AUTHORIZED_PASSWORD = AUTH_PASSWORD
 
     def show_snack(msg: str, success: bool = True):
         page.snack_bar = ft.SnackBar(
@@ -29,41 +26,55 @@ def LoginView(page: ft.Page):
         page.update()
 
     def realizar_login(e):
-            btn_entrar.disabled = True
-            btn_entrar.content = ft.Row(
-                [ft.ProgressRing(width=16, height=16, stroke_width=2, color=COLOR_WHITE), ft.Text("Entrando...", color=COLOR_WHITE)], 
-                alignment=ft.MainAxisAlignment.CENTER
-            )
+        btn_entrar.disabled = True
+        btn_entrar.content = ft.Row(
+            [ft.ProgressRing(width=16, height=16, stroke_width=2, color=COLOR_WHITE), ft.Text("Entrando...", color=COLOR_WHITE)], 
+            alignment=ft.MainAxisAlignment.CENTER
+        )
+        page.update()
+
+        email = campo_usuario.value
+        senha = campo_senha.value
+
+        # --- LÓGICA DE ACESSO PRODUÇÃO ---
+        if email == "acesso.producao@gmail.com" and senha == "MarmorariaC55":
+            # Define o perfil na sessão do usuário
+            page.session.set("user_role", "producao")
+            
+            show_snack("Bem-vindo à Área de Produção!", success=True)
+            page.go("/producao") # Redireciona direto para produção
+            return # Encerra aqui para não tentar o login normal
+
+        # --- LÓGICA DE ACESSO ADM (PADRÃO) ---
+        sucesso, mensagem = AuthController.autenticar(email, senha)
+
+        if sucesso:
+            # Define o perfil como admin
+            page.session.set("user_role", "admin")
+            
+            show_snack(mensagem, success=True)
+            page.go("/dashboard") # Redireciona para o painel geral
+        else:
+            # Tratamento de erro visual (tremidinha)
+            btn_entrar.disabled = False
+            btn_entrar.content = ft.Text("Entrar", size=16, weight=ft.FontWeight.W_600)
+            
+            container_form.offset = ft.Offset(-0.02, 0)
             page.update()
-
-            email = campo_usuario.value
-            senha = campo_senha.value
-
-            sucesso, mensagem = AuthController.autenticar(email, senha)
-
-            if sucesso:
-                show_snack(mensagem, success=True)
-                page.go("/dashboard")
-            else:
-                btn_entrar.disabled = False
-                btn_entrar.content = ft.Text("Entrar", size=16, weight=ft.FontWeight.W_600)
-                
-                container_form.offset = ft.Offset(-0.02, 0)
-                page.update()
-                import time
-                time.sleep(0.06)
-                container_form.offset = ft.Offset(0.02, 0)
-                page.update()
-                time.sleep(0.06)
-                container_form.offset = ft.Offset(0, 0)
-                page.update()
-                
-                show_snack(mensagem, success=False)
+            import time
+            time.sleep(0.06)
+            container_form.offset = ft.Offset(0.02, 0)
+            page.update()
+            time.sleep(0.06)
+            container_form.offset = ft.Offset(0, 0)
+            page.update()
+            
+            show_snack(mensagem, success=False)
 
     def on_submit(e):
         realizar_login(e)
 
-    # --- LOGO DA EMPRESA (Atualizado para .jpg) ---
+    # Logo (ajustada para jpg conforme conversamos antes)
     logo = ft.Container(
         content=ft.Image(src="logo.jpg", width=140, height=140, fit=ft.ImageFit.CONTAIN),
         padding=ft.padding.only(bottom=8),
@@ -71,7 +82,7 @@ def LoginView(page: ft.Page):
 
     campo_usuario = ft.TextField(
         label="E-mail",
-        hint_text="Digite seu e-mail cadastrado",
+        hint_text="Digite seu e-mail",
         height=56,
         text_size=15,
         border_radius=12,
@@ -107,18 +118,18 @@ def LoginView(page: ft.Page):
         on_click=realizar_login,
     )
 
-    texto_esqueci_senha = ft.TextButton(text="Esqueceu sua senha?", on_click=lambda e: show_snack("Funcionalidade em breve", success=True))
+    texto_esqueci_senha = ft.TextButton(text="Esqueceu sua senha?", on_click=lambda e: show_snack("Contate o administrador", success=True))
 
     texto_rodape = ft.Column([
         ft.Divider(height=1, color=ft.colors.GREY_200),
         ft.Text("Central Granitos © 2025", size=12, color=ft.colors.GREY_500),
-        ft.Text("Todos os direitos reservados", size=10, color=ft.colors.GREY_400),
+        ft.Text("Sistema de Gestão Integrada", size=10, color=ft.colors.GREY_400),
     ], alignment=ft.MainAxisAlignment.CENTER)
 
     container_form = ft.Container(
         content=ft.Column([
             logo,
-            ft.Text("Bem-vindo de volta", size=26, weight=ft.FontWeight.W_700, color=ft.colors.GREY_900),
+            ft.Text("Bem-vindo", size=26, weight=ft.FontWeight.W_700, color=ft.colors.GREY_900),
             ft.Text("Faça login para continuar", size=14, color=ft.colors.GREY_600),
             ft.Divider(height=30, color=ft.colors.TRANSPARENT),
             campo_usuario,
@@ -136,6 +147,7 @@ def LoginView(page: ft.Page):
         shadow=shadow,
     )
 
+    # Layout responsivo (Mantido igual)
     container_imagem = ft.Container(
         content=ft.Stack([
             ft.Image(src="marmores.jpg", fit=ft.ImageFit.COVER, opacity=0.95),
@@ -173,7 +185,6 @@ def LoginView(page: ft.Page):
         campo_senha.width = largura_form
         btn_entrar.width = largura_form
         container_form.width = largura_form + 72 if page.width >= 760 else largura_form
-
         page.update()
 
     page.on_resize = ajustar_layout

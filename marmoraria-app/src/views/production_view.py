@@ -181,4 +181,5 @@ def ProductionView(page: ft.Page):
         page.update()
 
     carregar_dados()
-    return ft.View(route="/producao", padding=0, controls=[ft.Row([Sidebar(page), conteudo], expand=True)])
+    from src.views.layout_base import LayoutBase
+    return LayoutBase(page, conteudo, "Produção")
