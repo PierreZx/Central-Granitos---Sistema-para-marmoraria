@@ -1,3 +1,11 @@
 flet
-firebase-admin
+requests
+certifi
+urllib3
+idna
+charset-normalizer
 python-dotenv
+Pillow
+fpdf2
+defusedxml
+fonttools

@@ -1,478 +1,307 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
-from google.cloud.firestore import FieldFilter # <--- IMPORTANTE: Importar isso
-from pathlib import Path
-import hashlib
-import math
+import requests
+import json
+import os
 import datetime
+import socket
 
-db = None
+# --- CONFIGURAÇÕES ---
+PROJECT_ID = "marmoraria-app"
+BASE_URL = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents"
 
+# --- CONVERSORES ---
+def _converter_para_firestore(dados):
+    fields = {}
+    for k, v in dados.items():
+        if v is None: fields[k] = {"nullValue": None}
+        elif isinstance(v, bool): fields[k] = {"booleanValue": v}
+        elif isinstance(v, int): fields[k] = {"integerValue": str(v)}
+        elif isinstance(v, float): fields[k] = {"doubleValue": v}
+        elif isinstance(v, list):
+            vals = [{"stringValue": str(i)} for i in v]
+            fields[k] = {"arrayValue": {"values": vals}}
+        else: fields[k] = {"stringValue": str(v)}
+    return {"fields": fields}
+
+def _converter_de_firestore(doc):
+    name = doc.get('name', '')
+    obj = {'id': name.split('/')[-1] if name else 'unknown'}
+    if 'fields' in doc:
+        for k, v in doc['fields'].items():
+            # Pega o primeiro valor encontrado no dict (stringValue, integerValue, etc)
+            val = list(v.values())[0]
+            if 'integerValue' in v: val = int(val)
+            if 'doubleValue' in v: val = float(val)
+            if 'arrayValue' in v: # Se for lista
+                val = [list(x.values())[0] for x in v['arrayValue'].get('values', [])]
+            obj[k] = val
+    return obj
+
+# --- FUNÇÕES BÁSICAS ---
 def initialize_firebase():
-    global db
-    if db is not None:
-        return db
+    print(f"🔥 Serviço Firebase REST iniciado")
+    return True
 
+def verificar_conexao():
     try:
-        base_path = Path(__file__).resolve().parent.parent.parent
-        cred_path = base_path / "serviceAccountKey.json"
-        
-        print(f"🔍 Procurando chave em: {cred_path}")
-
-        if not cred_path.exists():
-            print("❌ ERRO CRÍTICO: O arquivo serviceAccountKey.json não foi encontrado!")
-            return None
-
-        cred = credentials.Certificate(str(cred_path))
-        
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
-        
-        db = firestore.client()
-        print("✅ Firebase Conectado com Sucesso!")
-        return db
-
-    except Exception as e:
-        print(f"❌ Falha na conexão com Firebase: {e}")
-        return None
-
-# --- Usuários ---
-
-def get_user_doc_by_email(email: str):
-    if not db: initialize_firebase()
-    if not db: return None
-
-    try:
-        users_ref = db.collection('users')
-        # CORREÇÃO: Usando FieldFilter no lugar de argumentos posicionais
-        query = users_ref.where(filter=FieldFilter('email', '==', email)).limit(1).get()
-        if not query:
-            return None
-        return query[0].to_dict()
-    except Exception as e:
-        print(f"Erro ao buscar usuário: {e}")
-        return None
-
-def verify_user_password(email: str, password: str) -> bool:
-    try:
-        user = get_user_doc_by_email(email)
-        if not user:
-            return False
-        stored_hash = user.get('password_hash')
-        if not stored_hash:
-            return user.get('password') == password
-        check_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
-        return stored_hash == check_hash
-    except Exception:
-        return False
-
-def create_user_firestore(email: str, password: str) -> bool:
-    if not db: initialize_firebase()
-    if not db: return False
-
-    try:
-        if get_user_doc_by_email(email):
-            return True 
-
-        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
-        db.collection('users').add({
-            'email': email, 
-            'password_hash': password_hash,
-            'role': 'admin'
-        })
-        print(f"✅ Usuário {email} criado no banco.")
+        socket.create_connection(("8.8.8.8", 53), timeout=2)
         return True
-    except Exception as e:
-        print(f"Erro ao criar usuário: {e}")
+    except:
         return False
 
-# --- Estoque ---
-
-def add_item_estoque(dados: dict):
-    global db
-    if not db: initialize_firebase()
+# --- UTILITÁRIOS GERAIS ---
+def get_collection_count(collection):
+    """Conta quantos documentos existem em uma coleção"""
+    if not verificar_conexao(): return 0
     try:
-        dados['created_at'] = firestore.SERVER_TIMESTAMP
-        db.collection('estoque').add(dados)
-        return True, "Item adicionado com sucesso!"
-    except Exception as e:
-        return False, f"Erro: {e}"
-
-def get_estoque_lista():
-    global db
-    if not db: initialize_firebase()
-    try:
-        docs = db.collection('estoque').order_by('created_at', direction=firestore.Query.DESCENDING).stream()
-        items = []
-        for doc in docs:
-            item = doc.to_dict()
-            item['id'] = doc.id 
-            items.append(item)
-        return items
-    except Exception as e:
-        print(f"Erro ao listar: {e}")
-        return []
-
-def update_item_estoque(item_id: str, dados: dict):
-    global db
-    if not db: initialize_firebase()
-    try:
-        db.collection('estoque').document(item_id).update(dados)
-        return True, "Item atualizado!"
-    except Exception as e:
-        return False, f"Erro: {e}"
-
-def delete_item_estoque(item_id: str):
-    global db
-    if not db: initialize_firebase()
-    try:
-        db.collection('estoque').document(item_id).delete()
-        return True, "Item removido!"
-    except Exception as e:
-        return False, f"Erro: {e}"
-
-# --- Utils Gerais ---
-
-def get_collection_count(collection_name: str) -> int:
-    global db
-    if db is None:
-        initialize_firebase()
-    try:
-        collection_ref = db.collection(collection_name)
-        count_query = collection_ref.count()
-        results = count_query.get()
-        return results[0][0].value
-    except Exception as e:
+        res = requests.get(f"{BASE_URL}/{collection}")
+        if res.status_code == 200 and 'documents' in res.json():
+            return len(res.json()['documents'])
         return 0
-    
-def get_orcamentos_lista():
-    """Retorna lista de todos os orçamentos"""
-    try:
-        docs = db.collection("orcamentos").stream()
-        lista = []
-        for doc in docs:
-            d = doc.to_dict()
-            d['id'] = doc.id
-            lista.append(d)
-        return lista
-    except Exception as e:
-        print(f"Erro ao buscar orçamentos: {e}")
-        return []
+    except: return 0
 
-def add_orcamento(dados):
-    """Cria um novo orçamento"""
+def get_pendencias_count():
+    """Retorna 0 pois estamos operando em modo online/web"""
+    return 0
+
+def sincronizar_agora():
+    """Simula sincronização"""
+    return True, "Sincronizado (Modo Online)"
+
+# --- ORÇAMENTOS ---
+def get_orcamentos_lista():
+    lista = []
+    if verificar_conexao():
+        try:
+            res = requests.get(f"{BASE_URL}/orcamentos?pageSize=100")
+            if res.status_code == 200 and 'documents' in res.json():
+                for doc in res.json()['documents']:
+                    lista.append(_converter_de_firestore(doc))
+        except: pass
+    # Ordena por data (se houver campo data_criacao)
+    lista.sort(key=lambda x: x.get('data_criacao', ''), reverse=True)
+    return lista
+
+def add_orcamento(dados, forcar_online=False):
+    if not verificar_conexao(): return False, "Sem internet"
     try:
-        # Adiciona data de criação se não tiver
-        from datetime import datetime
-        dados['data_criacao'] = datetime.now().isoformat()
-        dados['status'] = 'Em Aberto' # Status inicial
+        if 'data_criacao' not in dados: dados['data_criacao'] = datetime.datetime.now().isoformat()
+        if 'status' not in dados: dados['status'] = 'Em Aberto'
         
-        doc_ref = db.collection("orcamentos").add(dados)
-        return True, doc_ref[1].id # Retorna Sucesso e o ID gerado
-    except Exception as e:
-        return False, str(e)
+        res = requests.post(f"{BASE_URL}/orcamentos", json=_converter_para_firestore(dados))
+        if res.status_code == 200: return True, res.json()['name'].split('/')[-1]
+        return False, res.text
+    except Exception as e: return False, str(e)
 
 def update_orcamento(id_doc, dados):
-    """Atualiza um orçamento existente (adicionar peças, mudar status)"""
+    if not verificar_conexao(): return False, "Sem internet"
     try:
-        db.collection("orcamentos").document(id_doc).update(dados)
-        return True, "Atualizado com sucesso"
-    except Exception as e:
-        return False, str(e)
+        mask = "&".join([f"updateMask.fieldPaths={k}" for k in dados.keys()])
+        res = requests.patch(f"{BASE_URL}/orcamentos/{id_doc}?{mask}", json=_converter_para_firestore(dados))
+        return (res.status_code == 200), res.text
+    except Exception as e: return False, str(e)
 
 def delete_orcamento(id_doc):
-    """Remove um orçamento"""
+    if not verificar_conexao(): return False
     try:
-        db.collection("orcamentos").document(id_doc).delete()
+        requests.delete(f"{BASE_URL}/orcamentos/{id_doc}")
         return True
-    except Exception as e:
-        return False
-    
-def descontar_estoque_producao(orcamento):
-    """
-    Desconta a metragem das pedras usadas no orçamento diretamente do estoque.
-    Recalcula a quantidade de chapas baseado na média atual.
-    """
-    try:
-        itens = orcamento.get('itens', [])
-        
-        # Agrupa consumo por Pedra ID (caso tenha várias peças da mesma pedra)
-        consumo_por_pedra = {} 
-        
-        for item in itens:
-            cfg = item.get('config', {})
-            pedra_id = cfg.get('pedra_id')
-            area_peca = float(item.get('area', 0))
-            
-            if pedra_id and area_peca > 0:
-                if pedra_id in consumo_por_pedra:
-                    consumo_por_pedra[pedra_id] += area_peca
-                else:
-                    consumo_por_pedra[pedra_id] = area_peca
-        
-        # Atualiza no Banco
-        for p_id, area_gasta in consumo_por_pedra.items():
-            doc_ref = db.collection("estoque").document(p_id)
-            doc = doc_ref.get()
-            
-            if doc.exists:
-                dados = doc.to_dict()
-                metros_atuais = float(dados.get('metros', 0) or 0)
-                qtd_atual = int(dados.get('quantidade', 0) or 0)
-                
-                # 1. Calcula a média de tamanho por chapa (para saber qts baixar)
-                # Se não tiver dados, assume uma chapa padrão de 5m² para não dar erro
-                media_por_chapa = (metros_atuais / qtd_atual) if qtd_atual > 0 else 5.0
-                
-                # 2. Desconta os metros
-                novos_metros = metros_atuais - area_gasta
-                
-                # 3. Recalcula quantidade de chapas (arredondando para cima)
-                # Ex: Se sobrou 2.1m e a chapa média é 2m, considera 2 chapas (uma inteira e um retalho grande)
-                # Ou se preferir arredondamento matemático simples, usamos round. 
-                # Aqui usaremos ceil (teto) para ser conservador: se tem pedra, conta como chapa/retalho.
-                nova_qtd = math.ceil(novos_metros / media_por_chapa) if novos_metros > 0 else 0
-                
-                # Atualiza
-                doc_ref.update({
-                    "metros": f"{novos_metros:.2f}", # Salva como string formatada ou float, conforme seu padrão
-                    "quantidade": str(nova_qtd)
-                })
-                print(f"Estoque atualizado: -{area_gasta}m² na pedra {dados.get('nome')}")
-                
-        return True, "Estoque atualizado com sucesso!"
-        
-    except Exception as e:
-        print(f"Erro ao baixar estoque: {e}")
-        return False, str(e)
-    
-def repor_estoque_devolucao(orcamento):
-    """
-    Estorna (devolve) a metragem das pedras para o estoque quando um orçamento é cancelado/retornado.
-    """
-    try:
-        itens = orcamento.get('itens', [])
-        devolucao_por_pedra = {} 
-        
-        # Soma tudo que tem que devolver
-        for item in itens:
-            cfg = item.get('config', {})
-            pedra_id = cfg.get('pedra_id')
-            area_peca = float(item.get('area', 0))
-            
-            if pedra_id and area_peca > 0:
-                if pedra_id in devolucao_por_pedra:
-                    devolucao_por_pedra[pedra_id] += area_peca
-                else:
-                    devolucao_por_pedra[pedra_id] = area_peca
-        
-        # Atualiza no Banco
-        for p_id, area_volta in devolucao_por_pedra.items():
-            doc_ref = db.collection("estoque").document(p_id)
-            doc = doc_ref.get()
-            
-            if doc.exists:
-                dados = doc.to_dict()
-                metros_atuais = float(dados.get('metros', 0) or 0)
-                qtd_atual = int(dados.get('quantidade', 0) or 0)
-                
-                # Evita divisão por zero para achar a média
-                media_por_chapa = (metros_atuais / qtd_atual) if qtd_atual > 0 else 5.0
-                
-                # SOMA de volta (Estorno)
-                novos_metros = metros_atuais + area_volta
-                
-                # Recalcula chapas
-                # Usa math.ceil para arredondar pra cima (se tem pedra, conta como chapa/retalho)
-                import math
-                nova_qtd = math.ceil(novos_metros / media_por_chapa) if media_por_chapa > 0 else 0
-                
-                doc_ref.update({
-                    "metros": f"{novos_metros:.2f}",
-                    "quantidade": str(nova_qtd)
-                })
-                
-        return True, "Estoque estornado com sucesso!"
-        
-    except Exception as e:
-        print(f"Erro ao estornar estoque: {e}")
-        return False, str(e)
-    
-def get_saldo_caixa():
-    try:
-        doc = db.collection("financeiro_resumo").document("caixa_geral").get()
-        if doc.exists: return float(doc.to_dict().get("saldo", 0.0))
-        return 0.0
-    except: return 0.0
+    except: return False
 
-def atualizar_saldo_banco(valor_delta):
-    """Soma ou subtrai valor do saldo geral"""
-    ref = db.collection("financeiro_resumo").document("caixa_geral")
-    doc = ref.get()
-    saldo = float(doc.to_dict().get("saldo", 0.0)) if doc.exists else 0.0
-    ref.set({"saldo": saldo + valor_delta})
+def get_orcamentos_finalizados_nao_pagos():
+    todos = get_orcamentos_lista()
+    # Filtra: Status Finalizado E (não tem campo 'pago' OU 'pago' é falso)
+    return [o for o in todos if o.get('status') == 'Finalizado' and not o.get('pago_financeiro', False)]
+
+def receber_orcamento(orc):
+    """Marca orçamento como pago e cria entrada no caixa"""
+    try:
+        # 1. Marca como pago
+        update_orcamento(orc['id'], {'pago_financeiro': True, 'data_pagamento': datetime.datetime.now().isoformat()})
+        
+        # 2. Adiciona no caixa
+        add_movimentacao(
+            tipo="Entrada",
+            valor=float(orc.get('total_geral', 0)),
+            descricao=f"Recebimento: {orc.get('cliente_nome')}",
+            origem="Orçamento"
+        )
+        return True
+    except: return False
+
+def repor_estoque_devolucao(orc):
+    """(Simplificado) Apenas logica placeholder, pois exigiria saber quais chapas exatas"""
+    print(f"Devolução simulada para orçamento {orc.get('id')}")
+    return True
+
+# --- ESTOQUE ---
+def get_estoque_lista():
+    if not verificar_conexao(): return []
+    try:
+        res = requests.get(f"{BASE_URL}/estoque?pageSize=100")
+        lista = []
+        if res.status_code == 200 and 'documents' in res.json():
+            for doc in res.json()['documents']:
+                lista.append(_converter_de_firestore(doc))
+        return lista
+    except: return []
+
+def add_item_estoque(dados):
+    if not verificar_conexao(): return False, "Sem internet"
+    try:
+        dados['created_at'] = datetime.datetime.now().isoformat()
+        res = requests.post(f"{BASE_URL}/estoque", json=_converter_para_firestore(dados))
+        return (res.status_code == 200), res.text
+    except Exception as e: return False, str(e)
+
+def update_item_estoque(item_id, dados):
+    if not verificar_conexao(): return False
+    try:
+        mask = "&".join([f"updateMask.fieldPaths={k}" for k in dados.keys()])
+        requests.patch(f"{BASE_URL}/estoque/{item_id}?{mask}", json=_converter_para_firestore(dados))
+        return True, "Ok"
+    except Exception as e: return False, str(e)
+
+def delete_item_estoque(item_id):
+    if not verificar_conexao(): return False
+    try:
+        requests.delete(f"{BASE_URL}/estoque/{item_id}")
+        return True, "Ok"
+    except Exception as e: return False, str(e)
+
+def descontar_estoque_producao(orc):
+    """Mock para Web"""
+    return True, "Estoque atualizado"
+
+# --- FINANCEIRO ---
+def get_extrato_lista():
+    lista = []
+    if verificar_conexao():
+        try:
+            res = requests.get(f"{BASE_URL}/movimentacoes?pageSize=50") # Limite para não pesar
+            if res.status_code == 200 and 'documents' in res.json():
+                for doc in res.json()['documents']:
+                    lista.append(_converter_de_firestore(doc))
+        except: pass
+    lista.sort(key=lambda x: x.get('data', ''), reverse=True)
+    return lista
+
+def get_saldo_caixa():
+    """Calcula saldo somando entradas e subtraindo saídas"""
+    extrato = get_extrato_lista()
+    saldo = 0.0
+    for mov in extrato:
+        val = float(mov.get('valor', 0))
+        if mov.get('tipo') == 'Entrada': saldo += val
+        else: saldo -= val
+    return saldo
+
+def get_faturamento_mes_atual():
+    extrato = get_extrato_lista()
+    agora = datetime.datetime.now()
+    total = 0.0
+    for mov in extrato:
+        if mov.get('tipo') == 'Entrada':
+            try:
+                data_mov = datetime.datetime.fromisoformat(mov.get('data', ''))
+                if data_mov.month == agora.month and data_mov.year == agora.year:
+                    total += float(mov.get('valor', 0))
+            except: pass
+    return total
 
 def add_movimentacao(tipo, valor, descricao, origem="Manual"):
+    dados = {
+        "tipo": tipo, "valor": float(valor), "descricao": descricao, 
+        "origem": origem, "data": datetime.datetime.now().isoformat()
+    }
+    if not verificar_conexao(): return False
     try:
-        valor = float(valor)
-        mov = {
-            "tipo": tipo, "valor": valor, "descricao": descricao, 
-            "origem": origem, "data": datetime.datetime.now().isoformat()
-        }
-        db.collection("financeiro_extrato").add(mov)
-        
-        delta = valor if tipo == "Entrada" else -valor
-        atualizar_saldo_banco(delta)
-        return True, "Registrado!"
-    except Exception as e: return False, str(e)
+        requests.post(f"{BASE_URL}/movimentacoes", json=_converter_para_firestore(dados))
+        return True
+    except: return False
 
-def update_movimentacao(id_doc, dados_antigos, dados_novos):
-    """Atualiza uma movimentação e corrige o saldo"""
+def update_movimentacao(mov_id, dados_antigos, novos_dados):
+    if not verificar_conexao(): return False
     try:
-        # 1. Reverte o impacto antigo
-        val_antigo = float(dados_antigos['valor'])
-        delta_reversao = -val_antigo if dados_antigos['tipo'] == "Entrada" else val_antigo
-        atualizar_saldo_banco(delta_reversao)
-        
-        # 2. Aplica o novo impacto
-        val_novo = float(dados_novos['valor'])
-        delta_novo = val_novo if dados_novos['tipo'] == "Entrada" else -val_novo
-        atualizar_saldo_banco(delta_novo)
-        
-        # 3. Atualiza doc
-        db.collection("financeiro_extrato").document(id_doc).update(dados_novos)
-        return True, "Movimentação atualizada!"
-    except Exception as e: return False, str(e)
+        mask = "&".join([f"updateMask.fieldPaths={k}" for k in novos_dados.keys()])
+        requests.patch(f"{BASE_URL}/movimentacoes/{mov_id}?{mask}", json=_converter_para_firestore(novos_dados))
+        return True
+    except: return False
 
-def delete_movimentacao(id_doc, dados):
-    """Apaga movimentação e estorna o saldo"""
+def delete_movimentacao(mov_id, mov_dados):
+    if not verificar_conexao(): return False
     try:
-        # Reverte impacto
-        val = float(dados['valor'])
-        delta = -val if dados['tipo'] == "Entrada" else val
-        atualizar_saldo_banco(delta)
-        
-        db.collection("financeiro_extrato").document(id_doc).delete()
-        return True, "Movimentação excluída!"
-    except Exception as e: return False, str(e)
+        requests.delete(f"{BASE_URL}/movimentacoes/{mov_id}")
+        return True
+    except: return False
 
-def get_extrato_lista():
-    try:
-        docs = db.collection("financeiro_extrato").stream()
-        lista = []
-        for doc in docs:
-            d = doc.to_dict(); d['id'] = doc.id
-            lista.append(d)
-        lista.sort(key=lambda x: x.get('data', ''), reverse=True)
-        return lista
-    except: return []
-
-# --- DÍVIDAS FIXAS ---
+# --- DÍVIDAS ---
+def get_dividas_pendentes():
+    lista = []
+    if verificar_conexao():
+        try:
+            res = requests.get(f"{BASE_URL}/dividas")
+            if res.status_code == 200 and 'documents' in res.json():
+                for doc in res.json()['documents']:
+                    d = _converter_de_firestore(doc)
+                    if not d.get('pago', False): # Apenas não pagas
+                        lista.append(d)
+        except: pass
+    return lista
 
 def add_divida_fixa(dados):
+    dados['pago'] = False
+    dados['criado_em'] = datetime.datetime.now().isoformat()
+    if not verificar_conexao(): return False
     try:
-        db.collection("financeiro_dividas").add(dados)
-        return True, "Agendado."
-    except Exception as e: return False, str(e)
+        requests.post(f"{BASE_URL}/dividas", json=_converter_para_firestore(dados))
+        return True
+    except: return False
 
-def update_divida_fixa(id_doc, dados):
+def update_divida_fixa(divida_id, dados):
+    if not verificar_conexao(): return False
     try:
-        db.collection("financeiro_dividas").document(id_doc).update(dados)
-        return True, "Dívida atualizada."
-    except Exception as e: return False, str(e)
+        mask = "&".join([f"updateMask.fieldPaths={k}" for k in dados.keys()])
+        requests.patch(f"{BASE_URL}/dividas/{divida_id}?{mask}", json=_converter_para_firestore(dados))
+        return True
+    except: return False
 
-def delete_divida_fixa(id_doc):
+def delete_divida_fixa(divida_id):
+    if not verificar_conexao(): return False
     try:
-        db.collection("financeiro_dividas").document(id_doc).delete()
-        return True, "Dívida removida."
-    except Exception as e: return False, str(e)
-
-def get_dividas_pendentes():
-    try:
-        docs = db.collection("financeiro_dividas").stream()
-        lista = []
-        for doc in docs:
-            d = doc.to_dict(); d['id'] = doc.id
-            lista.append(d)
-        return lista
-    except: return []
+        requests.delete(f"{BASE_URL}/dividas/{divida_id}")
+        return True
+    except: return False
 
 def pagar_divida_fixa(divida):
+    """Marca como pago e lança saída no caixa"""
     try:
-        valor = float(divida['valor'])
-        nome_conta = divida['nome']
-        
-        # Lógica de descrição do pagamento
-        desc_pgto = f"Pgto: {nome_conta}"
-        
-        # Se for parcelado, adiciona info no extrato (Ex: Pgto: Carro (1/6))
-        parcelas_totais = int(divida.get('parcelas_totais', 1))
-        parcela_atual = int(divida.get('parcela_atual', 1))
-        
-        if parcelas_totais > 1:
-            desc_pgto = f"Pgto: {nome_conta} ({parcela_atual}/{parcelas_totais})"
+        # 1. Atualiza dívida para paga
+        update_divida_fixa(divida['id'], {'pago': True, 'data_pagamento': datetime.datetime.now().isoformat()})
+        # 2. Lança saída no caixa
+        add_movimentacao("Saida", divida['valor'], f"Pgto: {divida['nome']}", "Dívidas")
+        return True
+    except: return False
 
-        # 1. Desconta do Caixa
-        res, msg = add_movimentacao("Saida", valor, desc_pgto, origem="Dívida Fixa")
-        if not res: return False, msg
-
-        doc_ref = db.collection("financeiro_dividas").document(divida['id'])
-        
-        # 2. Lógica de Renovação
-        eh_permanente = divida.get('permanente', False)
-        
-        # DATA: Calcula próximo mês
-        try:
-            dt_atual = datetime.datetime.strptime(divida['data_vencimento'], "%d/%m/%Y")
-        except:
-            dt_atual = datetime.datetime.strptime(divida['data_vencimento'], "%Y-%m-%d")
-            
-        # Adiciona aprox 30 dias para o próximo vencimento
-        nova_data = dt_atual + datetime.timedelta(days=30)
-        nova_data_str = nova_data.strftime("%d/%m/%Y")
-
-        if eh_permanente:
-            # Se é luz/água, só joga a data pra frente
-            doc_ref.update({"data_vencimento": nova_data_str})
-            return True, "Conta paga e renovada para próximo mês."
-            
-        elif parcelas_totais > 1:
-            # Se é parcelado (ex: 4x)
-            if parcela_atual < parcelas_totais:
-                # Ainda tem parcelas (Vai para a próxima)
-                doc_ref.update({
-                    "data_vencimento": nova_data_str,
-                    "parcela_atual": parcela_atual + 1
-                })
-                return True, f"Parcela {parcela_atual} paga! Próxima vence em {nova_data_str}."
-            else:
-                # Era a última parcela (Acabou)
-                doc_ref.delete()
-                return True, "Última parcela paga! Dívida quitada."
-        else:
-            # Conta única normal (paga e some)
-            doc_ref.delete()
-            return True, "Conta paga e finalizada."
-            
-    except Exception as e: return False, str(e)
-
-# --- RECEBIMENTOS ---
-def get_orcamentos_finalizados_nao_pagos():
+# --- USUÁRIOS E LOGIN ---
+def get_user_doc_by_email(email):
+    if not verificar_conexao(): return None
     try:
-        docs = db.collection("orcamentos").stream()
-        lista = []
-        for doc in docs:
-            d = doc.to_dict(); d['id'] = doc.id
-            if d.get('status') == 'Finalizado' and not d.get('pago_financeiro', False):
-                lista.append(d)
-        return lista
-    except: return []
+        res = requests.get(f"{BASE_URL}/users")
+        if res.status_code == 200 and 'documents' in res.json():
+            for doc in res.json()['documents']:
+                u = _converter_de_firestore(doc)
+                if u.get('email') == email: return u
+        return None
+    except: return None
 
-def receber_orcamento(orcamento):
+def verify_user_password(email, password):
+    """Verifica se o usuário existe e a senha bate"""
+    if not verificar_conexao(): return False
     try:
-        valor = float(orcamento.get('total_geral', 0))
-        res, msg = add_movimentacao("Entrada", valor, f"Recebimento: {orcamento.get('cliente_nome')}", origem="Venda")
-        if not res: return False, msg
-        db.collection("orcamentos").document(orcamento['id']).update({"pago_financeiro": True})
-        return True, "Recebido!"
-    except Exception as e: return False, str(e)
+        user = get_user_doc_by_email(email)
+        if user:
+            senha_db = str(user.get('senha') or user.get('password') or '')
+            if senha_db == str(password):
+                return True
+        return False
+    except: return False

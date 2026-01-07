@@ -1,24 +1,14 @@
 import flet as ft
-from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE, AUTH_EMAIL, AUTH_PASSWORD
+from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE, COLOR_BACKGROUND, AUTH_EMAIL, AUTH_PASSWORD
 from src.services import firebase_service
-from src.controllers.auth_controller import AuthController
 
 def LoginView(page: ft.Page):
-    """Tela de login responsiva com acesso diferenciado para Produção"""
-
-    radius = 16
-    shadow = ft.BoxShadow(blur_radius=18, color="#00000014", offset=ft.Offset(0, 6))
-
-    gradiente_fundo = ft.LinearGradient(
-        begin=ft.alignment.top_left,
-        end=ft.alignment.bottom_right,
-        colors=[ft.colors.BLUE_GREY_50, ft.colors.GREY_100, ft.colors.WHITE],
-    )
+    """Tela de login com cores Vinho/Bronze"""
 
     def show_snack(msg: str, success: bool = True):
         page.snack_bar = ft.SnackBar(
             content=ft.Text(msg, color=COLOR_WHITE),
-            bgcolor=ft.colors.GREEN_400 if success else ft.colors.RED_400,
+            bgcolor=ft.colors.GREEN_600 if success else ft.colors.RED_600,
             behavior=ft.SnackBarBehavior.FLOATING,
             duration=2000,
         )
@@ -26,168 +16,64 @@ def LoginView(page: ft.Page):
         page.update()
 
     def realizar_login(e):
-        btn_entrar.disabled = True
-        btn_entrar.content = ft.Row(
-            [ft.ProgressRing(width=16, height=16, stroke_width=2, color=COLOR_WHITE), ft.Text("Entrando...", color=COLOR_WHITE)], 
-            alignment=ft.MainAxisAlignment.CENTER
-        )
-        page.update()
-
         email = campo_usuario.value
         senha = campo_senha.value
 
-        # --- LÓGICA DE ACESSO PRODUÇÃO ---
+        # Acesso produção
         if email == "acesso.producao@gmail.com" and senha == "MarmorariaC55":
-            # Define o perfil na sessão do usuário
             page.session.set("user_role", "producao")
-            
             show_snack("Bem-vindo à Área de Produção!", success=True)
-            page.go("/producao") # Redireciona direto para produção
-            return # Encerra aqui para não tentar o login normal
+            page.go("/producao")
+            return
 
-        # --- LÓGICA DE ACESSO ADM (PADRÃO) ---
-        sucesso, mensagem = AuthController.autenticar(email, senha)
+        # Acesso ADM
+        is_local_admin = (email == AUTH_EMAIL and senha == AUTH_PASSWORD)
+        is_db_user = firebase_service.verify_user_password(email, senha)
 
-        if sucesso:
-            # Define o perfil como admin
+        if is_local_admin or is_db_user:
             page.session.set("user_role", "admin")
-            
-            show_snack(mensagem, success=True)
-            page.go("/dashboard") # Redireciona para o painel geral
+            show_snack("Login realizado com sucesso!", success=True)
+            page.go("/dashboard")
         else:
-            # Tratamento de erro visual (tremidinha)
-            btn_entrar.disabled = False
-            btn_entrar.content = ft.Text("Entrar", size=16, weight=ft.FontWeight.W_600)
-            
-            container_form.offset = ft.Offset(-0.02, 0)
-            page.update()
-            import time
-            time.sleep(0.06)
-            container_form.offset = ft.Offset(0.02, 0)
-            page.update()
-            time.sleep(0.06)
-            container_form.offset = ft.Offset(0, 0)
-            page.update()
-            
-            show_snack(mensagem, success=False)
+            show_snack("E-mail ou senha incorretos", success=False)
 
-    def on_submit(e):
-        realizar_login(e)
-
-    # Logo (ajustada para jpg conforme conversamos antes)
     logo = ft.Container(
-        content=ft.Image(src="logo.jpg", width=140, height=140, fit=ft.ImageFit.CONTAIN),
-        padding=ft.padding.only(bottom=8),
+        content=ft.Column([
+            ft.Image(src="logo.jpg", width=80, height=80, fit=ft.ImageFit.CONTAIN),
+            ft.Text("CENTRAL", size=24, weight=ft.FontWeight.W_900, color=COLOR_PRIMARY),
+            ft.Text("GRANITOS", size=14, weight=ft.FontWeight.W_600, color=COLOR_SECONDARY, style=ft.TextStyle(letter_spacing=2)),
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        padding=ft.padding.only(bottom=20),
     )
 
-    campo_usuario = ft.TextField(
-        label="E-mail",
-        hint_text="Digite seu e-mail",
-        height=56,
-        text_size=15,
-        border_radius=12,
-        filled=True,
-        fill_color=ft.colors.WHITE,
-        focused_border_color=COLOR_PRIMARY,
-        cursor_color=COLOR_PRIMARY,
-        prefix_icon=ft.Icon(ft.icons.PERSON_OUTLINE, size=20, color=ft.colors.GREY_500),
-        on_submit=on_submit,
-    )
-
-    campo_senha = ft.TextField(
-        label="Senha",
-        hint_text="Digite sua senha",
-        password=True,
-        can_reveal_password=True,
-        height=56,
-        text_size=15,
-        border_radius=12,
-        filled=True,
-        fill_color=ft.colors.WHITE,
-        focused_border_color=COLOR_PRIMARY,
-        cursor_color=COLOR_PRIMARY,
-        prefix_icon=ft.Icon(ft.icons.LOCK_OUTLINE, size=20, color=ft.colors.GREY_500),
-        on_submit=on_submit,
-    )
+    campo_usuario = ft.TextField(label="E-mail", height=50, border_radius=10, filled=True, focused_border_color=COLOR_PRIMARY)
+    campo_senha = ft.TextField(label="Senha", password=True, height=50, border_radius=10, filled=True, focused_border_color=COLOR_PRIMARY, can_reveal_password=True)
 
     btn_entrar = ft.ElevatedButton(
         content=ft.Text("Entrar", size=16, weight=ft.FontWeight.W_600),
-        height=56,
-        bgcolor=COLOR_PRIMARY,
+        height=50,
+        bgcolor=COLOR_PRIMARY, # VINHO SÓLIDO
         color=COLOR_WHITE,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
         on_click=realizar_login,
     )
-
-    texto_esqueci_senha = ft.TextButton(text="Esqueceu sua senha?", on_click=lambda e: show_snack("Contate o administrador", success=True))
-
-    texto_rodape = ft.Column([
-        ft.Divider(height=1, color=ft.colors.GREY_200),
-        ft.Text("Central Granitos © 2025", size=12, color=ft.colors.GREY_500),
-        ft.Text("Sistema de Gestão Integrada", size=10, color=ft.colors.GREY_400),
-    ], alignment=ft.MainAxisAlignment.CENTER)
 
     container_form = ft.Container(
         content=ft.Column([
             logo,
-            ft.Text("Bem-vindo", size=26, weight=ft.FontWeight.W_700, color=ft.colors.GREY_900),
-            ft.Text("Faça login para continuar", size=14, color=ft.colors.GREY_600),
-            ft.Divider(height=30, color=ft.colors.TRANSPARENT),
+            ft.Text("Bem-vindo de volta", size=20, weight=ft.FontWeight.W_700, color=COLOR_PRIMARY),
+            ft.Container(height=20),
             campo_usuario,
-            ft.Divider(height=12, color=ft.colors.TRANSPARENT),
+            ft.Container(height=10),
             campo_senha,
-            ft.Container(content=texto_esqueci_senha, alignment=ft.alignment.center_right),
-            ft.Divider(height=18, color=ft.colors.TRANSPARENT),
+            ft.Container(height=20),
             btn_entrar,
-            ft.Divider(height=12, color=ft.colors.TRANSPARENT),
-            texto_rodape,
-        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
-        bgcolor=ft.colors.WHITE,
-        padding=36,
-        border_radius=radius,
-        shadow=shadow,
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        bgcolor=COLOR_WHITE,
+        padding=40,
+        border_radius=20,
+        shadow=ft.BoxShadow(blur_radius=20, color="#00000010"),
+        width=400
     )
 
-    # Layout responsivo (Mantido igual)
-    container_imagem = ft.Container(
-        content=ft.Stack([
-            ft.Image(src="marmores.jpg", fit=ft.ImageFit.COVER, opacity=0.95),
-            ft.Container(
-                gradient=ft.LinearGradient(begin=ft.alignment.center_left, end=ft.alignment.center_right, colors=["#00000099", ft.colors.TRANSPARENT])
-            )
-        ]),
-        expand=True,
-    )
-
-    layout_desktop = ft.Row(
-        controls=[
-            ft.Container(content=container_imagem, expand=True),
-            ft.Container(content=container_form, expand=True, alignment=ft.alignment.center, padding=40, bgcolor=gradiente_fundo),
-        ],
-        spacing=0,
-        expand=True,
-    )
-
-    layout_mobile = ft.Column([
-        ft.Container(height=220, content=ft.Image(src="marmores.jpg", fit=ft.ImageFit.COVER)),
-        ft.Container(content=container_form, expand=True, padding=18, bgcolor=gradiente_fundo),
-    ], expand=True)
-
-    def ajustar_layout(e=None):
-        if page.width < 760:
-            page.controls.clear()
-            page.controls.append(ft.Container(content=layout_mobile, expand=True))
-        else:
-            page.controls.clear()
-            page.controls.append(ft.Container(content=layout_desktop, expand=True))
-
-        largura_form = 420 if page.width >= 760 else max(300, page.width - 48)
-        campo_usuario.width = largura_form
-        campo_senha.width = largura_form
-        btn_entrar.width = largura_form
-        container_form.width = largura_form + 72 if page.width >= 760 else largura_form
-        page.update()
-
-    page.on_resize = ajustar_layout
-    ajustar_layout()
-
-    return ft.View(route="/", padding=0, controls=[ft.Container(content=layout_mobile if page.width < 760 else layout_desktop, expand=True)], bgcolor=gradiente_fundo)
+    return ft.View(route="/", padding=0, controls=[ft.Container(content=container_form, alignment=ft.alignment.center, expand=True, bgcolor=COLOR_BACKGROUND)])

@@ -1,162 +1,236 @@
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.utils import ImageReader
+from fpdf import FPDF
 import os
-import webbrowser
 import platform
+import webbrowser
+
+class PDF(FPDF):
+    def __init__(self):
+        super().__init__(orientation='P', unit='pt', format='A4')
+        self.set_auto_page_break(auto=True, margin=40)
 
 def gerar_pdf_orcamento(orcamento):
     cliente_safe = orcamento.get('cliente_nome', 'Cliente').replace(" ", "_")
     filename = f"Orcamento_{cliente_safe}.pdf"
     
-    COR_VINHO = colors.Color(0.45, 0.15, 0.15)
-    COR_BRONZE = colors.Color(0.65, 0.45, 0.25)
-    COR_CINZA = colors.Color(0.3, 0.3, 0.3)
+    # Cores (RGB)
+    COR_VINHO = (115, 38, 38)
+    COR_CINZA = (80, 80, 80)
     
-    c = canvas.Canvas(filename, pagesize=A4)
-    width, height = A4
-    y = height - 50 
-
-    # --- 1. LOGO ---
+    # Configuração Inicial
+    pdf = PDF()
+    pdf.add_page()
+    # Tamanho A4 em points (aprox)
+    width, height = 595.28, 841.89 
+    
+    # --- 1. LOGO E CABEÇALHO ---
+    y = 40 
+    
     dir_atual = os.path.dirname(os.path.abspath(__file__)) 
-    dir_assets = os.path.join(os.path.dirname(os.path.dirname(dir_atual)), 'assets')
+    # Sobe duas pastas para achar o assets (src/services -> src -> raiz -> assets)
+    # Ajuste conforme sua estrutura real. Se assets está na raiz:
+    dir_assets = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(dir_atual))), 'assets')
+    if not os.path.exists(dir_assets):
+        # Tenta pegar relativo ao script se a estrutura for diferente
+        dir_assets = "assets"
+
     caminho_jpg = os.path.join(dir_assets, "logo.jpg")
     caminho_png = os.path.join(dir_assets, "logo.png")
-    
     logo_final = caminho_jpg if os.path.exists(caminho_jpg) else caminho_png if os.path.exists(caminho_png) else None
-    
-    logo_desenhada = False
+
     if logo_final:
         try:
-            img = ImageReader(logo_final)
-            c.drawImage(img, (width-180)/2, height - 130, width=180, height=100, preserveAspectRatio=True, mask='auto')
-            logo_desenhada = True
-            y -= 90 
-        except: pass
+            # x, y, w, h
+            pdf.image(logo_final, x=(width-180)/2, y=y, w=180)
+            y += 110
+        except: 
+            pass
+    else:
+        # Texto se não achar logo
+        pdf.set_font("Helvetica", "B", 24)
+        pdf.set_text_color(*COR_VINHO)
+        pdf.cell(0, 30, "CENTRAL GRANITOS", align="C", ln=True)
+        y += 40
 
-    if not logo_desenhada:
-        c.setFont("Helvetica-Bold", 24); c.setFillColor(COR_VINHO)
-        c.drawCentredString(width/2, height - 60, "CENTRAL GRANITOS")
-        y -= 20
-    else: y -= 10
-
-    c.setFont("Helvetica", 10); c.setFillColor(COR_CINZA)
-    c.drawCentredString(width/2, y, "Especialistas em Mármores e Granitos")
-    y -= 12
-    c.drawCentredString(width/2, y, "Contato: (XX) 99999-9999") 
-    y -= 20; c.setStrokeColor(COR_BRONZE); c.setLineWidth(2); c.line(40, y, width - 40, y); y -= 40
+    pdf.set_y(y)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(*COR_CINZA)
+    pdf.cell(0, 14, "Especialistas em Mármores e Granitos", align="C", ln=True)
+    pdf.cell(0, 14, "Contato: (XX) 99999-9999", align="C", ln=True)
+    
+    y = pdf.get_y() + 10
+    pdf.set_draw_color(165, 115, 65) # Bronze
+    pdf.set_line_width(2)
+    pdf.line(40, y, width - 40, y)
+    y += 20
 
     # --- 2. DADOS CLIENTE ---
-    c.setFillColor(COR_VINHO); c.setFont("Helvetica-Bold", 12); c.drawString(40, y, "DADOS DO CLIENTE")
-    c.setFillColor(colors.Color(0.96, 0.96, 0.96)); c.rect(40, y - 55, width - 80, 45, fill=1, stroke=0)
-    c.setFillColor(colors.black); c.setFont("Helvetica", 11)
-    y -= 25; c.drawString(50, y, f"Cliente: {orcamento.get('cliente_nome', '-')}")
-    c.drawRightString(width - 50, y, f"Contato: {orcamento.get('cliente_contato', '-')}")
-    y -= 20; c.drawString(50, y, f"Endereço: {orcamento.get('cliente_endereco', '-')}")
-    y -= 50
+    pdf.set_y(y)
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_text_color(*COR_VINHO)
+    pdf.cell(0, 20, "DADOS DO CLIENTE", ln=True)
+    
+    y_box = pdf.get_y()
+    pdf.set_fill_color(245, 245, 245)
+    pdf.rect(40, y_box, width - 80, 55, 'F')
+    
+    pdf.set_font("Helvetica", "", 11)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(50, y_box + 10)
+    pdf.cell(0, 16, f"Cliente: {orcamento.get('cliente_nome', '-')}", ln=True)
+    pdf.set_x(50)
+    pdf.cell(0, 16, f"Contato: {orcamento.get('cliente_contato', '-')}", ln=True)
+    pdf.set_x(50)
+    pdf.cell(0, 16, f"Endereço: {orcamento.get('cliente_endereco', '-')}", ln=True)
+    
+    y = y_box + 70
 
     # --- 3. ITENS ---
     itens = orcamento.get('itens', [])
     for i, item in enumerate(itens):
-        if y < 300: c.showPage(); y = height - 50
-        
+        if y > height - 250:
+            pdf.add_page()
+            y = 40
+            
         cfg = item.get('config', {})
         
-        # Cabeçalho
-        c.setFillColor(COR_VINHO); c.rect(40, y, width - 80, 22, fill=1, stroke=0)
-        c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 11)
-        c.drawString(45, y + 7, f"{i+1}. {item['ambiente']}  |  {item['material']}")
-        c.drawRightString(width - 45, y + 7, f"R$ {item['preco_total']:.2f}")
-        y -= 20
+        # Faixa Vinho
+        pdf.set_fill_color(*COR_VINHO)
+        pdf.rect(40, y, width - 80, 25, 'F')
         
-        # Detalhes Técnicos
-        c.setFillColor(colors.black); c.setFont("Helvetica", 9)
-        c.drawString(45, y - 15, f"Medidas: {item['largura']}m x {item['profundidade']}m   |   Área: {item['area']:.2f} m²")
+        pdf.set_xy(45, y + 5)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_text_color(255, 255, 255)
+        texto_item = f"{i+1}. {item['ambiente']}  |  {item['material']}"
+        pdf.cell(300, 15, texto_item)
         
-        # ACABAMENTO E OBSERVAÇÕES
+        pdf.set_x(width - 150)
+        pdf.cell(100, 15, f"R$ {item['preco_total']:.2f}", align="R")
+        
+        y += 35
+        
+        # Detalhes
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Helvetica", "", 10)
+        pdf.set_xy(45, y)
+        pdf.cell(0, 15, f"Medidas: {item['largura']}m x {item['profundidade']}m   |   Area: {item['area']:.2f} m2", ln=True)
+        
         borda = cfg.get('tipo_borda', 'Reto')
         obs = cfg.get('obs', '')
-        y -= 30
-        c.setFont("Helvetica-Bold", 9)
-        c.drawString(45, y, f"Acabamento: {borda}")
+        
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_x(45)
+        pdf.write(15, f"Acabamento: {borda}   ")
+        
         if obs:
-            c.setFont("Helvetica-Oblique", 9); c.setFillColor(colors.red)
-            c.drawString(200, y, f"OBS: {obs}")
+            pdf.set_font("Helvetica", "I", 10)
+            pdf.set_text_color(200, 0, 0)
+            pdf.write(15, f"OBS: {obs}")
+            
+        y += 20
         
         # Desenho
-        box_x, box_y, box_w, box_h = 100, y - 150, 400, 140
-        desenhar_item_no_pdf(c, item, box_x, box_y, box_w, box_h)
-        y -= 180
+        box_h = 140
+        desenhar_item_fpdf(pdf, item, 100, y, 400, box_h)
+        y += box_h + 30
 
     # --- 4. TOTAL ---
-    if y < 100: c.showPage(); y = height - 50
-    c.setStrokeColor(COR_BRONZE); c.setLineWidth(2); c.line(40, y, width - 40, y); y -= 30
-    c.setFillColor(COR_VINHO); c.setFont("Helvetica-Bold", 14); c.drawString(40, y, "TOTAL GERAL")
-    c.setFillColor(colors.black); c.setFont("Helvetica-Bold", 22); c.drawRightString(width - 40, y, f"R$ {orcamento.get('total_geral', 0):.2f}")
-    c.setFont("Helvetica", 8); c.setFillColor(colors.grey); c.drawCentredString(width/2, 30, "Orçamento válido por 15 dias | Central Granitos")
-    c.save()
+    if y > height - 100: pdf.add_page(); y = 40
+    
+    pdf.set_draw_color(165, 115, 65)
+    pdf.line(40, y, width - 40, y)
+    y += 20
+    
+    pdf.set_xy(40, y)
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.set_text_color(*COR_VINHO)
+    pdf.cell(200, 30, "TOTAL GERAL")
+    
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_x(width - 200)
+    pdf.cell(150, 30, f"R$ {orcamento.get('total_geral', 0):.2f}", align="R")
+    
+    pdf.set_y(height - 40)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(128, 128, 128)
+    pdf.cell(0, 10, "Orcamento valido por 15 dias | Central Granitos", align="C")
+
+    pdf.output(filename)
+    
+    # Abre o PDF (Android tenta abrir com app padrão)
     try:
         if platform.system() == "Windows": os.startfile(filename)
         else: webbrowser.open(filename)
     except: pass
     return True
 
-def desenhar_item_no_pdf(c, item, box_x, box_y, box_w, box_h):
-    cfg = item.get('config', {})
+def desenhar_item_fpdf(pdf, item, box_x, box_y, box_w, box_h):
     try: larg_real = float(item['largura']); prof_real = float(item['profundidade'])
     except: return
+    
     if larg_real <= 0 or prof_real <= 0: return
-
+    
     scale = min((box_w - 60) / larg_real, (box_h - 60) / prof_real) * 0.8
     w_draw = larg_real * scale; h_draw = prof_real * scale
     sx = box_x + (box_w - w_draw) / 2; sy = box_y + (box_h - h_draw) / 2
     
-    C_PEDRA, C_RODA, C_SAIA, C_LINHA = colors.Color(0.92, 0.92, 0.92), colors.Color(0.8, 0.8, 0.8), colors.Color(0.6, 0.6, 0.6), colors.black
-    c.setLineWidth(1)
-
-    c.setFillColor(C_RODA); c.setStrokeColor(C_LINHA)
+    pdf.set_line_width(1)
+    cfg = item.get('config', {})
+    
+    # Rodas
+    pdf.set_fill_color(200, 200, 200) 
     def draw_roda(k, pos):
-        vals = cfg.get(k, {}); 
+        vals = cfg.get(k, {})
         if vals.get('chk'):
             hr = float(vals.get('a', 0.10)) * scale
-            if pos == 't': c.rect(sx, sy + h_draw, w_draw, hr, fill=1)
-            if pos == 'b': c.rect(sx, sy - hr, w_draw, hr, fill=1)
-            if pos == 'l': c.rect(sx - hr, sy, hr, h_draw, fill=1)
-            if pos == 'r': c.rect(sx + w_draw, sy, hr, h_draw, fill=1)
-    draw_roda('rfundo', 't'); draw_roda('rfrente', 'b'); draw_roda('resq', 'l'); draw_roda('rdir', 'r')
+            if pos == 't': pdf.rect(sx, sy - hr, w_draw, hr, 'F')
+            if pos == 'b': pdf.rect(sx, sy + h_draw, w_draw, hr, 'F')
+            if pos == 'l': pdf.rect(sx - hr, sy, hr, h_draw, 'F')
+            if pos == 'r': pdf.rect(sx + w_draw, sy, hr, h_draw, 'F')
+    draw_roda('rfundo', 't'); draw_roda('rfrente', 'b')
+    draw_roda('resq', 'l'); draw_roda('rdir', 'r')
 
-    c.setFillColor(C_PEDRA); c.rect(sx, sy, w_draw, h_draw, fill=1, stroke=1)
-
-    c.setFillColor(C_SAIA); esp = 6
+    # Pedra
+    pdf.set_fill_color(235, 235, 235)
+    pdf.rect(sx, sy, w_draw, h_draw, 'FD')
+    
+    # Saia
+    pdf.set_fill_color(150, 150, 150)
+    esp = 6
     def draw_saia(k, pos):
         vals = cfg.get(k, {})
         if vals.get('chk'):
-            if pos == 't': c.rect(sx, sy + h_draw - esp, w_draw, esp, fill=1, stroke=0)
-            if pos == 'b': c.rect(sx, sy, w_draw, esp, fill=1, stroke=0)
-            if pos == 'l': c.rect(sx, sy, esp, h_draw, fill=1, stroke=0)
-            if pos == 'r': c.rect(sx + w_draw - esp, sy, esp, h_draw, fill=1, stroke=0)
-    draw_saia('sfundo', 't'); draw_saia('sfrente', 'b'); draw_saia('sesq', 'l'); draw_saia('sdir', 'r')
+            if pos == 't': pdf.rect(sx, sy, w_draw, esp, 'F')
+            if pos == 'b': pdf.rect(sx, sy + h_draw - esp, w_draw, esp, 'F')
+            if pos == 'l': pdf.rect(sx, sy, esp, h_draw, 'F')
+            if pos == 'r': pdf.rect(sx + w_draw - esp, sy, esp, h_draw, 'F')
+    draw_saia('sfundo', 't'); draw_saia('sfrente', 'b')
+    draw_saia('sesq', 'l'); draw_saia('sdir', 'r')
 
-    c.setFillColor(colors.white)
+    # Cortes
+    pdf.set_fill_color(255, 255, 255)
     cuba = cfg.get('cuba', {})
     if cuba.get('chk'):
         dist = float(cuba.get('pos', 0)) * scale
-        cw = float(cuba.get('larg', 0.5)) * scale # USA LARGURA REAL
-        ch = float(cuba.get('prof', 0.4)) * scale # USA PROF REAL
-        c.roundRect(sx + dist, sy + (h_draw - ch)/2, cw, ch, 4, fill=0, stroke=1)
-        c.circle(sx + dist + cw/2, sy + (h_draw - ch)/2 + ch - 8, 3, fill=0, stroke=1)
+        cw = float(cuba.get('larg', 0.5)) * scale
+        ch = float(cuba.get('prof', 0.4)) * scale
+        cy = sy + (h_draw - ch) / 2
+        pdf.rect(sx + dist, cy, cw, ch, 'D')
+        pdf.ellipse(sx + dist + cw/2 - 3, cy + ch - 8, 6, 6, 'D')
 
     cook = cfg.get('cook', {})
     if cook.get('chk'):
         dist = float(cook.get('pos', 0)) * scale
-        cw = float(cook.get('larg', 0.6)) * scale # USA LARGURA REAL
-        ch = float(cook.get('prof', 0.45)) * scale # USA PROF REAL
-        cx, cy = sx + dist, sy + (h_draw - ch)/2
-        c.rect(cx, cy, cw, ch, fill=0, stroke=1)
-        c.circle(cx + cw*0.25, cy + ch*0.25, 4, stroke=1)
-        c.circle(cx + cw*0.75, cy + ch*0.75, 4, stroke=1)
+        cw = float(cook.get('larg', 0.6)) * scale
+        ch = float(cook.get('prof', 0.45)) * scale
+        cy = sy + (h_draw - ch) / 2
+        cx = sx + dist
+        pdf.rect(cx, cy, cw, ch, 'D')
+        pdf.ellipse(cx + cw*0.25, cy + ch*0.25, 8, 8, 'D')
+        pdf.ellipse(cx + cw*0.75, cy + ch*0.75, 8, 8, 'D')
 
-    c.setFillColor(colors.black); c.setFont("Helvetica", 9)
-    c.drawCentredString(sx + w_draw/2, sy - 12, f"{larg_real}m")
-    c.drawString(sx - 35, sy + h_draw/2, f"{prof_real}m")
+    # Cotas
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(0, 0, 0)
+    pdf.text(sx + w_draw/2 - 10, sy - 5, f"{larg_real}m")
+    pdf.text(sx - 35, sy + h_draw/2, f"{prof_real}m")
