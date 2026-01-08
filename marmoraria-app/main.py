@@ -15,65 +15,66 @@ def main(page: ft.Page):
     def route_change(e):
         page.views.clear()
         
-        # ROTA DE LOGIN
+        # Função auxiliar para montar a View com AppBar e Drawer extraídos do LayoutBase
+        def append_view(route_name, view_function):
+            try:
+                conteudo_layout = view_function(page)
+                
+                # Extrai AppBar e Drawer que guardamos no .data do LayoutBase
+                appbar_final = None
+                drawer_final = None
+                
+                if hasattr(conteudo_layout, 'data') and conteudo_layout.data:
+                    # Se for um AppBar direto
+                    if isinstance(conteudo_layout.data, ft.AppBar):
+                        appbar_final = conteudo_layout.data
+                    # Se for um dicionário (caso precise guardar os dois no futuro)
+                    elif isinstance(conteudo_layout.data, dict):
+                        appbar_final = conteudo_layout.data.get("appbar")
+                        drawer_final = conteudo_layout.data.get("drawer")
+
+                page.views.append(
+                    ft.View(
+                        route=route_name,
+                        controls=[conteudo_layout],
+                        appbar=appbar_final,
+                        drawer=drawer_final,
+                        padding=0
+                    )
+                )
+            except Exception as err:
+                traceback.print_exc()
+                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro em {route_name}: {err}")]))
+
+        # --- MAPEAMENTO DE ROTAS ---
         if page.route == "/login" or page.route == "/" or page.route == "":
-            try:
-                from src.views.login_view import LoginView
-                page.views.append(ft.View(route="/login", controls=[LoginView(page)], padding=0))
-            except Exception as err:
-                traceback.print_exc()
-                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro ao carregar Login: {err}")]))
+            from src.views.login_view import LoginView
+            page.views.append(ft.View(route="/login", controls=[LoginView(page)], padding=0))
 
-        # ROTA DASHBOARD
         elif page.route == "/dashboard":
-            try:
-                from src.views.dashboard_view import DashboardView
-                page.views.append(ft.View(route="/dashboard", controls=[DashboardView(page)], padding=0))
-            except Exception as err:
-                traceback.print_exc()
-                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Dashboard: {err}")]))
+            from src.views.dashboard_view import DashboardView
+            append_view("/dashboard", DashboardView)
 
-        # ROTA ESTOQUE
         elif page.route == "/estoque":
-            try:
-                from src.views.inventory_view import InventoryView
-                page.views.append(ft.View(route="/estoque", controls=[InventoryView(page)], padding=0))
-            except Exception as err:
-                traceback.print_exc()
-                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Estoque: {err}")]))
+            from src.views.inventory_view import InventoryView
+            append_view("/estoque", InventoryView)
 
-        # ROTA ORÇAMENTOS
         elif page.route == "/orcamentos":
-            try:
-                from src.views.budget_view import BudgetView
-                page.views.append(ft.View(route="/orcamentos", controls=[BudgetView(page)], padding=0))
-            except Exception as err:
-                traceback.print_exc()
-                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Orçamentos: {err}")]))
+            from src.views.budget_view import BudgetView
+            append_view("/orcamentos", BudgetView)
 
-        # ROTA FINANCEIRO
         elif page.route == "/financeiro":
-            try:
-                from src.views.financial_view import FinancialView
-                page.views.append(ft.View(route="/financeiro", controls=[FinancialView(page)], padding=0))
-            except Exception as err:
-                traceback.print_exc()
-                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Financeiro: {err}")]))
+            from src.views.financial_view import FinancialView
+            append_view("/financeiro", FinancialView)
 
-        # ROTA PRODUÇÃO
         elif page.route == "/producao":
-            try:
-                from src.views.production_view import ProductionView
-                page.views.append(ft.View(route="/producao", controls=[ProductionView(page)], padding=0))
-            except Exception as err:
-                traceback.print_exc()
-                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Produção: {err}")]))
+            from src.views.production_view import ProductionView
+            append_view("/producao", ProductionView)
         
         page.update()
 
     page.on_route_change = route_change
     
-    # Redirecionamento inicial
     if page.route == "/" or page.route == "":
         page.go("/login")
     else:

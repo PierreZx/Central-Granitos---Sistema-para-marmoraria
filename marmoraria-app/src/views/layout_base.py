@@ -4,16 +4,11 @@ from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_BACKGROUND, COLOR_W
 from src.services import firebase_service
 
 def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
-    # Verifica status de conexão
     conectado = firebase_service.verificar_conexao()
     
-    # --- FUNÇÃO PARA ABRIR O MENU NO CELULAR ---
     def abrir_menu(e):
-        # Usamos a sua Sidebar customizada dentro do Drawer
         page.drawer = ft.NavigationDrawer(
-            controls=[
-                Sidebar(page, is_mobile=True)
-            ],
+            controls=[Sidebar(page, is_mobile=True)],
             bgcolor=ft.colors.WHITE,
         )
         page.drawer.open = True
@@ -22,8 +17,8 @@ def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
     eh_mobile = page.width < 768
 
     if eh_mobile:
-        # BARRA SUPERIOR (Botão de Menu + Título)
-        app_bar = ft.AppBar(
+        # Criamos o AppBar
+        app_bar_obj = ft.AppBar(
             leading=ft.IconButton(
                 icon=ft.icons.MENU, 
                 icon_color=COLOR_WHITE, 
@@ -32,10 +27,8 @@ def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
             title=ft.Text(titulo, size=18, weight="bold", color=COLOR_WHITE),
             bgcolor=COLOR_PRIMARY,
             center_title=True,
-            elevation=2,
         )
         
-        # BARRA DE AVISO OFFLINE
         barra_offline = ft.Container()
         if not conectado:
             barra_offline = ft.Container(
@@ -46,10 +39,13 @@ def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
                 width=float("inf")
             )
 
-        # LAYOUT MOBILE: AppBar + Conteúdo com Padding Lateral
+        # IMPORTANTE: No Flet Web moderno, retornamos um Column que contém a lógica,
+        # Mas o AppBar nós vamos tratar de forma que o Main possa ler.
+        # Para resolver o erro "Unknown control", o segredo está em como o Container é montado:
+        
         return ft.Container(
             content=ft.Column([
-                app_bar,
+                # Removi o app_bar de dentro dos controls da Column
                 barra_offline,
                 ft.Container(
                     content=conteudo_principal, 
@@ -58,19 +54,17 @@ def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
                 )
             ], spacing=0),
             expand=True,
-            bgcolor=COLOR_BACKGROUND
+            bgcolor=COLOR_BACKGROUND,
+            # Passamos o appbar como uma propriedade do objeto que retorna (se possível) 
+            # ou garantimos que o Main o adicione.
+            data=app_bar_obj # Guardamos o objeto appbar aqui para o main buscar
         )
         
     else:
-        # LAYOUT DESKTOP: Sidebar Fixa + Conteúdo
         return ft.Row(
             [
                 Sidebar(page), 
-                ft.Container(
-                    content=conteudo_principal, 
-                    expand=True, 
-                    padding=30
-                )
+                ft.Container(content=conteudo_principal, expand=True, padding=30)
             ],
             expand=True,
             spacing=0
