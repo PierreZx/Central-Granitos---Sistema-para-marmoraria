@@ -200,3 +200,34 @@ def get_orcamentos_finalizados_nao_pagos():
         return [o for o in todos if o.get('status') == 'FINALIZADO' and o.get('pagamento') != 'PAGO']
     except:
         return []
+    
+# --- ADICIONE ISSO NO FINAL DO SEU firebase_service.py ---
+
+def get_extrato_lista():
+    """Busca todas as movimentações financeiras para exibir no extrato"""
+    # A sua View está chamando essa função para listar as entradas/saídas
+    # Vamos buscar da coleção 'financeiro' ou 'movimentacoes' (ajuste conforme seu banco)
+    try:
+        dados = get_collection("financeiro")
+        # Ordena por data (as mais recentes primeiro) se o campo 'data' existir
+        return sorted(dados, key=lambda x: x.get('data', ''), reverse=True)
+    except:
+        return []
+
+def get_orcamentos_lista():
+    """Busca a lista de orçamentos para o Grid de Cards"""
+    # Essa função é a que a BudgetView que refizemos vai precisar também!
+    return get_collection("orcamentos")
+
+def add_orcamento(dados):
+    """Atalho para adicionar orçamento e retornar o ID (usado no popup de novo cliente)"""
+    # O Firestore REST API retorna o nome do doc criado no POST
+    try:
+        import requests
+        res = requests.post(f"{BASE_URL}/orcamentos", json=_converter_para_firestore(dados))
+        if res.status_code == 200:
+            id_gerado = res.json().get('name', '').split('/')[-1]
+            return True, id_gerado
+        return False, None
+    except:
+        return False, None
