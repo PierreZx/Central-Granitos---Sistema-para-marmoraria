@@ -152,7 +152,11 @@ def InventoryView(page: ft.Page):
             content=ft.Text(f"Deseja realmente excluir '{nome_item}'?"),
             actions=[
                 ft.TextButton("Cancelar", on_click=fechar_dialogo),
-                ft.TextButton("Excluir", color=COLOR_ERROR, on_click=deletar)
+                ft.TextButton(
+                    "Excluir", 
+                    style=ft.ButtonStyle(color=COLOR_ERROR), # O parâmetro 'color' aqui dentro funciona
+                    on_click=deletar
+                )
             ]
         )
         page.dialog.open = True
