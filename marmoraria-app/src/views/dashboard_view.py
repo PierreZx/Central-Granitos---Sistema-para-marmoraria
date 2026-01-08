@@ -20,12 +20,23 @@ def DashboardView(page: ft.Page):
                         alignment=ft.alignment.center
                     ),
                     ft.Column([
-                        ft.Text(titulo, color=ft.colors.GREY_700, size=12, weight="w500"),
-                        ft.Text(valor, size=20, weight="bold", color=cor_valor),
+                        # Aplicando Opção B: Uso de TextStyle para propriedades de fonte
+                        ft.Text(
+                            titulo, 
+                            color=ft.colors.GREY_700, 
+                            size=12, 
+                            style=ft.TextStyle(weight="w500") # Exemplo de uso do style
+                        ),
+                        ft.Text(
+                            valor, 
+                            size=20, 
+                            color=cor_valor,
+                            style=ft.TextStyle(weight="bold") # Centralizando pesos e estilos aqui
+                        ),
                     ], spacing=0, expand=True)
                 ], alignment="start", spacing=12)
             ]),
-            col={"xs": 12, "sm": 6, "md": 4}, # No celular (xs) ocupa a linha toda
+            col={"xs": 12, "sm": 6, "md": 4},
             padding=15,
             bgcolor=COLOR_WHITE,
             border_radius=12,
@@ -33,7 +44,13 @@ def DashboardView(page: ft.Page):
         )
 
     conteudo_corpo = ft.Column([
-        ft.Text("Visão Geral", size=24, weight="bold", color=COLOR_TEXT),
+        # Caso queira usar letter_spacing futuramente, deve ser assim:
+        ft.Text(
+            "Visão Geral", 
+            size=24, 
+            color=COLOR_TEXT,
+            style=ft.TextStyle(weight="bold", letter_spacing=0.5) 
+        ),
         ft.Divider(height=10, color="transparent"),
         
         ft.ResponsiveRow([
@@ -43,7 +60,12 @@ def DashboardView(page: ft.Page):
         ], spacing=15),
         
         ft.Divider(height=20, color="transparent"),
-        ft.Text("Ações Rápidas", weight="bold", size=18, color=COLOR_TEXT),
+        ft.Text(
+            "Ações Rápidas", 
+            size=18, 
+            color=COLOR_TEXT,
+            style=ft.TextStyle(weight="bold")
+        ),
         ft.ResponsiveRow([
             ft.Container(
                 col={"xs": 12, "sm": 6, "md": 3},
