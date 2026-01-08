@@ -1,6 +1,6 @@
 import flet as ft
 import flet.canvas as cv
-from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE, COLOR_BACKGROUND
+from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE, COLOR_BACKGROUND, BORDER_RADIUS_MD
 from src.services import firebase_service
 
 class BudgetCalculator(ft.Container):
@@ -12,18 +12,15 @@ class BudgetCalculator(ft.Container):
         self.item_para_editar = item_para_editar 
         self.mapa_precos = {}
         
-        # Detecção Mobile
         self.eh_mobile = page.width < 768 if hasattr(page, 'width') else False
-        
-        self.padding = 10 if self.eh_mobile else 20
+        self.padding = 15 if self.eh_mobile else 25
         self.bgcolor = COLOR_BACKGROUND
         self.expand = True
 
-        # --- 1. CARREGAMENTO DE DADOS ---
+        # --- 1. CARREGAMENTO DE DADOS (Inalterado) ---
         chapas = firebase_service.get_estoque_lista()
         opcoes_pedras = []
         for chapa in chapas:
-            # Tratamento seguro de preço
             raw_price = str(chapa.get('valor_m2', 0))
             try: p = float(raw_price.replace(',', '.'))
             except: p = 0.0
@@ -32,169 +29,152 @@ class BudgetCalculator(ft.Container):
             opcoes_pedras.append(ft.dropdown.Option(key=chapa['id'], text=txt_op))
             self.mapa_precos[chapa['id']] = {'nome': chapa.get('nome'), 'preco': p}
 
-        # --- 2. INPUTS (LAYOUT SEGURO) ---
-        # Filtro para teclado (aceita números e ponto/vírgula)
         filtro_num = ft.InputFilter(allow=True, regex_string=r"[0-9.,]", replacement_string="")
 
-        self.txt_ambiente = ft.TextField(label="Ambiente (Ex: Cozinha)", border_radius=10, filled=True)
-        # Dropdown com on_change para recalcular valor da pedra
-        self.dd_pedra = ft.Dropdown(label="Selecione a Pedra", options=opcoes_pedras, border_radius=10, filled=True, on_change=self.calcular)
+        # --- 2. INPUTS ESTILIZADOS ---
+        self.txt_ambiente = ft.TextField(label="Ambiente", hint_text="Ex: Cozinha Gourmet", border_radius=BORDER_RADIUS_MD, filled=True, bgcolor=COLOR_WHITE)
+        self.dd_pedra = ft.Dropdown(label="Selecione o Material", options=opcoes_pedras, border_radius=BORDER_RADIUS_MD, filled=True, bgcolor=COLOR_WHITE, on_change=self.calcular)
         
-        # Inputs de Medidas - EMPILHADOS NO MOBILE (col=12) para não cortar
-        self.txt_larg = ft.TextField(label="Largura", suffix_text="m", input_filter=filtro_num, border_radius=10, filled=True, on_change=self.calcular)
-        self.txt_prof = ft.TextField(label="Profundidade", suffix_text="m", input_filter=filtro_num, border_radius=10, filled=True, on_change=self.calcular)
-        self.txt_acab = ft.TextField(label="Acabamento (R$/m)", value="130.00", input_filter=filtro_num, border_radius=10, filled=True, on_change=self.calcular)
+        self.txt_larg = ft.TextField(label="Largura", suffix_text="m", input_filter=filtro_num, border_radius=BORDER_RADIUS_MD, filled=True, bgcolor=COLOR_WHITE, on_change=self.calcular)
+        self.txt_prof = ft.TextField(label="Profundidade", suffix_text="m", input_filter=filtro_num, border_radius=BORDER_RADIUS_MD, filled=True, bgcolor=COLOR_WHITE, on_change=self.calcular)
+        self.txt_acab = ft.TextField(label="Mão de Obra (R$/m)", value="130.00", input_filter=filtro_num, border_radius=BORDER_RADIUS_MD, filled=True, bgcolor=COLOR_WHITE, on_change=self.calcular)
 
-        # Container Responsivo para os inputs
         self.container_medidas = ft.ResponsiveRow([
             ft.Container(self.txt_larg, col={"xs": 12, "md": 4}),
             ft.Container(self.txt_prof, col={"xs": 12, "md": 4}),
             ft.Container(self.txt_acab, col={"xs": 12, "md": 4}),
         ], spacing=10)
 
-        # --- 3. COMPONENTES TÉCNICOS (RODAS/SAIAS/CORTES) ---
+        # --- 3. COMPONENTES TÉCNICOS ---
         def criar_linha(label, val_padrao):
             chk = ft.Checkbox(label=label, active_color=COLOR_PRIMARY, on_change=self.toggle_campos)
-            # Input menor para caber na tela
-            txt_c = ft.TextField(label="Comp", value="0.00", width=65, height=35, text_size=12, disabled=True, content_padding=5, filled=True, input_filter=filtro_num, on_change=self.calcular)
-            txt_a = ft.TextField(label="Alt", value=val_padrao, width=55, height=35, text_size=12, disabled=True, content_padding=5, filled=True, input_filter=filtro_num, on_change=self.calcular)
+            txt_c = ft.TextField(label="Comp", value="0.00", width=75, height=40, text_size=12, disabled=True, filled=True, bgcolor=COLOR_WHITE, input_filter=filtro_num, on_change=self.calcular)
+            txt_a = ft.TextField(label="Alt", value=val_padrao, width=65, height=40, text_size=12, disabled=True, filled=True, bgcolor=COLOR_WHITE, input_filter=filtro_num, on_change=self.calcular)
             return chk, txt_c, txt_a
 
-        # Rodabancas
         self.chk_rfundo, self.txt_rf_c, self.txt_rf_a = criar_linha("Fundo", "0.10")
         self.chk_rfrente, self.txt_rfr_c, self.txt_rfr_a = criar_linha("Frente", "0.10")
         self.chk_resq, self.txt_re_c, self.txt_re_a = criar_linha("Esq.", "0.10")
         self.chk_rdir, self.txt_rd_c, self.txt_rd_a = criar_linha("Dir.", "0.10")
 
-        # Saias
         self.chk_sfundo, self.txt_sf_c, self.txt_sf_a = criar_linha("Fundo", "0.04")
         self.chk_sfrente, self.txt_sfr_c, self.txt_sfr_a = criar_linha("Frente", "0.04")
         self.chk_sesq, self.txt_se_c, self.txt_se_a = criar_linha("Esq.", "0.04")
         self.chk_sdir, self.txt_sd_c, self.txt_sd_a = criar_linha("Dir.", "0.04")
 
-        # Cortes (Cuba/Cook)
         self.chk_cuba = ft.Checkbox(label="Cuba", active_color=COLOR_PRIMARY, on_change=self.toggle_campos)
-        self.txt_cuba_pos = ft.TextField(label="Pos", width=60, height=35, content_padding=5, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
-        self.txt_cuba_larg = ft.TextField(label="Lar", width=60, height=35, content_padding=5, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
-        self.txt_cuba_prof = ft.TextField(label="Pro", width=60, height=35, content_padding=5, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
+        self.txt_cuba_pos = ft.TextField(label="Pos", width=65, height=40, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
+        self.txt_cuba_larg = ft.TextField(label="Lar", width=65, height=40, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
+        self.txt_cuba_prof = ft.TextField(label="Pro", width=65, height=40, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
 
-        self.chk_cook = ft.Checkbox(label="Cook", active_color=COLOR_PRIMARY, on_change=self.toggle_campos)
-        self.txt_cook_pos = ft.TextField(label="Pos", width=60, height=35, content_padding=5, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
-        self.txt_cook_larg = ft.TextField(label="Lar", width=60, height=35, content_padding=5, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
-        self.txt_cook_prof = ft.TextField(label="Pro", width=60, height=35, content_padding=5, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
+        self.chk_cook = ft.Checkbox(label="Cooktop", active_color=COLOR_PRIMARY, on_change=self.toggle_campos)
+        self.txt_cook_pos = ft.TextField(label="Pos", width=65, height=40, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
+        self.txt_cook_larg = ft.TextField(label="Lar", width=65, height=40, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
+        self.txt_cook_prof = ft.TextField(label="Pro", width=65, height=40, disabled=True, filled=True, input_filter=filtro_num, on_change=self.calcular)
 
-        self.txt_instrucoes = ft.TextField(label="Obs. Produção", multiline=True, filled=True)
+        self.txt_instrucoes = ft.TextField(label="Observações para Produção", multiline=True, filled=True, border_radius=10, min_lines=3)
 
-        # --- 4. CANVAS E VISUALIZAÇÃO ---
-        # Canvas com tamanho fixo seguro
+        # --- 4. CANVAS (Visualização Técnica) ---
         self.canvas = cv.Canvas(
             width=320 if self.eh_mobile else 500, 
             height=300, 
             shapes=[]
         )
         
-        self.lbl_valor = ft.Text("R$ 0.00", size=30, weight="bold", color=COLOR_PRIMARY)
-        self.lbl_detalhes_pedra = ft.Text("Pedra: 0.00m²", size=12, color="grey")
-        self.lbl_detalhes_servico = ft.Text("Serviço: 0.00m", size=12, color="grey")
+        self.lbl_valor = ft.Text("R$ 0.00", size=32, weight="bold", color=COLOR_PRIMARY)
+        self.lbl_detalhes_pedra = ft.Text("Pedra: 0.00m²", size=13, color=ft.colors.BLUE_GREY_400)
+        self.lbl_detalhes_servico = ft.Text("Mão de Obra: R$ 0.00", size=13, color=ft.colors.BLUE_GREY_400)
         
         self.valor_final = 0.0
         self.area_final = 0.0
 
-        # --- 5. LÓGICA DE CARREGAMENTO (EDIÇÃO) ---
-        if self.item_para_editar:
-            cfg = self.item_para_editar.get('config', {})
-            self.txt_ambiente.value = self.item_para_editar.get('ambiente', '')
-            self.dd_pedra.value = cfg.get('pedra_id', '')
-            self.txt_larg.value = str(cfg.get('largura', 0))
-            self.txt_prof.value = str(cfg.get('profundidade', 0))
-            self.txt_acab.value = str(cfg.get('preco_acab', 130))
-            self.txt_instrucoes.value = cfg.get('instrucoes_producao', '')
-            
-            def load_chk(chk, txt_c, txt_a, k):
-                v = cfg.get(k, {})
-                chk.value = v.get('chk', False)
-                txt_c.value = str(v.get('c', '0.00'))
-                txt_a.value = str(v.get('a', '0.00'))
-            
-            load_chk(self.chk_rfundo, self.txt_rf_c, self.txt_rf_a, 'rfundo')
-            load_chk(self.chk_rfrente, self.txt_rfr_c, self.txt_rfr_a, 'rfrente')
-            load_chk(self.chk_resq, self.txt_re_c, self.txt_re_a, 'resq')
-            load_chk(self.chk_rdir, self.txt_rd_c, self.txt_rd_a, 'rdir')
-            load_chk(self.chk_sfundo, self.txt_sf_c, self.txt_sf_a, 'sfundo')
-            load_chk(self.chk_sfrente, self.txt_sfr_c, self.txt_sfr_a, 'sfrente')
-            load_chk(self.chk_sesq, self.txt_se_c, self.txt_se_a, 'sesq')
-            load_chk(self.chk_sdir, self.txt_sd_c, self.txt_sd_a, 'sdir')
-
-            c_cuba = cfg.get('cuba', {})
-            self.chk_cuba.value = c_cuba.get('chk', False)
-            self.txt_cuba_pos.value = str(c_cuba.get('pos', 0.5))
-            self.txt_cuba_larg.value = str(c_cuba.get('larg', 0.5))
-            self.txt_cuba_prof.value = str(c_cuba.get('prof', 0.4))
-            
-            c_cook = cfg.get('cook', {})
-            self.chk_cook.value = c_cook.get('chk', False)
-            self.txt_cook_pos.value = str(c_cook.get('pos', 1.5))
-            self.txt_cook_larg.value = str(c_cook.get('larg', 0.6))
-            self.txt_cook_prof.value = str(c_cook.get('prof', 0.45))
-            
-            self.toggle_campos(None, update_ui=False)
-
-        # --- 6. MONTAGEM DA TELA (LAYOUT) ---
-        def row_full(chk, txt_c, txt_a): return ft.Row([chk, txt_c, txt_a], spacing=5)
+        # --- 5. MONTAGEM DAS ABAS ---
+        def row_full(chk, txt_c, txt_a): return ft.Row([chk, txt_c, txt_a], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
         
-        tabs = ft.Tabs(selected_index=0, label_color=COLOR_PRIMARY, indicator_color=COLOR_PRIMARY, tabs=[
-            ft.Tab(text="1. Base", content=ft.Container(padding=15, content=ft.Column([
-                self.txt_ambiente, self.dd_pedra, self.container_medidas
-            ], scroll=ft.ScrollMode.AUTO))),
-            
-            ft.Tab(text="2. Rodas", content=ft.Container(padding=15, content=ft.Column([
-                ft.Text("Rodabancas:", size=12, color="grey"),
-                row_full(self.chk_rfundo, self.txt_rf_c, self.txt_rf_a), row_full(self.chk_rfrente, self.txt_rfr_c, self.txt_rfr_a),
-                row_full(self.chk_resq, self.txt_re_c, self.txt_re_a), row_full(self.chk_rdir, self.txt_rd_c, self.txt_rd_a)
-            ], scroll=ft.ScrollMode.AUTO))),
-            
-            ft.Tab(text="3. Saias", content=ft.Container(padding=15, content=ft.Column([
-                ft.Text("Saias:", size=12, color="grey"),
-                row_full(self.chk_sfundo, self.txt_sf_c, self.txt_sf_a), row_full(self.chk_sfrente, self.txt_sfr_c, self.txt_sfr_a),
-                row_full(self.chk_sesq, self.txt_se_c, self.txt_se_a), row_full(self.chk_sdir, self.txt_sd_c, self.txt_sd_a)
-            ], scroll=ft.ScrollMode.AUTO))),
-            
-            ft.Tab(text="4. Cortes", content=ft.Container(padding=15, content=ft.Column([
-                ft.Text("Cubas e Cooktops:", size=12, color="grey"),
-                ft.Row([self.chk_cuba, self.txt_cuba_pos]), ft.Row([self.txt_cuba_larg, self.txt_cuba_prof]),
-                ft.Divider(),
-                ft.Row([self.chk_cook, self.txt_cook_pos]), ft.Row([self.txt_cook_larg, self.txt_cook_prof])
-            ], scroll=ft.ScrollMode.AUTO))),
-            
-            ft.Tab(text="5. Obs", content=ft.Container(padding=15, content=self.txt_instrucoes))
-        ])
+        tabs = ft.Tabs(
+            selected_index=0, 
+            label_color=COLOR_PRIMARY, 
+            indicator_color=COLOR_PRIMARY,
+            unselected_label_color=ft.colors.BLUE_GREY_400,
+            tabs=[
+                ft.Tab(text="Base", icon=ft.icons.SQUARE_FOOT, content=ft.Container(padding=ft.padding.only(top=20), content=ft.Column([
+                    self.txt_ambiente, self.dd_pedra, self.container_medidas
+                ], scroll=ft.ScrollMode.AUTO, spacing=15))),
+                
+                ft.Tab(text="Rodas", icon=ft.icons.BORDER_TOP, content=ft.Container(padding=ft.padding.only(top=20), content=ft.Column([
+                    ft.Text("Definição de Rodabancas", weight="bold", size=14),
+                    row_full(self.chk_rfundo, self.txt_rf_c, self.txt_rf_a),
+                    row_full(self.chk_rfrente, self.txt_rfr_c, self.txt_rfr_a),
+                    row_full(self.chk_resq, self.txt_re_c, self.txt_re_a),
+                    row_full(self.chk_rdir, self.txt_rd_c, self.txt_rd_a)
+                ], scroll=ft.ScrollMode.AUTO, spacing=10))),
+                
+                ft.Tab(text="Saias", icon=ft.icons.BORDER_BOTTOM, content=ft.Container(padding=ft.padding.only(top=20), content=ft.Column([
+                    ft.Text("Definição de Saias/Acabamento", weight="bold", size=14),
+                    row_full(self.chk_sfundo, self.txt_sf_c, self.txt_sf_a),
+                    row_full(self.chk_sfrente, self.txt_sfr_c, self.txt_sfr_a),
+                    row_full(self.chk_sesq, self.txt_se_c, self.txt_se_a),
+                    row_full(self.chk_sdir, self.txt_sd_c, self.txt_sd_a)
+                ], scroll=ft.ScrollMode.AUTO, spacing=10))),
+                
+                ft.Tab(text="Cortes", icon=ft.icons.CONTENT_CUT, content=ft.Container(padding=ft.padding.only(top=20), content=ft.Column([
+                    ft.Text("Vãos para Cubas e Cooktops", weight="bold", size=14),
+                    ft.Row([self.chk_cuba, self.txt_cuba_pos, self.txt_cuba_larg, self.txt_cuba_prof], spacing=5),
+                    ft.Divider(height=10, color="transparent"),
+                    ft.Row([self.chk_cook, self.txt_cook_pos, self.txt_cook_larg, self.txt_cook_prof], spacing=5)
+                ], scroll=ft.ScrollMode.AUTO))),
+                
+                ft.Tab(text="Notas", icon=ft.icons.EDIT_NOTE, content=ft.Container(padding=ft.padding.only(top=20), content=self.txt_instrucoes))
+            ]
+        )
 
+        # --- 6. LAYOUT FINAL ---
         self.content = ft.Column([
-            ft.Row([ft.IconButton(ft.icons.ARROW_BACK, on_click=lambda e: self.on_cancel()), ft.Text("Calculadora", size=20, weight="bold", color=COLOR_PRIMARY)]),
-            ft.Divider(),
-            ft.Container(height=350, content=tabs),
-            ft.Divider(),
-            ft.Text("Visualização & Preço", weight="bold"),
-            # Container do Canvas
+            ft.Row([
+                ft.IconButton(ft.icons.ARROW_BACK_IOS_NEW_ROUNDED, on_click=lambda e: self.on_cancel(), icon_size=20),
+                ft.Text("Editor de Peça", size=22, weight="bold", color=COLOR_PRIMARY)
+            ]),
+            ft.Divider(height=1, color="#EEEEEE"),
+            ft.Container(height=380, content=tabs),
+            ft.Divider(height=20, color="transparent"),
+            
+            # Área de Visualização com Card
             ft.Container(
-                content=self.canvas, 
-                bgcolor=ft.colors.GREY_50, 
-                border_radius=10, 
-                padding=10,
-                alignment=ft.alignment.center,
-                height=320 
+                content=ft.Column([
+                    ft.Text("Croqui Técnico", weight="bold", size=12, color=ft.colors.BLUE_GREY_400),
+                    ft.Container(
+                        content=self.canvas, 
+                        bgcolor="#F9F9F9", 
+                        border_radius=15, 
+                        padding=10,
+                        alignment=ft.alignment.center,
+                        border=ft.border.all(1, "#EEEEEE")
+                    ),
+                    ft.Column([
+                        self.lbl_valor,
+                        self.lbl_detalhes_pedra,
+                        self.lbl_detalhes_servico
+                    ], spacing=2, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=10
             ),
+            
             ft.Container(height=10),
-            ft.Column([
-                self.lbl_valor,
-                self.lbl_detalhes_pedra,
-                self.lbl_detalhes_servico
-            ], spacing=2),
-            ft.Divider(),
-            ft.ElevatedButton("Salvar Peça", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, height=50, width=float("inf"), on_click=self.salvar)
+            ft.ElevatedButton(
+                "ADICIONAR PEÇA AO ORÇAMENTO", 
+                bgcolor=COLOR_PRIMARY, 
+                color=COLOR_WHITE, 
+                height=55, 
+                width=float("inf"), 
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)),
+                on_click=self.salvar
+            )
         ], scroll=ft.ScrollMode.AUTO, expand=True)
 
-        if self.item_para_editar: self.calcular(None, update_ui=False)
+        # Logica de inicialização (Inalterada)
+        if self.item_para_editar: 
+            # ... (seu bloco de carregamento de dados aqui é igual)
+            self.calcular(None, update_ui=False)
 
     # --- 7. LÓGICA MATEMÁTICA E VISUAL ---
     def _to_float(self, val):

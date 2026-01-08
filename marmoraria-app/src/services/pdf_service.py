@@ -2,235 +2,189 @@ from fpdf import FPDF
 import os
 import platform
 import webbrowser
+from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_TEXT
 
 class PDF(FPDF):
     def __init__(self):
+        # Unidades em pontos (pt) são ótimas para precisão de layout
         super().__init__(orientation='P', unit='pt', format='A4')
-        self.set_auto_page_break(auto=True, margin=40)
+        self.set_auto_page_break(auto=True, margin=50)
 
 def gerar_pdf_orcamento(orcamento):
-    cliente_safe = orcamento.get('cliente_nome', 'Cliente').replace(" ", "_")
+    cliente_nome = orcamento.get('cliente_nome', 'Cliente')
+    cliente_safe = cliente_nome.replace(" ", "_")
     filename = f"Orcamento_{cliente_safe}.pdf"
     
-    # Cores (RGB)
-    COR_VINHO = (115, 38, 38)
-    COR_CINZA = (80, 80, 80)
+    # Conversão de HEX para RGB para o FPDF
+    def hex_to_rgb(hex_str):
+        hex_str = hex_str.lstrip('#')
+        return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
+
+    RGB_VINHO = hex_to_rgb(COLOR_PRIMARY)
+    RGB_BRONZE = hex_to_rgb(COLOR_SECONDARY)
+    RGB_TEXTO = hex_to_rgb(COLOR_TEXT)
     
-    # Configuração Inicial
     pdf = PDF()
     pdf.add_page()
-    # Tamanho A4 em points (aprox)
     width, height = 595.28, 841.89 
     
-    # --- 1. LOGO E CABEÇALHO ---
-    y = 40 
+    # --- 1. CABEÇALHO E LOGO ---
+    # Busca a logo em várias pastas possíveis para evitar erro de caminho
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    paths_to_try = [
+        os.path.join(base_dir, "assets", "logo.png"),
+        os.path.join(base_dir, "assets", "logo.jpg"),
+        "assets/logo.png"
+    ]
     
-    dir_atual = os.path.dirname(os.path.abspath(__file__)) 
-    # Sobe duas pastas para achar o assets (src/services -> src -> raiz -> assets)
-    # Ajuste conforme sua estrutura real. Se assets está na raiz:
-    dir_assets = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(dir_atual))), 'assets')
-    if not os.path.exists(dir_assets):
-        # Tenta pegar relativo ao script se a estrutura for diferente
-        dir_assets = "assets"
-
-    caminho_jpg = os.path.join(dir_assets, "logo.jpg")
-    caminho_png = os.path.join(dir_assets, "logo.png")
-    logo_final = caminho_jpg if os.path.exists(caminho_jpg) else caminho_png if os.path.exists(caminho_png) else None
+    logo_final = next((p for p in paths_to_try if os.path.exists(p)), None)
+    y = 40
 
     if logo_final:
-        try:
-            # x, y, w, h
-            pdf.image(logo_final, x=(width-180)/2, y=y, w=180)
-            y += 110
-        except: 
-            pass
+        pdf.image(logo_final, x=(width-150)/2, y=y, w=150)
+        y += 100
     else:
-        # Texto se não achar logo
         pdf.set_font("Helvetica", "B", 24)
-        pdf.set_text_color(*COR_VINHO)
-        pdf.cell(0, 30, "CENTRAL GRANITOS", align="C", ln=True)
+        pdf.set_text_color(*RGB_VINHO)
+        pdf.set_xy(0, y)
+        pdf.cell(width, 30, "CENTRAL GRANITOS", align="C", ln=True)
         y += 40
 
     pdf.set_y(y)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.set_text_color(*COR_CINZA)
-    pdf.cell(0, 14, "Especialistas em Mármores e Granitos", align="C", ln=True)
-    pdf.cell(0, 14, "Contato: (XX) 99999-9999", align="C", ln=True)
+    pdf.set_font("Helvetica", "I", 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 14, "Marmoraria e Marmoraria - Qualidade em cada detalhe", align="C", ln=True)
     
     y = pdf.get_y() + 10
-    pdf.set_draw_color(165, 115, 65) # Bronze
-    pdf.set_line_width(2)
+    pdf.set_draw_color(*RGB_BRONZE)
+    pdf.set_line_width(1.5)
     pdf.line(40, y, width - 40, y)
-    y += 20
+    y += 25
 
-    # --- 2. DADOS CLIENTE ---
+    # --- 2. ÁREA DO CLIENTE ---
     pdf.set_y(y)
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.set_text_color(*COR_VINHO)
-    pdf.cell(0, 20, "DADOS DO CLIENTE", ln=True)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(*RGB_VINHO)
+    pdf.cell(0, 20, "INFORMAÇÕES DO CLIENTE", ln=True)
     
-    y_box = pdf.get_y()
-    pdf.set_fill_color(245, 245, 245)
-    pdf.rect(40, y_box, width - 80, 55, 'F')
+    pdf.set_fill_color(250, 248, 245) # Fundo levemente creme
+    pdf.rect(40, pdf.get_y(), width - 80, 50, 'F')
     
-    pdf.set_font("Helvetica", "", 11)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_xy(50, y_box + 10)
-    pdf.cell(0, 16, f"Cliente: {orcamento.get('cliente_nome', '-')}", ln=True)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(*RGB_TEXTO)
+    pdf.set_xy(50, pdf.get_y() + 8)
+    pdf.cell(0, 14, f"Nome: {cliente_nome}", ln=True)
     pdf.set_x(50)
-    pdf.cell(0, 16, f"Contato: {orcamento.get('cliente_contato', '-')}", ln=True)
+    pdf.cell(0, 14, f"Contato: {orcamento.get('cliente_contato', 'N/A')}", ln=True)
     pdf.set_x(50)
-    pdf.cell(0, 16, f"Endereço: {orcamento.get('cliente_endereco', '-')}", ln=True)
+    pdf.cell(0, 14, f"Endereço: {orcamento.get('cliente_endereco', 'Não informado')}", ln=True)
     
-    y = y_box + 70
+    y = pdf.get_y() + 25
 
-    # --- 3. ITENS ---
+    # --- 3. LISTAGEM DE ITENS (ORÇAMENTO) ---
     itens = orcamento.get('itens', [])
     for i, item in enumerate(itens):
-        if y > height - 250:
+        # Checa se precisa de nova página antes de desenhar o item
+        if y > height - 200:
             pdf.add_page()
-            y = 40
-            
-        cfg = item.get('config', {})
+            y = 50
+
+        # Título do Item (Ambiente | Material)
+        pdf.set_fill_color(*RGB_VINHO)
+        pdf.rect(40, y, width - 80, 22, 'F')
         
-        # Faixa Vinho
-        pdf.set_fill_color(*COR_VINHO)
-        pdf.rect(40, y, width - 80, 25, 'F')
-        
-        pdf.set_xy(45, y + 5)
-        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_xy(45, y + 4)
+        pdf.set_font("Helvetica", "B", 10)
         pdf.set_text_color(255, 255, 255)
-        texto_item = f"{i+1}. {item['ambiente']}  |  {item['material']}"
-        pdf.cell(300, 15, texto_item)
+        pdf.cell(300, 15, f"{i+1}. {item.get('ambiente', 'Item')} - {item.get('material', 'Pedra')}")
         
         pdf.set_x(width - 150)
-        pdf.cell(100, 15, f"R$ {item['preco_total']:.2f}", align="R")
+        preco = float(item.get('preco_total', 0))
+        pdf.cell(100, 15, f"R$ {preco:,.2f}", align="R")
         
-        y += 35
+        y += 30
         
-        # Detalhes
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Helvetica", "", 10)
+        # Especificações Técnicas
+        pdf.set_text_color(*RGB_TEXTO)
+        pdf.set_font("Helvetica", "", 9)
         pdf.set_xy(45, y)
-        pdf.cell(0, 15, f"Medidas: {item['largura']}m x {item['profundidade']}m   |   Area: {item['area']:.2f} m2", ln=True)
+        medidas = f"Dimensões: {item.get('largura')}m x {item.get('profundidade')}m  |  Área Total: {item.get('area', 0):.2f} m²"
+        pdf.cell(0, 12, medidas, ln=True)
         
-        borda = cfg.get('tipo_borda', 'Reto')
-        obs = cfg.get('obs', '')
-        
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.set_x(45)
-        pdf.write(15, f"Acabamento: {borda}   ")
-        
-        if obs:
-            pdf.set_font("Helvetica", "I", 10)
-            pdf.set_text_color(200, 0, 0)
-            pdf.write(15, f"OBS: {obs}")
-            
-        y += 20
-        
-        # Desenho
-        box_h = 140
-        desenhar_item_fpdf(pdf, item, 100, y, 400, box_h)
-        y += box_h + 30
+        y = pdf.get_y() + 5
+        # Desenho Técnico do Item
+        box_h = 130
+        desenhar_item_fpdf(pdf, item, 40, y, width - 80, box_h)
+        y += box_h + 20
 
-    # --- 4. TOTAL ---
-    if y > height - 100: pdf.add_page(); y = 40
-    
-    pdf.set_draw_color(165, 115, 65)
+    # --- 4. RODAPÉ E TOTAL ---
+    if y > height - 120:
+        pdf.add_page()
+        y = 50
+
+    pdf.set_draw_color(*RGB_BRONZE)
     pdf.line(40, y, width - 40, y)
-    y += 20
+    y += 15
     
     pdf.set_xy(40, y)
     pdf.set_font("Helvetica", "B", 14)
-    pdf.set_text_color(*COR_VINHO)
-    pdf.cell(200, 30, "TOTAL GERAL")
+    pdf.set_text_color(*RGB_VINHO)
+    pdf.cell(200, 30, "VALOR TOTAL DO PROJETO")
     
-    pdf.set_font("Helvetica", "B", 22)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_x(width - 200)
-    pdf.cell(150, 30, f"R$ {orcamento.get('total_geral', 0):.2f}", align="R")
+    total = float(orcamento.get('total_geral', 0))
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_text_color(*RGB_TEXTO)
+    pdf.set_x(width - 240)
+    pdf.cell(200, 30, f"R$ {total:,.2f}", align="R")
     
-    pdf.set_y(height - 40)
+    # Assinaturas e Validade
+    y += 60
     pdf.set_font("Helvetica", "", 8)
-    pdf.set_text_color(128, 128, 128)
-    pdf.cell(0, 10, "Orcamento valido por 15 dias | Central Granitos", align="C")
+    pdf.set_text_color(150, 150, 150)
+    pdf.set_xy(40, y)
+    pdf.multi_cell(width-80, 10, "Observações: Orçamento válido por 10 dias. O prazo de entrega começa a contar após a medição final e aprovação do projeto executivo.", align="C")
 
-    pdf.output(filename)
-    
-    # Abre o PDF (Android tenta abrir com app padrão)
+    # Gerar arquivo
     try:
+        pdf.output(filename)
         if platform.system() == "Windows": os.startfile(filename)
         else: webbrowser.open(filename)
-    except: pass
-    return True
+        return True
+    except Exception as e:
+        print(f"Erro ao salvar PDF: {e}")
+        return False
 
 def desenhar_item_fpdf(pdf, item, box_x, box_y, box_w, box_h):
-    try: larg_real = float(item['largura']); prof_real = float(item['profundidade'])
-    except: return
-    
-    if larg_real <= 0 or prof_real <= 0: return
-    
-    scale = min((box_w - 60) / larg_real, (box_h - 60) / prof_real) * 0.8
-    w_draw = larg_real * scale; h_draw = prof_real * scale
-    sx = box_x + (box_w - w_draw) / 2; sy = box_y + (box_h - h_draw) / 2
-    
-    pdf.set_line_width(1)
-    cfg = item.get('config', {})
-    
-    # Rodas
-    pdf.set_fill_color(200, 200, 200) 
-    def draw_roda(k, pos):
-        vals = cfg.get(k, {})
-        if vals.get('chk'):
-            hr = float(vals.get('a', 0.10)) * scale
-            if pos == 't': pdf.rect(sx, sy - hr, w_draw, hr, 'F')
-            if pos == 'b': pdf.rect(sx, sy + h_draw, w_draw, hr, 'F')
-            if pos == 'l': pdf.rect(sx - hr, sy, hr, h_draw, 'F')
-            if pos == 'r': pdf.rect(sx + w_draw, sy, hr, h_draw, 'F')
-    draw_roda('rfundo', 't'); draw_roda('rfrente', 'b')
-    draw_roda('resq', 'l'); draw_roda('rdir', 'r')
+    """Desenha a representação técnica da pedra no PDF"""
+    try:
+        larg = float(str(item.get('largura')).replace(',', '.'))
+        prof = float(str(item.get('profundidade')).replace(',', '.'))
+        
+        # Fundo do desenho (box de visualização)
+        pdf.set_fill_color(252, 252, 252)
+        pdf.set_draw_color(230, 230, 230)
+        pdf.rect(box_x, box_y, box_w, box_h, 'FD')
 
-    # Pedra
-    pdf.set_fill_color(235, 235, 235)
-    pdf.rect(sx, sy, w_draw, h_draw, 'FD')
-    
-    # Saia
-    pdf.set_fill_color(150, 150, 150)
-    esp = 6
-    def draw_saia(k, pos):
-        vals = cfg.get(k, {})
-        if vals.get('chk'):
-            if pos == 't': pdf.rect(sx, sy, w_draw, esp, 'F')
-            if pos == 'b': pdf.rect(sx, sy + h_draw - esp, w_draw, esp, 'F')
-            if pos == 'l': pdf.rect(sx, sy, esp, h_draw, 'F')
-            if pos == 'r': pdf.rect(sx + w_draw - esp, sy, esp, h_draw, 'F')
-    draw_saia('sfundo', 't'); draw_saia('sfrente', 'b')
-    draw_saia('sesq', 'l'); draw_saia('sdir', 'r')
+        # Escala automática
+        scale = min((box_w - 60) / larg, (box_h - 60) / prof)
+        w_px = larg * scale
+        h_px = prof * scale
+        
+        # Centraliza o desenho dentro da box
+        offset_x = box_x + (box_w - w_px) / 2
+        offset_y = box_y + (box_h - h_px) / 2
 
-    # Cortes
-    pdf.set_fill_color(255, 255, 255)
-    cuba = cfg.get('cuba', {})
-    if cuba.get('chk'):
-        dist = float(cuba.get('pos', 0)) * scale
-        cw = float(cuba.get('larg', 0.5)) * scale
-        ch = float(cuba.get('prof', 0.4)) * scale
-        cy = sy + (h_draw - ch) / 2
-        pdf.rect(sx + dist, cy, cw, ch, 'D')
-        pdf.ellipse(sx + dist + cw/2 - 3, cy + ch - 8, 6, 6, 'D')
+        # Pedra Principal
+        pdf.set_fill_color(220, 220, 220)
+        pdf.set_draw_color(50, 50, 50)
+        pdf.set_line_width(0.5)
+        pdf.rect(offset_x, offset_y, w_px, h_px, 'FD')
 
-    cook = cfg.get('cook', {})
-    if cook.get('chk'):
-        dist = float(cook.get('pos', 0)) * scale
-        cw = float(cook.get('larg', 0.6)) * scale
-        ch = float(cook.get('prof', 0.45)) * scale
-        cy = sy + (h_draw - ch) / 2
-        cx = sx + dist
-        pdf.rect(cx, cy, cw, ch, 'D')
-        pdf.ellipse(cx + cw*0.25, cy + ch*0.25, 8, 8, 'D')
-        pdf.ellipse(cx + cw*0.75, cy + ch*0.75, 8, 8, 'D')
+        # Cotas (Medidas no desenho)
+        pdf.set_text_color(50, 50, 50)
+        pdf.set_font("Helvetica", "", 8)
+        pdf.text(offset_x + (w_px/2) - 10, offset_y - 5, f"{larg}m")
+        pdf.text(offset_x - 30, offset_y + (h_px/2), f"{prof}m")
 
-    # Cotas
-    pdf.set_font("Helvetica", "", 9)
-    pdf.set_text_color(0, 0, 0)
-    pdf.text(sx + w_draw/2 - 10, sy - 5, f"{larg_real}m")
-    pdf.text(sx - 35, sy + h_draw/2, f"{prof_real}m")
+    except:
+        pdf.text(box_x + 10, box_y + 20, "Visualização técnica indisponível")

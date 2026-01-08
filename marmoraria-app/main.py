@@ -2,84 +2,109 @@ import flet as ft
 import os
 import sys
 import traceback
+from src.config import COLOR_BACKGROUND, COLOR_PRIMARY
 
-# Garante que o Python encontre a pasta 'src'
+# Garante que o Python encontre a pasta 'src' em qualquer ambiente (Local ou Render)
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 def main(page: ft.Page):
     page.title = "Marmoraria Central"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
-    page.bgcolor = "#F5F5F5"
+    page.bgcolor = COLOR_BACKGROUND
+    
+    # Configuração de fontes e estilo global (opcional)
+    page.theme = ft.Theme(
+        color_scheme_seed=COLOR_PRIMARY,
+        visual_density=ft.VisualDensity.COMFORTABLE,
+    )
 
     def route_change(e):
         page.views.clear()
-        
-        # Função auxiliar para montar a View com AppBar e Drawer extraídos do LayoutBase
-        def append_view(route_name, view_function):
+        rota_atual = page.route
+
+        # 1. VERIFICAÇÃO DE SEGURANÇA
+        # Se não houver role na sessão e não for login, manda pro login
+        user_role = page.session.get("user_role")
+        if not user_role and rota_atual not in ["/login", "/", ""]:
+            page.go("/login")
+            return
+
+        # 2. FUNÇÃO PARA CONSTRUIR AS VIEWS
+        def construir_view(view_func, route_name):
             try:
-                conteudo_layout = view_function(page)
+                # Carrega o conteúdo da View
+                conteudo_layout = view_func(page)
                 
-                appbar_final = None
-                drawer_final = None
+                # Extração automática dos metadados do LayoutBase
+                res_appbar = None
+                res_drawer = None
                 
-                if hasattr(conteudo_layout, 'data') and conteudo_layout.data:
-                    # Se for o dicionário que configuramos no LayoutBase
-                    if isinstance(conteudo_layout.data, dict):
-                        appbar_final = conteudo_layout.data.get("appbar")
-                        drawer_final = conteudo_layout.data.get("drawer")
-                    # Caso seja só o AppBar (backup)
-                    elif isinstance(conteudo_layout.data, ft.AppBar):
-                        appbar_final = conteudo_layout.data
+                if hasattr(conteudo_layout, 'data') and isinstance(conteudo_layout.data, dict):
+                    res_appbar = conteudo_layout.data.get("appbar")
+                    res_drawer = conteudo_layout.data.get("drawer")
 
                 page.views.append(
                     ft.View(
                         route=route_name,
                         controls=[conteudo_layout],
-                        appbar=appbar_final,
-                        drawer=drawer_final, # Agora o Drawer será injetado na View!
-                        padding=0
+                        appbar=res_appbar,
+                        drawer=res_drawer,
+                        padding=0,
+                        bgcolor=COLOR_BACKGROUND
                     )
                 )
             except Exception as err:
+                print(f"Erro Crítico na Rota {route_name}:")
                 traceback.print_exc()
-                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro em {route_name}: {err}")]))
+                # View de Erro Amigável
+                page.views.append(
+                    ft.View(
+                        "/erro", 
+                        [ft.SafeArea(ft.Text(f"Ops! Algo deu errado ao carregar esta tela.\n{err}", color="red"))]
+                    )
+                )
 
-        # --- MAPEAMENTO DE ROTAS ---
-        if page.route == "/login" or page.route == "/" or page.route == "":
+        # 3. MAPEAMENTO DE ROTAS (Lazy Loading)
+        if rota_atual in ["/login", "/", ""]:
             from src.views.login_view import LoginView
-            page.views.append(ft.View(route="/login", controls=[LoginView(page)], padding=0))
+            page.views.append(
+                ft.View("/login", [LoginView(page)], padding=0, vertical_alignment="center", horizontal_alignment="center")
+            )
 
-        elif page.route == "/dashboard":
+        elif rota_atual == "/dashboard":
             from src.views.dashboard_view import DashboardView
-            append_view("/dashboard", DashboardView)
+            construir_view(DashboardView, "/dashboard")
 
-        elif page.route == "/estoque":
+        elif rota_atual == "/estoque":
             from src.views.inventory_view import InventoryView
-            append_view("/estoque", InventoryView)
+            construir_view(InventoryView, "/estoque")
 
-        elif page.route == "/orcamentos":
+        elif rota_atual == "/orcamentos":
             from src.views.budget_view import BudgetView
-            append_view("/orcamentos", BudgetView)
+            construir_view(BudgetView, "/orcamentos")
 
-        elif page.route == "/financeiro":
+        elif rota_atual == "/financeiro":
             from src.views.financial_view import FinancialView
-            append_view("/financeiro", FinancialView)
+            construir_view(FinancialView, "/financeiro")
 
-        elif page.route == "/producao":
+        elif rota_atual == "/producao":
             from src.views.production_view import ProductionView
-            append_view("/producao", ProductionView)
-        
+            construir_view(ProductionView, "/producao")
+
         page.update()
 
+    # Configuração de eventos
     page.on_route_change = route_change
     
-    if page.route == "/" or page.route == "":
+    # Inicialização do App
+    if page.route in ["/", ""]:
         page.go("/login")
     else:
         page.update()
 
 if __name__ == "__main__":
+    # Configuração específica para o RENDER.com (Porta Dinâmica)
     port = int(os.getenv("PORT", 10000))
     ft.app(
         target=main,
