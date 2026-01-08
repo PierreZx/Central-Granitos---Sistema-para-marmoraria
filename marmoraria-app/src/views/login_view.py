@@ -37,17 +37,8 @@ def LoginView(page: ft.Page):
         else:
             show_snack("E-mail ou senha incorretos", success=False)
 
-    logo = ft.Container(
-        content=ft.Image(
-            src="icon.png", # Mudamos de logo.jpg para icon.png
-            width=150,
-            height=150,
-            fit=ft.ImageFit.CONTAINER,
-            error_content=ft.Icon(ft.icons.IMAGE_NOT_SUPPORTED, size=50) # Se falhar, mostra um ícone e não trava
-        ),
-        padding=ft.padding.only(bottom=20),
-    )
-
+    logo = ft.Text("CENTRAL GRANITOS", size=30, weight="bold", color=COLOR_PRIMARY)
+    
     campo_usuario = ft.TextField(label="E-mail", height=50, border_radius=10, filled=True, focused_border_color=COLOR_PRIMARY)
     campo_senha = ft.TextField(label="Senha", password=True, height=50, border_radius=10, filled=True, focused_border_color=COLOR_PRIMARY, can_reveal_password=True)
 
