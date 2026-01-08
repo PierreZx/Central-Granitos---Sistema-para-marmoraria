@@ -20,25 +20,24 @@ def main(page: ft.Page):
             try:
                 conteudo_layout = view_function(page)
                 
-                # Extrai AppBar e Drawer que guardamos no .data do LayoutBase
                 appbar_final = None
                 drawer_final = None
                 
                 if hasattr(conteudo_layout, 'data') and conteudo_layout.data:
-                    # Se for um AppBar direto
-                    if isinstance(conteudo_layout.data, ft.AppBar):
-                        appbar_final = conteudo_layout.data
-                    # Se for um dicionário (caso precise guardar os dois no futuro)
-                    elif isinstance(conteudo_layout.data, dict):
+                    # Se for o dicionário que configuramos no LayoutBase
+                    if isinstance(conteudo_layout.data, dict):
                         appbar_final = conteudo_layout.data.get("appbar")
                         drawer_final = conteudo_layout.data.get("drawer")
+                    # Caso seja só o AppBar (backup)
+                    elif isinstance(conteudo_layout.data, ft.AppBar):
+                        appbar_final = conteudo_layout.data
 
                 page.views.append(
                     ft.View(
                         route=route_name,
                         controls=[conteudo_layout],
                         appbar=appbar_final,
-                        drawer=drawer_final,
+                        drawer=drawer_final, # Agora o Drawer será injetado na View!
                         padding=0
                     )
                 )

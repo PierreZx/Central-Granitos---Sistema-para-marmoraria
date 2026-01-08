@@ -6,7 +6,7 @@ class Sidebar(ft.Container):
         super().__init__()
         self.page = page
         
-        # Configurações de layout
+        # --- CONFIGURAÇÕES DE LAYOUT (CORRIGIDO) ---
         if is_mobile:
             self.width = None
             self.expand = True
@@ -17,25 +17,29 @@ class Sidebar(ft.Container):
             self.expand = True 
             self.bgcolor = ft.colors.WHITE
             self.border = ft.border.only(right=ft.border.BorderSide(1, "#00000008"))
-            self.shadow = ft.BoxShadow(blur_radius=20, spread_radius=-5, color="#00000005", offset=ft.Offset(5, 0))
+            self.shadow = ft.BoxShadow(
+                blur_radius=20, 
+                spread_radius=-5, 
+                color="#00000005", 
+                offset=ft.Offset(5, 0)
+            )
             padding_bottom = 5
         
         self.padding = ft.padding.only(left=20, right=20, top=20, bottom=padding_bottom)
         
-        # Lógica de menus baseada no cargo
+        # --- LÓGICA DE PERMISSÕES ---
         user_role = self.page.session.get("user_role")
         
-        # Cabeçalho
+        # Cabeçalho (Removido letter_spacing para evitar erro de TypeError)
         logo = ft.Row([
             ft.Container(
                 width=40, height=40, border_radius=10, bgcolor=COLOR_PRIMARY,
                 content=ft.Icon(ft.icons.PRECISION_MANUFACTURING, color="white", size=20)
             ),
-            # REMOVIDO O letter_spacing DAQUI:
             ft.Text("CENTRAL", weight="bold", size=20, color=COLOR_PRIMARY),
         ], spacing=12)
 
-        # Itens de Menu
+        # Itens de Menu Dinâmicos
         menu_items = []
         if user_role == "admin":
             menu_items = [
@@ -49,15 +53,17 @@ class Sidebar(ft.Container):
                 self.criar_item_menu("Produção", ft.icons.CHAIR_ALT_ROUNDED, "/producao"),
             ]
 
+        # Botão Sair
         rodape = self.criar_item_menu("Sair", ft.icons.LOGOUT_ROUNDED, "/login", estilo="danger")
 
+        # --- MONTAGEM DA ESTRUTURA ---
         self.content = ft.Column(
             [
                 logo,
                 ft.Container(height=30),
-                ft.Column(menu_items, spacing=8, expand=True),
+                ft.Column(menu_items, spacing=8, expand=True), # Ocupa o meio
                 ft.Divider(color="#00000008"),
-                rodape
+                rodape # Fica no fim
             ], 
             spacing=0, 
             expand=True
@@ -65,22 +71,33 @@ class Sidebar(ft.Container):
 
     def navegar(self, e):
         rota = e.control.data
-        # Se estiver no mobile, fecha o drawer antes de navegar
+        
+        # CORREÇÃO CRÍTICA PARA MOBILE:
+        # Se houver um drawer aberto na página, fecha ele antes de navegar
         if self.page.drawer:
             self.page.drawer.open = False
+            self.page.update() # Garante que a gaveta suma da tela
+            
         self.page.go(rota)
 
-    def criar_item_menu(self, texto, icone, rota, cor_icone=None, estilo="normal"):
+    def criar_item_menu(self, texto, icone, rota, estilo="normal"):
+        # Cores baseadas no estado e estilo
         cor_base = ft.colors.GREY_700 if estilo != "danger" else ft.colors.RED_600
-        
-        # Verifica se é a rota ativa
         esta_ativo = self.page.route == rota
         
         return ft.Container(
             content=ft.TextButton(
                 content=ft.Row([
-                    ft.Icon(icone, size=22, color=COLOR_PRIMARY if esta_ativo else cor_base),
-                    ft.Text(texto, size=15, weight=ft.FontWeight.W_500 if esta_ativo else ft.FontWeight.W_400),
+                    ft.Icon(
+                        icone, 
+                        size=22, 
+                        color=COLOR_PRIMARY if esta_ativo else cor_base
+                    ),
+                    ft.Text(
+                        texto, 
+                        size=15, 
+                        weight=ft.FontWeight.W_500 if esta_ativo else ft.FontWeight.W_400
+                    ),
                 ], spacing=12),
                 style=ft.ButtonStyle(
                     shape=ft.RoundedRectangleBorder(radius=10),

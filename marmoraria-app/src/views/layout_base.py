@@ -5,28 +5,21 @@ from src.services import firebase_service
 
 def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
     conectado = firebase_service.verificar_conexao()
+
+    drawer_mobile = ft.NavigationDrawer(
+        controls=[Sidebar(page, is_mobile=True)],
+        bgcolor=ft.colors.WHITE,
+    )
     
     def abrir_menu(e):
-        # 1. Criamos o drawer se ele não existir ou para garantir atualização
-        page.drawer = ft.NavigationDrawer(
-            controls=[Sidebar(page, is_mobile=True)],
-            bgcolor=ft.colors.WHITE,
-        )
-        # 2. Mudamos o estado para aberto
-        page.drawer.open = True
-        # 3. Damos o update na PÁGINA inteira para o Flet processar a abertura
+        drawer_mobile.open = True
         page.update()
 
     eh_mobile = page.width < 768
 
     if eh_mobile:
-        # Criamos o AppBar
         app_bar_obj = ft.AppBar(
-            leading=ft.IconButton(
-                icon=ft.icons.MENU, 
-                icon_color=COLOR_WHITE, 
-                on_click=abrir_menu
-            ),
+            leading=ft.IconButton(ft.icons.MENU, icon_color=COLOR_WHITE, on_click=abrir_menu),
             title=ft.Text(titulo, size=18, weight="bold", color=COLOR_WHITE),
             bgcolor=COLOR_PRIMARY,
             center_title=True,
@@ -48,27 +41,17 @@ def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
         
         return ft.Container(
             content=ft.Column([
-                # Removi o app_bar de dentro dos controls da Column
                 barra_offline,
-                ft.Container(
-                    content=conteudo_principal, 
-                    padding=ft.padding.only(left=15, right=15, top=20, bottom=20), 
-                    expand=True
-                )
+                ft.Container(content=conteudo_principal, padding=15, expand=True)
             ], spacing=0),
             expand=True,
             bgcolor=COLOR_BACKGROUND,
-            # Passamos o appbar como uma propriedade do objeto que retorna (se possível) 
-            # ou garantimos que o Main o adicione.
-            data=app_bar_obj # Guardamos o objeto appbar aqui para o main buscar
+            # AQUI ESTÁ O SEGREDO: Mandar um dicionário com os dois!
+            data={
+                "appbar": app_bar_obj,
+                "drawer": drawer_mobile
+            }
         )
-        
     else:
-        return ft.Row(
-            [
-                Sidebar(page), 
-                ft.Container(content=conteudo_principal, expand=True, padding=30)
-            ],
-            expand=True,
-            spacing=0
-        )
+        # Desktop continua igual
+        return ft.Row([Sidebar(page), ft.Container(content=conteudo_principal, expand=True, padding=30)], expand=True)
