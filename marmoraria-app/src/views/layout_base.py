@@ -7,11 +7,14 @@ def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
     conectado = firebase_service.verificar_conexao()
     
     def abrir_menu(e):
+        # 1. Criamos o drawer se ele não existir ou para garantir atualização
         page.drawer = ft.NavigationDrawer(
             controls=[Sidebar(page, is_mobile=True)],
             bgcolor=ft.colors.WHITE,
         )
+        # 2. Mudamos o estado para aberto
         page.drawer.open = True
+        # 3. Damos o update na PÁGINA inteira para o Flet processar a abertura
         page.update()
 
     eh_mobile = page.width < 768
