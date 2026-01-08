@@ -84,13 +84,28 @@ def add_document(collection, dados):
     except: return False
 
 def update_document(collection, doc_id, dados):
+    """Atualiza um documento via API REST (Padrão do seu arquivo)"""
     if not verificar_conexao(): return False
     try:
-        # Cria a máscara de campos para o patch
+        # A API do Firestore exige um PATCH para atualizar
+        # Criamos o corpo convertido para o formato do Firebase
+        corpo_json = _converter_para_firestore(dados)
+        
+        # A máscara diz ao Firebase quais campos devem ser alterados
         mask = "&".join([f"updateMask.fieldPaths={k}" for k in dados.keys()])
-        res = requests.patch(f"{BASE_URL}/{collection}/{doc_id}?{mask}", json=_converter_para_firestore(dados))
-        return res.status_code == 200
-    except: return False
+        
+        url = f"{BASE_URL}/{collection}/{doc_id}?{mask}"
+        res = requests.patch(url, json=corpo_json)
+        
+        if res.status_code == 200:
+            print(f"Sucesso ao atualizar {doc_id}")
+            return True
+        else:
+            print(f"Erro API Firebase ({res.status_code}): {res.text}")
+            return False
+    except Exception as e:
+        print(f"Erro ao atualizar: {e}")
+        return False
 
 def delete_document(collection, doc_id):
     if not verificar_conexao(): return False
@@ -154,42 +169,34 @@ def verify_user_password(email, password):
 # No final do seu firebase_service.py:
 
 def get_saldo_caixa():
-    """Calcula o saldo total baseado nas transações financeiras"""
     transacoes = get_collection("financeiro")
     saldo = 0.0
     for t in transacoes:
-        valor = float(str(t.get('valor', 0)).replace(',', '.'))
-        if t.get('tipo') == 'RECEITA':
-            saldo += valor
-        else:
-            saldo -= valor
+        try:
+            # Garante que o valor seja float mesmo se vier como string ou vírgula
+            valor = float(str(t.get('valor', 0)).replace(',', '.'))
+            if t.get('tipo') == 'RECEITA':
+                saldo += valor
+            else:
+                saldo -= valor
+        except: continue
     return saldo
 
 def get_orcamentos_by_status(status):
-    """Filtra orçamentos para a tela de produção"""
     todos = get_collection("orcamentos")
     return [o for o in todos if o.get('status') == status]
 
-def update_document(collection, doc_id, data):
-    """Função genérica para editar qualquer documento (Estoque, Financeiro, etc)"""
-    try:
-        # Se estiver usando a biblioteca python-firebase-admin:
-        # db.collection(collection).document(doc_id).update(data)
-        # return True
-        print(f"Atualizando {collection}/{doc_id} com {data}")
-        return True # Simulação para o fluxo continuar
-    except Exception as e:
-        print(f"Erro ao atualizar: {e}")
-        return False
-    
 def get_dividas_pendentes():
-    """Busca transações do tipo DESPESA que ainda não foram pagas ou estão abertas"""
     transacoes = get_collection("financeiro")
-    # Filtra apenas o que for DESPESA e que tenha algum campo indicando pendência
-    # Se você não tiver o campo 'status', ele trará todas as despesas
     return [t for t in transacoes if t.get('tipo') == 'DESPESA' and t.get('status') != 'PAGO']
 
 def get_receitas_pendentes():
-    """Busca transações do tipo RECEITA que ainda não foram recebidas"""
     transacoes = get_collection("financeiro")
     return [t for t in transacoes if t.get('tipo') == 'RECEITA' and t.get('status') != 'RECEBIDO']
+
+def get_orcamentos_finalizados_nao_pagos():
+    try:
+        todos = get_collection("orcamentos")
+        return [o for o in todos if o.get('status') == 'FINALIZADO' and o.get('pagamento') != 'PAGO']
+    except:
+        return []
