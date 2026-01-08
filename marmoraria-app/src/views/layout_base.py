@@ -123,7 +123,21 @@ def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos"):
         if not conectado:
             barra_offline = ft.Container(content=ft.Text("MÓDULO OFFLINE ATIVO", size=11, color="black", weight="bold"), bgcolor=COLOR_WARNING, padding=5, alignment=ft.alignment.center, width=float('inf'))
 
-        return ft.View(route=page.route, padding=0, appbar=app_bar, controls=[barra_offline, ft.Container(content=conteudo_principal, expand=True)], drawer=drawer_mobile, bgcolor=COLOR_BACKGROUND)
+        return ft.Container(
+            content=ft.Column([
+                barra_offline, 
+                ft.Container(content=conteudo_principal, expand=True)
+            ]),
+            bgcolor=COLOR_BACKGROUND,
+            expand=True
+        )
         
     else:
-        return ft.View(route=page.route, padding=0, controls=[ft.Row([Sidebar(page), ft.Container(content=ft.Column([ft.Container(content=ft.Text("SEM INTERNET", color="white"), bgcolor="red", padding=5, alignment=ft.alignment.center) if not conectado else ft.Container(), ft.Container(content=conteudo_principal, expand=True)], spacing=0, expand=True), expand=True)], expand=True, spacing=0)], bgcolor=COLOR_BACKGROUND)
+        return ft.Row(
+            [
+                Sidebar(page), 
+                ft.Container(content=conteudo_principal, expand=True, padding=20)
+            ],
+            expand=True,
+            spacing=0
+        )

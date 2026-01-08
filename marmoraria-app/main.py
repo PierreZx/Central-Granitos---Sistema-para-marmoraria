@@ -15,25 +15,59 @@ def main(page: ft.Page):
     def route_change(e):
         page.views.clear()
         
-        # Rota de Login (Raiz)
+        # ROTA DE LOGIN
         if page.route == "/login" or page.route == "/" or page.route == "":
             try:
                 from src.views.login_view import LoginView
-                # Usamos um try/except interno para capturar erro na View
-                page.views.append(ft.View(route="/login", controls=[LoginView(page)]))
+                page.views.append(ft.View(route="/login", controls=[LoginView(page)], padding=0))
             except Exception as err:
                 traceback.print_exc()
                 page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro ao carregar Login: {err}")]))
 
-        # Rota Dashboard
+        # ROTA DASHBOARD
         elif page.route == "/dashboard":
             try:
                 from src.views.dashboard_view import DashboardView
-                page.views.append(ft.View(route="/dashboard", controls=[DashboardView(page)]))
+                page.views.append(ft.View(route="/dashboard", controls=[DashboardView(page)], padding=0))
             except Exception as err:
+                traceback.print_exc()
                 page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Dashboard: {err}")]))
-        
-        # Adicione aqui as outras rotas (estoque, financeiro...) conforme for testando
+
+        # ROTA ESTOQUE
+        elif page.route == "/estoque":
+            try:
+                from src.views.inventory_view import InventoryView
+                page.views.append(ft.View(route="/estoque", controls=[InventoryView(page)], padding=0))
+            except Exception as err:
+                traceback.print_exc()
+                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Estoque: {err}")]))
+
+        # ROTA ORÇAMENTOS
+        elif page.route == "/orcamentos":
+            try:
+                from src.views.budget_view import BudgetView
+                page.views.append(ft.View(route="/orcamentos", controls=[BudgetView(page)], padding=0))
+            except Exception as err:
+                traceback.print_exc()
+                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Orçamentos: {err}")]))
+
+        # ROTA FINANCEIRO
+        elif page.route == "/financeiro":
+            try:
+                from src.views.financial_view import FinancialView
+                page.views.append(ft.View(route="/financeiro", controls=[FinancialView(page)], padding=0))
+            except Exception as err:
+                traceback.print_exc()
+                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Financeiro: {err}")]))
+
+        # ROTA PRODUÇÃO
+        elif page.route == "/producao":
+            try:
+                from src.views.production_view import ProductionView
+                page.views.append(ft.View(route="/producao", controls=[ProductionView(page)], padding=0))
+            except Exception as err:
+                traceback.print_exc()
+                page.views.append(ft.View(route="/erro", controls=[ft.Text(f"Erro Produção: {err}")]))
         
         page.update()
 
