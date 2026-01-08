@@ -31,7 +31,8 @@ class Sidebar(ft.Container):
                 width=40, height=40, border_radius=10, bgcolor=COLOR_PRIMARY,
                 content=ft.Icon(ft.icons.PRECISION_MANUFACTURING, color="white", size=20)
             ),
-            ft.Text("CENTRAL", weight="bold", size=20, color=COLOR_PRIMARY, letter_spacing=1),
+            # REMOVIDO O letter_spacing DAQUI:
+            ft.Text("CENTRAL", weight="bold", size=20, color=COLOR_PRIMARY),
         ], spacing=12)
 
         # Itens de Menu
