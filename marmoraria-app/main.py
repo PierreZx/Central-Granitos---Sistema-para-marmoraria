@@ -1,16 +1,15 @@
 import flet as ft
-import time
 import traceback
 import warnings
 import os
 
+# --- 1. SILENCIADOR DE AVISOS ---
 warnings.filterwarnings("ignore")
 
-print("--- 🚀 INICIANDO APLICAÇÃO ---")
+print("--- 🚀 INICIANDO APLICAÇÃO (MODO PRODUÇÃO) ---")
 
-# --- TESTE DE IMPORTAÇÕES ---
+# --- IMPORTAÇÕES SEGURAS ---
 try:
-    print("Tentando importar configurações e views...")
     from src.config import COLOR_PRIMARY, COLOR_BACKGROUND, COLOR_WHITE, COLOR_SECONDARY
     from src.services import firebase_service
     from src.views.login_view import LoginView
@@ -21,62 +20,79 @@ try:
     from src.views.financial_view import FinancialView
     print("✅ Todas as importações feitas com sucesso!")
 except Exception as e:
-    print(f"❌ ERRO NAS IMPORTAÇÕES: {e}")
+    print(f"❌ ERRO CRÍTICO NAS IMPORTAÇÕES: {e}")
     traceback.print_exc()
 
 def main(page: ft.Page):
-    print(f"--- 👤 Nova sessão iniciada (Rota atual: {page.route}) ---")
-    
+    # Configuração de Layout
     page.title = "Marmoraria Central"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
     
+    # Tenta definir cor de fundo das variáveis, se falhar usa padrão
     try:
         page.bgcolor = COLOR_BACKGROUND
     except:
         page.bgcolor = "#F5F5F5"
 
     def route_change(route):
-        print(f"🛣️ Mudança de rota detectada: {page.route}")
+        print(f"🛣️ Mudança de rota para: {page.route}")
+        page.views.clear()
+        
         try:
-            page.views.clear()
-            
+            # Rota Raiz ou Login
             if page.route == "/" or page.route == "/login":
-                print("Exibindo tela de LOGIN")
                 page.views.append(ft.View(route="/login", controls=[LoginView(page)]))
             
+            # Outras Rotas
             elif page.route == "/dashboard":
-                print("Exibindo tela de DASHBOARD")
                 page.views.append(ft.View(route="/dashboard", controls=[DashboardView(page)]))
-            
-            # Adicione aqui as outras rotas se necessário...
+            elif page.route == "/estoque":
+                page.views.append(ft.View(route="/estoque", controls=[InventoryView(page)]))
+            elif page.route == "/orcamentos":
+                page.views.append(ft.View(route="/orcamentos", controls=[BudgetView(page)]))
+            elif page.route == "/producao":
+                page.views.append(ft.View(route="/producao", controls=[ProductionView(page)]))
+            elif page.route == "/financeiro":
+                page.views.append(ft.View(route="/financeiro", controls=[FinancialView(page)]))
             
             page.update()
-            print("✅ Página atualizada com sucesso")
-        except Exception as e:
-            print(f"🔥 ERRO DENTRO DA ROTA: {e}")
+        except Exception as err:
+            print(f"🔥 Erro ao carregar view: {err}")
             traceback.print_exc()
 
-    page.on_route_change = route_change
-    
-    # --- INICIALIZAÇÃO FIREBASE ---
-    try:
-        print("Iniciando Firebase Service...")
-        firebase_service.initialize_firebase()
-        print("✅ Firebase iniciado!")
-    except Exception as e:
-        print(f"⚠️ Erro Firebase: {e}")
+    def view_pop(view):
+        if len(page.views) > 1:
+            page.views.pop()
+            top_view = page.views[-1]
+            page.go(top_view.route)
 
-    # Força a ida para a tela inicial
-    print("Redirecionando para rota inicial...")
-    page.go(page.route)
+    page.on_route_change = route_change
+    page.on_view_pop = view_pop
+    
+    # Inicialização do Firebase
+    try:
+        firebase_service.initialize_firebase()
+        print("✅ Firebase pronto.")
+    except Exception as e:
+        print(f"⚠️ Firebase offline: {e}")
+
+    # Forçar rota inicial se estiver na raiz
+    if page.route == "/":
+        page.go("/login")
+    else:
+        page.go(page.route)
 
 if __name__ == "__main__":
+    # O Render usa a porta 10000 por padrão
     port = int(os.getenv("PORT", 10000))
+    
+    print(f"🌐 Iniciando servidor na porta {port}...")
+    
     ft.app(
         target=main,
         view=ft.AppView.WEB_BROWSER,
         host="0.0.0.0",
         port=port,
-        assets_dir="assets" # Garante que o Flet saiba onde as imagens estão
+        assets_dir="assets" # Importante para carregar imagens da pasta assets
     )
