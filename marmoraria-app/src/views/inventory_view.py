@@ -57,13 +57,13 @@ def InventoryView(page: ft.Page):
                             ], alignment="spaceBetween"),
                             ft.Row([
                                 ft.IconButton(
-                                    icon=ft.icons.EDIT_OUTLINE,
+                                    icon=ft.icons.EDIT,
                                     icon_color=ft.colors.BLUE_700,
                                     tooltip="Editar item",
                                     on_click=lambda e, i=item: abrir_popup_editar(i)
                                 ),
                                 ft.IconButton(
-                                    icon=ft.icons.DELETE_OUTLINE, 
+                                    icon=ft.icons.DELETE, 
                                     icon_color=COLOR_ERROR, 
                                     tooltip="Excluir item",
                                     on_click=lambda e, i=item: confirmar_exclusao(i['id'], i['nome'])

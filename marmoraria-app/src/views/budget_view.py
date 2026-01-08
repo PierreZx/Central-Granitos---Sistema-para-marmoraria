@@ -136,7 +136,7 @@ def BudgetView(page: ft.Page):
 
         # Cálculo de Total
         total_calc = 0
-        lista_itens_ui = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, max_height=400)
+        lista_itens_ui = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=400)
         
         for idx, item in enumerate(orc['itens']):
             try:

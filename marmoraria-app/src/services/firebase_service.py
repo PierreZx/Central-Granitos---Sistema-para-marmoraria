@@ -181,3 +181,15 @@ def update_document(collection, doc_id, data):
     except Exception as e:
         print(f"Erro ao atualizar: {e}")
         return False
+    
+def get_dividas_pendentes():
+    """Busca transações do tipo DESPESA que ainda não foram pagas ou estão abertas"""
+    transacoes = get_collection("financeiro")
+    # Filtra apenas o que for DESPESA e que tenha algum campo indicando pendência
+    # Se você não tiver o campo 'status', ele trará todas as despesas
+    return [t for t in transacoes if t.get('tipo') == 'DESPESA' and t.get('status') != 'PAGO']
+
+def get_receitas_pendentes():
+    """Busca transações do tipo RECEITA que ainda não foram recebidas"""
+    transacoes = get_collection("financeiro")
+    return [t for t in transacoes if t.get('tipo') == 'RECEITA' and t.get('status') != 'RECEBIDO']
