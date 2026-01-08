@@ -30,7 +30,13 @@ class Sidebar(ft.Container):
                     width=38, height=38, border_radius=10, bgcolor=COLOR_PRIMARY,
                     content=ft.Icon(ft.icons.PRECISION_MANUFACTURING_ROUNDED, color=COLOR_WHITE, size=20)
                 ),
-                ft.Text("CENTRAL", size=20, weight="bold", color=COLOR_PRIMARY, letter_spacing=1)
+                ft.Text(
+                    "CENTRAL", 
+                    size=20, 
+                    weight="bold", 
+                    color=COLOR_PRIMARY, 
+                    style=ft.TextStyle(letter_spacing=1) # Ajustado para ficar dentro do style
+                )
             ], spacing=12),
             margin=ft.margin.only(bottom=30, left=5)
         )

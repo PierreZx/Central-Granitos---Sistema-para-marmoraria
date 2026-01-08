@@ -66,7 +66,13 @@ def LoginView(page: ft.Page):
     )
 
     titulo = ft.Column([
-        ft.Text("CENTRAL GRANITOS", size=24, weight="bold", color=COLOR_PRIMARY, letter_spacing=1),
+        ft.Text(
+            "CENTRAL GRANITOS", 
+            size=24, 
+            weight="bold", 
+            color=COLOR_PRIMARY,
+            style=ft.TextStyle(letter_spacing=1) # O parâmetro correto é aqui dentro
+        ),
         ft.Text("Sistema de Gestão Interna", size=14, color=ft.colors.GREY_600),
     ], horizontal_alignment="center", spacing=2)
 
