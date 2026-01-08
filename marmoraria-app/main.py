@@ -11,8 +11,8 @@ def main(page: ft.Page):
         ft.Container(
             content=ft.Column([
                 ft.Text("SISTEMA CENTRAL GRANITOS", color="white", size=30, weight="bold"),
-                ft.Text("Versão 0.25.2 instalada com sucesso!", color="white"),
-                ft.ElevatedButton("Entrar no Sistema", on_click=lambda _: page.go("/login"))
+                ft.Text("Conectado ao Python 3.13 e Flet 0.25.2!", color="white"),
+                ft.ElevatedButton("Abrir Login", on_click=lambda _: page.go("/login"))
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             bgcolor="#722F37",
             padding=50,
@@ -22,4 +22,10 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port, host="0.0.0.0")
+    # Na versão 0.25.2, usamos apenas o target e as portas
+    ft.app(
+        target=main, 
+        view=ft.AppView.WEB_BROWSER, 
+        port=port, 
+        host="0.0.0.0"
+    )
