@@ -1,4 +1,4 @@
-flet==0.21.0
+flet==0.25.2
 requests==2.32.3
 certifi==2024.2.2
 urllib3==2.2.1

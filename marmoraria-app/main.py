@@ -3,19 +3,17 @@ import os
 
 def main(page: ft.Page):
     page.title = "Teste Marmoraria"
-    page.bgcolor = "#722F37" # Vinho
-    # Usei o nome antigo dos alinhamentos caso a versão ainda seja antiga
-    page.vertical_alignment = "center"
-    page.horizontal_alignment = "center"
+    page.bgcolor = "#722F37" 
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
     page.add(
         ft.Container(
             content=ft.Column([
-                # Removi o ícone CONSTRUCTION que deu erro
                 ft.Text("SISTEMA CENTRAL GRANITOS", color="white", size=30, weight="bold"),
-                ft.Text("Se você está vendo isso, a versão foi atualizada!", color="white"),
-                ft.ElevatedButton("Tentar Abrir Login Real", on_click=lambda _: page.go("/login"))
-            ], horizontal_alignment="center"),
+                ft.Text("Versão 0.25.2 instalada com sucesso!", color="white"),
+                ft.ElevatedButton("Entrar no Sistema", on_click=lambda _: page.go("/login"))
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             bgcolor="#722F37",
             padding=50,
             border_radius=20
