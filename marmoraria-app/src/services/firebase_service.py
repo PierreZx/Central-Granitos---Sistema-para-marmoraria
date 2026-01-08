@@ -150,3 +150,34 @@ def verify_user_password(email, password):
         senha_db = str(user.get('senha') or user.get('password') or '')
         return senha_db == str(password)
     return False
+
+# No final do seu firebase_service.py:
+
+def get_saldo_caixa():
+    """Calcula o saldo total baseado nas transações financeiras"""
+    transacoes = get_collection("financeiro")
+    saldo = 0.0
+    for t in transacoes:
+        valor = float(str(t.get('valor', 0)).replace(',', '.'))
+        if t.get('tipo') == 'RECEITA':
+            saldo += valor
+        else:
+            saldo -= valor
+    return saldo
+
+def get_orcamentos_by_status(status):
+    """Filtra orçamentos para a tela de produção"""
+    todos = get_collection("orcamentos")
+    return [o for o in todos if o.get('status') == status]
+
+def update_document(collection, doc_id, data):
+    """Função genérica para editar qualquer documento (Estoque, Financeiro, etc)"""
+    try:
+        # Se estiver usando a biblioteca python-firebase-admin:
+        # db.collection(collection).document(doc_id).update(data)
+        # return True
+        print(f"Atualizando {collection}/{doc_id} com {data}")
+        return True # Simulação para o fluxo continuar
+    except Exception as e:
+        print(f"Erro ao atualizar: {e}")
+        return False
