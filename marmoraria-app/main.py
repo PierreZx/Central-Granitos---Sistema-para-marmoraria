@@ -2,13 +2,15 @@ import flet as ft
 import time
 import traceback
 import warnings
-import os  # Necessário para ler a porta do servidor
+import os
 
-# --- 1. SILENCIADOR DE AVISOS ---
 warnings.filterwarnings("ignore")
 
-# --- IMPORTAÇÕES SEGURAS ---
+print("--- 🚀 INICIANDO APLICAÇÃO ---")
+
+# --- TESTE DE IMPORTAÇÕES ---
 try:
+    print("Tentando importar configurações e views...")
     from src.config import COLOR_PRIMARY, COLOR_BACKGROUND, COLOR_WHITE, COLOR_SECONDARY
     from src.services import firebase_service
     from src.views.login_view import LoginView
@@ -17,70 +19,65 @@ try:
     from src.views.budget_view import BudgetView
     from src.views.production_view import ProductionView
     from src.views.financial_view import FinancialView
-except ImportError as e:
-    print(f"⚠️ Erro de importação crítico: {e}")
-    class LoginView(ft.Container): pass
-    class DashboardView(ft.Container): pass
+    print("✅ Todas as importações feitas com sucesso!")
+except Exception as e:
+    print(f"❌ ERRO NAS IMPORTAÇÕES: {e}")
+    traceback.print_exc()
 
 def main(page: ft.Page):
-    # --- CONFIGURAÇÃO INICIAL ---
+    print(f"--- 👤 Nova sessão iniciada (Rota atual: {page.route}) ---")
+    
     page.title = "Marmoraria Central"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
-    page.bgcolor = "#F5F5F5" # Valor padrão caso a variável falhe
     
-    # Gerenciamento de Rotas
+    try:
+        page.bgcolor = COLOR_BACKGROUND
+    except:
+        page.bgcolor = "#F5F5F5"
+
     def route_change(route):
+        print(f"🛣️ Mudança de rota detectada: {page.route}")
         try:
             page.views.clear()
             
-            # Rota de Login (Padrão)
             if page.route == "/" or page.route == "/login":
+                print("Exibindo tela de LOGIN")
                 page.views.append(ft.View(route="/login", controls=[LoginView(page)]))
             
-            # Outras Rotas
             elif page.route == "/dashboard":
+                print("Exibindo tela de DASHBOARD")
                 page.views.append(ft.View(route="/dashboard", controls=[DashboardView(page)]))
-            elif page.route == "/estoque":
-                page.views.append(ft.View(route="/estoque", controls=[InventoryView(page)]))
-            elif page.route == "/orcamentos":
-                page.views.append(ft.View(route="/orcamentos", controls=[BudgetView(page)]))
-            elif page.route == "/producao":
-                page.views.append(ft.View(route="/producao", controls=[ProductionView(page)]))
-            elif page.route == "/financeiro":
-                page.views.append(ft.View(route="/financeiro", controls=[FinancialView(page)]))
+            
+            # Adicione aqui as outras rotas se necessário...
             
             page.update()
+            print("✅ Página atualizada com sucesso")
         except Exception as e:
-            print(f"🔥 ERRO NA ROTA: {e}")
+            print(f"🔥 ERRO DENTRO DA ROTA: {e}")
             traceback.print_exc()
 
-    def view_pop(view):
-        page.views.pop()
-        top_view = page.views[-1]
-        page.go(top_view.route)
-
     page.on_route_change = route_change
-    page.on_view_pop = view_pop
     
     # --- INICIALIZAÇÃO FIREBASE ---
-    def iniciar_servicos():
-        try:
-            firebase_service.initialize_firebase()
-        except Exception as e:
-            print(f"⚠️ Erro Firebase: {e}")
+    try:
+        print("Iniciando Firebase Service...")
+        firebase_service.initialize_firebase()
+        print("✅ Firebase iniciado!")
+    except Exception as e:
+        print(f"⚠️ Erro Firebase: {e}")
 
-    iniciar_servicos()
+    # Força a ida para a tela inicial
+    print("Redirecionando para rota inicial...")
     page.go(page.route)
 
-# --- EXECUÇÃO PARA WEB (CONFIGURAÇÃO RENDER) ---
 if __name__ == "__main__":
-    # O Render usa a porta 10000 por padrão, mas fornecida via variável de ambiente
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 10000))
+    print(f"🌐 Servidor rodando na porta {port}")
     
     ft.app(
         target=main,
-        view=ft.AppView.WEB_BROWSER, # Força o modo navegador
-        host="0.0.0.0",               # Permite conexões externas
-        port=port                    # Usa a porta do Render
+        view=ft.AppView.WEB_BROWSER,
+        host="0.0.0.0",
+        port=port
     )

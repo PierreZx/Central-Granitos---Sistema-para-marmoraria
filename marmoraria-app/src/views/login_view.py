@@ -38,11 +38,13 @@ def LoginView(page: ft.Page):
             show_snack("E-mail ou senha incorretos", success=False)
 
     logo = ft.Container(
-        content=ft.Column([
-            ft.Image(src="logo.jpg", width=80, height=80, fit=ft.ImageFit.CONTAIN),
-            ft.Text("CENTRAL", size=24, weight=ft.FontWeight.W_900, color=COLOR_PRIMARY),
-            ft.Text("GRANITOS", size=14, weight=ft.FontWeight.W_600, color=COLOR_SECONDARY, style=ft.TextStyle(letter_spacing=2)),
-        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        content=ft.Image(
+            src="icon.png", # Mudamos de logo.jpg para icon.png
+            width=150,
+            height=150,
+            fit=ft.ImageFit.CONTAINER,
+            error_content=ft.Icon(ft.icons.IMAGE_NOT_SUPPORTED, size=50) # Se falhar, mostra um ícone e não trava
+        ),
         padding=ft.padding.only(bottom=20),
     )
 
