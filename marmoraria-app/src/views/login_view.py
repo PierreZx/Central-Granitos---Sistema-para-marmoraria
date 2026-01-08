@@ -36,7 +36,7 @@ def LoginView(page: ft.Page):
         if email == AUTH_EMAIL and senha == AUTH_PASSWORD:
             page.session.set("user_role", "admin")
             show_snack("Bem-vindo, Administrador!", success=True)
-            page.push_route("/dashboard")
+            page.go("/dashboard")  # <--- MUDAR PARA page.go
             return
 
         # 3. Verificação via FIREBASE (Caso os de cima falhem)
