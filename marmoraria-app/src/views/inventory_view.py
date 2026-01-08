@@ -96,7 +96,12 @@ def InventoryView(page: ft.Page):
                             ], alignment="spaceBetween"),
                             ft.Divider(height=10, color="transparent"),
                             ft.Row([
-                                ft.Badge(text=f"{item.get('quantidade')} un", bgcolor=COLOR_SECONDARY),
+                                ft.Container(
+                                        content=ft.Text(f"{item.get('quantidade')} un", size=11, weight="bold", color=COLOR_WHITE),
+                                        bgcolor=COLOR_SECONDARY,
+                                        padding=ft.padding.symmetric(vertical=2, horizontal=8),
+                                        border_radius=10,
+                                    ),
                                 ft.Text(f"{item.get('metros')} m²", size=14, color=ft.colors.GREY_700),
                             ], alignment="spaceBetween"),
                             ft.Row([
