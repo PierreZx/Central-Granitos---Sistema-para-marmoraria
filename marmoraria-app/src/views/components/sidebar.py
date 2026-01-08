@@ -22,13 +22,19 @@ class Sidebar(ft.Container):
         self.padding = ft.padding.only(left=20, right=20, top=20, bottom=padding_bottom)
         user_role = self.page.session.get("user_role")
         
+        # Cabeçalho com correção de style
         logo = ft.Row([
             ft.Container(
                 width=40, height=40, border_radius=10, bgcolor=COLOR_PRIMARY,
                 content=ft.Icon(ft.icons.PRECISION_MANUFACTURING_ROUNDED, color=ft.colors.WHITE, size=20)
             ),
-            ft.Text("CENTRAL", size=20, weight="bold", color=COLOR_PRIMARY, letter_spacing=1),
-        ], spacing=12)
+            ft.Text(
+                "CENTRAL", 
+                size=18, 
+                color=COLOR_PRIMARY,
+                style=ft.TextStyle(weight="bold", letter_spacing=1) # CORREÇÃO AQUI
+            )
+        ], spacing=10)
 
         menu_items = []
         if user_role == "admin":
@@ -36,12 +42,12 @@ class Sidebar(ft.Container):
                 self.criar_item_menu("Dashboard", ft.icons.DASHBOARD_ROUNDED, "/dashboard"),
                 self.criar_item_menu("Estoque", ft.icons.INVENTORY_2_ROUNDED, "/estoque"),
                 self.criar_item_menu("Orçamentos", ft.icons.DESCRIPTION_ROUNDED, "/orcamentos"),
-                self.criar_item_menu("Financeiro", ft.icons.PAYMENTS_ROUNDED, "/financeiro"),
-                self.criar_item_menu("Produção", ft.icons.CHAIR_ALT_ROUNDED, "/producao"),
+                self.criar_item_menu("Financeiro", ft.icons.ACCOUNT_BALANCE_WALLET_ROUNDED, "/financeiro"),
+                self.criar_item_menu("Produção", ft.icons.HANDYMAN_ROUNDED, "/producao"),
             ]
-        elif user_role == "producao":
+        else:
             menu_items = [
-                self.criar_item_menu("Produção", ft.icons.CHAIR_ALT_ROUNDED, "/producao"),
+                self.criar_item_menu("Produção", ft.icons.HANDYMAN_ROUNDED, "/producao"),
             ]
 
         rodape = self.criar_item_menu("Sair", ft.icons.LOGOUT_ROUNDED, "/login", estilo="danger")
@@ -72,15 +78,20 @@ class Sidebar(ft.Container):
             content=ft.TextButton(
                 content=ft.Row([
                     ft.Icon(icone, size=22, color=COLOR_PRIMARY if esta_ativo else cor_base),
-                    ft.Text(texto, size=15, weight=ft.FontWeight.W_500 if esta_ativo else ft.FontWeight.W_400),
+                    ft.Text(
+                        texto, 
+                        size=15, 
+                        style=ft.TextStyle(
+                            weight=ft.FontWeight.W_500 if esta_ativo else ft.FontWeight.W_400
+                        )
+                    ),
                 ], spacing=12),
                 style=ft.ButtonStyle(
                     shape=ft.RoundedRectangleBorder(radius=10),
                     color=COLOR_PRIMARY if esta_ativo else cor_base,
-                    bgcolor="#6A1B1B10" if esta_ativo else "transparent",
+                    bgcolor="#6A1B1B10" if esta_ativo else ft.colors.TRANSPARENT,
                 ),
-                data=rota,
-                on_click=self.navegar
-            ),
-            margin=ft.margin.only(bottom=2)
+                on_click=self.navegar,
+                data=rota
+            )
         )

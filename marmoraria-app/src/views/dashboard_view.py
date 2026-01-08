@@ -20,18 +20,17 @@ def DashboardView(page: ft.Page):
                         alignment=ft.alignment.center
                     ),
                     ft.Column([
-                        # Aplicando Opção B: Uso de TextStyle para propriedades de fonte
                         ft.Text(
                             titulo, 
                             color=ft.colors.GREY_700, 
                             size=12, 
-                            style=ft.TextStyle(weight="w500") # Exemplo de uso do style
+                            style=ft.TextStyle(weight="w500") # CORREÇÃO AQUI
                         ),
                         ft.Text(
                             valor, 
                             size=20, 
-                            color=cor_valor,
-                            style=ft.TextStyle(weight="bold") # Centralizando pesos e estilos aqui
+                            color=cor_valor, 
+                            style=ft.TextStyle(weight="bold") # CORREÇÃO AQUI
                         ),
                     ], spacing=0, expand=True)
                 ], alignment="start", spacing=12)
@@ -44,12 +43,11 @@ def DashboardView(page: ft.Page):
         )
 
     conteudo_corpo = ft.Column([
-        # Caso queira usar letter_spacing futuramente, deve ser assim:
         ft.Text(
             "Visão Geral", 
             size=24, 
-            color=COLOR_TEXT,
-            style=ft.TextStyle(weight="bold", letter_spacing=0.5) 
+            color=COLOR_TEXT, 
+            style=ft.TextStyle(weight="bold") # CORREÇÃO AQUI
         ),
         ft.Divider(height=10, color="transparent"),
         
@@ -63,8 +61,8 @@ def DashboardView(page: ft.Page):
         ft.Text(
             "Ações Rápidas", 
             size=18, 
-            color=COLOR_TEXT,
-            style=ft.TextStyle(weight="bold")
+            color=COLOR_TEXT, 
+            style=ft.TextStyle(weight="bold") # CORREÇÃO AQUI
         ),
         ft.ResponsiveRow([
             ft.Container(
