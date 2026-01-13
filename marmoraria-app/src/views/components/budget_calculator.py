@@ -6,7 +6,7 @@ from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE, COLOR_BACKGR
 from src.services import firebase_service
 
 class BudgetCalculator(ft.UserControl):
-    def __init__(self, page, on_save_item, on_cancel, item=None): # Ajustado para bater com budget_view
+    def __init__(self, page, on_save_item, on_cancel, item=None):
         super().__init__()
         self.page = page
         self.on_save_item = on_save_item
@@ -16,169 +16,148 @@ class BudgetCalculator(ft.UserControl):
 
     def build(self):
         # --- CARREGAR DADOS ---
-        chapas = firebase_service.get_collection("estoque") # Ajustado para o seu serviço atual
+        chapas = firebase_service.get_collection("estoque")
         opcoes_pedras = []
         for chapa in chapas:
             nome = chapa.get('nome', 'Sem Nome')
-            preco = float(chapa.get('preco_m2', 0) or 0) # Ajustado para preco_m2
+            preco = float(chapa.get('preco_m2', 0) or 0)
             txt_op = f"{nome} - R$ {preco:.2f}/m²"
             opcoes_pedras.append(ft.dropdown.Option(key=chapa['id'], text=txt_op))
             self.mapa_precos[chapa['id']] = {'nome': nome, 'preco': preco}
 
         # --- COMPONENTES DA INTERFACE ---
-        self.txt_ambiente = ft.TextField(label="Ambiente (Ex: Cozinha)", border_radius=8, expand=True, height=45, text_size=14)
-        self.dd_pedra = ft.Dropdown(label="Pedra", options=opcoes_pedras, border_radius=8, expand=True, height=45, text_size=14)
-        self.txt_larg = ft.TextField(label="Largura (m)", suffix_text="m", expand=True, keyboard_type=ft.KeyboardType.NUMBER, height=45, text_size=14)
-        self.txt_prof = ft.TextField(label="Profund. (m)", suffix_text="m", expand=True, keyboard_type=ft.KeyboardType.NUMBER, height=45, text_size=14)
-        self.txt_acab = ft.TextField(label="R$/m Linear", value="130.00", expand=True, keyboard_type=ft.KeyboardType.NUMBER, height=45, text_size=14)
+        self.txt_ambiente = ft.TextField(label="Ambiente", border_radius=8, height=45, text_size=14)
+        self.dd_pedra = ft.Dropdown(label="Selecionar Pedra", options=opcoes_pedras, border_radius=8, height=45, text_size=14)
+        self.txt_larg = ft.TextField(label="Comprimento (m)", suffix_text="m", expand=True, keyboard_type=ft.KeyboardType.NUMBER, height=45, text_size=14)
+        self.txt_prof = ft.TextField(label="Profundidade (m)", suffix_text="m", expand=True, keyboard_type=ft.KeyboardType.NUMBER, height=45, text_size=14)
+        self.txt_acab = ft.TextField(label="Mão de Obra (R$/ML)", value="130.00", expand=True, keyboard_type=ft.KeyboardType.NUMBER, height=45, text_size=14)
 
         def criar_linha_config(label_chk, valor_padrao_alt):
             chk = ft.Checkbox(label=label_chk, value=False)
-            txt_comp = ft.TextField(label="Comp (m)", width=90, height=40, text_size=12, disabled=True, keyboard_type=ft.KeyboardType.NUMBER, bgcolor=ft.colors.GREY_50)
-            txt_alt = ft.TextField(label="Alt (m)", value=valor_padrao_alt, width=80, height=40, text_size=12, disabled=True, keyboard_type=ft.KeyboardType.NUMBER)
-            return chk, txt_comp, txt_alt
+            txt_alt = ft.TextField(label="Alt (m)", value=valor_padrao_alt, width=80, height=40, text_size=12, keyboard_type=ft.KeyboardType.NUMBER)
+            return chk, txt_alt
 
-        # Rodabancas
-        self.chk_rfundo, self.txt_rf_c, self.txt_rf_a = criar_linha_config("Fundo", "0.10")
-        self.chk_rfrente, self.txt_rfr_c, self.txt_rfr_a = criar_linha_config("Frente", "0.10")
-        self.chk_resq, self.txt_re_c, self.txt_re_a = criar_linha_config("Lat. Esq", "0.10")
-        self.chk_rdir, self.txt_rd_c, self.txt_rd_a = criar_linha_config("Lat. Dir", "0.10")
+        # Configurações de Acabamento (Simplicado para Mobile)
+        self.chk_rfundo, self.txt_rf_a = criar_linha_config("Rodo Fundo", "0.10")
+        self.chk_resq, self.txt_re_a = criar_linha_config("Rodo Esq", "0.10")
+        self.chk_rdir, self.txt_rd_a = criar_linha_config("Rodo Dir", "0.10")
+        
+        self.chk_sfrente, self.txt_sfr_a = criar_linha_config("Saia Frente", "0.04")
+        self.chk_sesq, self.txt_se_a = criar_linha_config("Saia Esq", "0.04")
+        self.chk_sdir, self.txt_sd_a = criar_linha_config("Saia Dir", "0.04")
 
-        # Saias
-        self.chk_sfundo, self.txt_sf_c, self.txt_sf_a = criar_linha_config("Fundo", "0.04")
-        self.chk_sfrente, self.txt_sfr_c, self.txt_sfr_a = criar_linha_config("Frente", "0.04")
-        self.chk_sesq, self.txt_se_c, self.txt_se_a = criar_linha_config("Lat. Esq", "0.04")
-        self.chk_sdir, self.txt_sd_c, self.txt_sd_a = criar_linha_config("Lat. Dir", "0.04")
+        self.chk_cuba = ft.Checkbox(label="Bojo/Cuba", value=False)
+        self.txt_pos_cuba = ft.TextField(label="Eixo (m)", value="0.50", width=80, height=40, text_size=12)
 
-        # Recortes
-        self.chk_cuba = ft.Checkbox(label="Cuba", value=False)
-        self.txt_pos_cuba = ft.TextField(label="Eixo (m)", value="0.50", width=80, height=40, text_size=12, disabled=True)
-        self.chk_cook = ft.Checkbox(label="Cooktop", value=False)
-        self.txt_pos_cook = ft.TextField(label="Eixo (m)", value="1.50", width=80, height=40, text_size=12, disabled=True)
-
-        self.canvas = cv.Canvas(width=400, height=350, shapes=[])
-        self.lbl_valor = ft.Text("R$ 0.00", size=28, weight="bold", color=COLOR_PRIMARY)
+        self.canvas = cv.Canvas(width=350, height=300, shapes=[])
+        self.lbl_valor = ft.Text("R$ 0.00", size=24, weight="bold", color=COLOR_PRIMARY)
         self.valor_final = 0.0
-        self.area_final = 0.0
 
-        # --- EVENTOS ---
-        inputs_calc = [
-            self.txt_larg, self.txt_prof, self.txt_acab, self.dd_pedra, 
-            self.txt_rf_a, self.txt_rf_c, self.txt_rfr_a, self.txt_rfr_c, self.txt_re_a, self.txt_re_c, self.txt_rd_a, self.txt_rd_c,
-            self.txt_sf_a, self.txt_sf_c, self.txt_sfr_a, self.txt_sfr_c, self.txt_se_a, self.txt_se_c, self.txt_sd_a, self.txt_sd_c,
-            self.txt_pos_cuba, self.txt_pos_cook
-        ]
-        for i in inputs_calc: i.on_change = self.calcular
-
-        inputs_toggle = [
-            self.chk_rfundo, self.chk_rfrente, self.chk_resq, self.chk_rdir, 
-            self.chk_sfundo, self.chk_sfrente, self.chk_sesq, self.chk_sdir, 
-            self.chk_cuba, self.chk_cook
-        ]
-        for i in inputs_toggle: i.on_change = self.toggle_campos
-
-        # Preencher edição se houver
-        if self.item_para_editar: 
-            self.txt_ambiente.value = self.item_para_editar.get('ambiente', '')
-            # ... lógica de carregar o resto ...
-            self.calcular(None, update_ui=False)
-
-        def row_compacta(chk, txt_c, txt_a):
-            return ft.Row([chk, txt_c, txt_a], spacing=5)
+        # Ativar cálculos automáticos
+        inputs = [self.txt_larg, self.txt_prof, self.txt_acab, self.dd_pedra, 
+                  self.txt_rf_a, self.txt_re_a, self.txt_rd_a, 
+                  self.txt_sfr_a, self.txt_se_a, self.txt_sd_a, self.txt_pos_cuba,
+                  self.chk_rfundo, self.chk_resq, self.chk_rdir, 
+                  self.chk_sfrente, self.chk_sesq, self.chk_sdir, self.chk_cuba]
+        
+        for i in inputs: i.on_change = self.calcular
 
         tabs = ft.Tabs(selected_index=0, tabs=[
-            ft.Tab(text="Base", content=ft.Column([self.txt_ambiente, self.dd_pedra, ft.Row([self.txt_larg, self.txt_prof]), self.txt_acab])),
-            ft.Tab(text="Rodobanca", content=ft.Column([row_compacta(self.chk_rfundo, self.txt_rf_c, self.txt_rf_a), row_compacta(self.chk_rfrente, self.txt_rfr_c, self.txt_rfr_a), row_compacta(self.chk_resq, self.txt_re_c, self.txt_re_a), row_compacta(self.chk_rdir, self.txt_rd_c, self.txt_rd_a)])),
-            ft.Tab(text="Saia", content=ft.Column([row_compacta(self.chk_sfundo, self.txt_sf_c, self.txt_sf_a), row_compacta(self.chk_sfrente, self.txt_sfr_c, self.txt_sfr_a), row_compacta(self.chk_sesq, self.txt_se_c, self.txt_se_a), row_compacta(self.chk_sdir, self.txt_sd_c, self.txt_sd_a)])),
-            ft.Tab(text="Furos", content=ft.Column([ft.Row([self.chk_cuba, self.txt_pos_cuba]), ft.Row([self.chk_cook, self.txt_pos_cook])]))
-        ], expand=True)
+            ft.Tab(text="Base", content=ft.Column([self.txt_ambiente, self.dd_pedra, ft.Row([self.txt_larg, self.txt_prof]), self.txt_acab], spacing=10)),
+            ft.Tab(text="Acabamentos", content=ft.Column([
+                ft.Text("Rodobancas (Fundo/Laterais)", size=12, weight="bold"),
+                ft.Row([self.chk_rfundo, self.txt_rf_a]),
+                ft.Row([self.chk_resq, self.txt_re_a, self.chk_rdir, self.txt_rd_a]),
+                ft.Divider(),
+                ft.Text("Saias (Frente/Laterais)", size=12, weight="bold"),
+                self.chk_sfrente,
+                ft.Row([self.chk_sesq, self.txt_se_a, self.chk_sdir, self.txt_sd_a]),
+            ], spacing=5)),
+            ft.Tab(text="Furos", content=ft.Column([ft.Row([self.chk_cuba, self.txt_pos_cuba])]))
+        ], height=280)
 
         return ft.Container(
-            padding=10, bgcolor=COLOR_BACKGROUND, expand=True,
+            padding=10, bgcolor=COLOR_BACKGROUND,
             content=ft.Column([
-                ft.Text("Calculadora Marmoraria", size=20, weight="bold"),
-                ft.Row([
-                    ft.Container(width=350, content=tabs, padding=10, bgcolor=COLOR_WHITE, border_radius=10),
-                    ft.Container(expand=True, content=ft.Column([
-                        ft.Container(content=self.canvas, bgcolor=ft.colors.GREY_50, border_radius=10, border=ft.border.all(1, ft.colors.GREY_300), alignment=ft.alignment.center, expand=True),
-                        ft.Row([self.lbl_valor, ft.ElevatedButton("Salvar", bgcolor=COLOR_SECONDARY, color=COLOR_WHITE, on_click=self.salvar)], alignment="spaceBetween")
-                    ]))
-                ], expand=True)
-            ])
+                ft.Row([ft.IconButton(ft.icons.ARROW_BACK, on_click=lambda e: self.on_cancel()), ft.Text("Nova Peça", weight="bold")], alignment="spaceBetween"),
+                ft.Container(content=tabs, padding=10, bgcolor=COLOR_WHITE, border_radius=10),
+                ft.Text("Visualização Técnica", weight="bold", size=14),
+                ft.Container(content=self.canvas, bgcolor=ft.colors.WHITE, border_radius=10, border=ft.border.all(1, "#ddd"), alignment=ft.alignment.center, height=300),
+                ft.Container(
+                    padding=15, bgcolor=COLOR_WHITE, border_radius=10,
+                    content=ft.Row([
+                        ft.Column([ft.Text("Investimento:", size=12), self.lbl_valor], spacing=0),
+                        ft.ElevatedButton("Salvar", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=self.salvar, height=45)
+                    ], alignment="spaceBetween")
+                )
+            ], scroll=ft.ScrollMode.ALWAYS) # Ativa scroll para telemóveis pequenos
         )
 
-    def toggle_campos(self, e):
-        l = self.txt_larg.value or "0"
-        p = self.txt_prof.value or "0"
-        def set_st(chk, tc, ta, val):
-            tc.disabled = not chk.value
-            ta.disabled = not chk.value
-            if chk.value and (not tc.value or float(tc.value or 0)==0): tc.value = val
-        
-        set_st(self.chk_rfundo, self.txt_rf_c, self.txt_rf_a, l)
-        set_st(self.chk_rfrente, self.txt_rfr_c, self.txt_rfr_a, l)
-        set_st(self.chk_resq, self.txt_re_c, self.txt_re_a, p)
-        set_st(self.chk_rdir, self.txt_rd_c, self.txt_rd_a, p)
-        set_st(self.chk_sfundo, self.txt_sf_c, self.txt_sf_a, l)
-        set_st(self.chk_sfrente, self.txt_sfr_c, self.txt_sfr_a, l)
-        set_st(self.chk_sesq, self.txt_se_c, self.txt_se_a, p)
-        set_st(self.chk_sdir, self.txt_sd_c, self.txt_sd_a, p)
-        self.txt_pos_cuba.disabled = not self.chk_cuba.value
-        self.txt_pos_cook.disabled = not self.chk_cook.value
-        self.calcular(None)
-
-    def calcular(self, e, update_ui=True):
+    def calcular(self, e):
         try:
             if not self.dd_pedra.value: return
             l = float(self.txt_larg.value or 0)
             p = float(self.txt_prof.value or 0)
+            v_ml = float(self.txt_acab.value or 0)
             if l==0 or p==0: return
 
-            preco_base = self.mapa_precos[self.dd_pedra.value]['preco']
-            preco_lin = float(self.txt_acab.value or 0)
+            preco_m2 = self.mapa_precos[self.dd_pedra.value]['preco']
             
             area = l * p
-            serv = 0
+            ml_total = 0
 
-            def add_extra(chk, tc, ta):
-                nonlocal area, serv
-                if chk.value:
-                    c = float(tc.value or 0)
-                    a = float(ta.value or 0)
-                    area += (c * a)
-                    serv += c
-            
-            for chk, tc, ta in [(self.chk_rfundo, self.txt_rf_c, self.txt_rf_a), (self.chk_rfrente, self.txt_rfr_c, self.txt_rfr_a), (self.chk_resq, self.txt_re_c, self.txt_re_a), (self.chk_rdir, self.txt_rd_c, self.txt_rd_a), (self.chk_sfundo, self.txt_sf_c, self.txt_sf_a), (self.chk_sfrente, self.txt_sfr_c, self.txt_sfr_a), (self.chk_sesq, self.txt_se_c, self.txt_se_a), (self.chk_sdir, self.txt_sd_c, self.txt_sd_a)]:
-                add_extra(chk, tc, ta)
+            # Soma perímetros ativos
+            if self.chk_rfundo.value: ml_total += l
+            if self.chk_resq.value: ml_total += p
+            if self.chk_rdir.value: ml_total += p
+            if self.chk_sfrente.value: ml_total += l
+            if self.chk_sesq.value: ml_total += p
+            if self.chk_sdir.value: ml_total += p
 
-            custo = (area * preco_base) + (serv * preco_lin)
-            if self.chk_cuba.value: custo += 150
-            if self.chk_cook.value: custo += 100
+            total = (area * preco_m2) + (ml_total * v_ml)
+            if self.chk_cuba.value: total += 150 # Taxa de furo
 
-            self.valor_final = custo
-            self.area_final = area
-            self.lbl_valor.value = f"R$ {custo:.2f}"
-            self.desenhar(l, p, update_ui)
-            if update_ui: self.update()
+            self.valor_final = total
+            self.lbl_valor.value = f"R$ {total:,.2f}"
+            self.desenhar(l, p)
+            self.update()
         except: pass
 
-    def desenhar(self, w, h, update_ui=True):
+    def desenhar(self, w, h):
         self.canvas.shapes.clear()
-        scale = min(300/w, 250/h) * 0.8
+        scale = min(300/w, 200/h) * 0.8
         w_px, h_px = w*scale, h*scale
-        sx, sy = (400-w_px)/2, (350-h_px)/2
+        sx, sy = (350-w_px)/2, (300-h_px)/2
         
-        # Pedra Principal
-        self.canvas.shapes.append(cv.Rect(sx, sy, w_px, h_px, paint=ft.Paint(style="fill", color="#EEEEEE")))
+        # Pedra
+        self.canvas.shapes.append(cv.Rect(sx, sy, w_px, h_px, paint=ft.Paint(style="fill", color="#F0F0F0")))
         self.canvas.shapes.append(cv.Rect(sx, sy, w_px, h_px, paint=ft.Paint(style="stroke", color="black", stroke_width=2)))
 
-        # Visualização básica de furos
-        if self.chk_cuba.value:
-            pos_x = sx + (float(self.txt_pos_cuba.value or 0) * scale)
-            self.canvas.shapes.append(cv.Rect(pos_x - 20, sy + h_px/2 - 15, 40, 30, border_radius=5, paint=ft.Paint(style="stroke", color="blue")))
-            self.canvas.shapes.append(cv.Text(pos_x - 15, sy + h_px/2 - 5, "EIXO", style=ft.TextStyle(size=8, color="blue")))
+        # Rodobancas (Vermelho com legenda)
+        def draw_rodo(chk, val, x1, y1, x2, y2, tx, ty):
+            if chk.value:
+                self.canvas.shapes.append(cv.Line(x1, y1, x2, y2, paint=ft.Paint(color="red", stroke_width=4)))
+                self.canvas.shapes.append(cv.Text(tx, ty, f"R:{val}m", style=ft.TextStyle(size=10, color="red")))
 
-        if update_ui: self.canvas.update()
+        draw_rodo(self.chk_rfundo, self.txt_rf_a.value, sx, sy, sx+w_px, sy, sx+w_px/2-20, sy-15)
+        draw_rodo(self.chk_resq, self.txt_re_a.value, sx, sy, sx, sy+h_px, sx-45, sy+h_px/2)
+
+        # Saias (Azul com legenda)
+        if self.chk_sfrente.value:
+            self.canvas.shapes.append(cv.Line(sx, sy+h_px, sx+w_px, sy+h_px, paint=ft.Paint(color="blue", stroke_width=6)))
+            self.canvas.shapes.append(cv.Text(sx+w_px/2-20, sy+h_px+5, f"S:{self.txt_sfr_a.value}m", style=ft.TextStyle(size=10, color="blue")))
+
+        # Cuba/Bojo
+        if self.chk_cuba.value:
+            px = sx + (float(self.txt_pos_cuba.value or 0) * scale)
+            self.canvas.shapes.append(cv.Rect(px-25, sy+h_px/2-15, 50, 30, border_radius=5, paint=ft.Paint(style="stroke", color="blue")))
+            self.canvas.shapes.append(cv.Text(px-15, sy+h_px/2-5, "EIXO", style=ft.TextStyle(size=8, color="blue")))
+
+        # Medidas Gerais
+        self.canvas.shapes.append(cv.Text(sx+w_px/2-10, sy-35, f"{w}m", style=ft.TextStyle(size=12, weight="bold")))
+        self.canvas.shapes.append(cv.Text(sx-55, sy+h_px/2-25, f"{h}m", style=ft.TextStyle(size=12, weight="bold")))
+        
+        self.canvas.update()
 
     def salvar(self, e):
         if self.valor_final <= 0: return
@@ -187,8 +166,6 @@ class BudgetCalculator(ft.UserControl):
             "material": self.mapa_precos[self.dd_pedra.value]['nome'],
             "largura": self.txt_larg.value,
             "profundidade": self.txt_prof.value,
-            "area": self.area_final,
-            "preco_total": self.valor_final,
-            "config": {"pedra_id": self.dd_pedra.value, "largura": float(self.txt_larg.value), "profundidade": float(self.txt_prof.value)}
+            "preco_total": self.valor_final
         }
         self.on_save_item(item_dict)
