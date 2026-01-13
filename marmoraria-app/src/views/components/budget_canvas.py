@@ -8,8 +8,8 @@ class BudgetCanvas(ft.UserControl):
     def __init__(self, composition: CompositionManager):
         super().__init__()
         self.composition = composition
-        self.scale = 140 
-        self.padding = 60
+        self.scale = 120 
+        self.padding = 50
 
     def build(self):
         shapes = []
@@ -19,42 +19,49 @@ class BudgetCanvas(ft.UserControl):
             w_px = peca.largura * self.scale
             h_px = peca.profundidade * self.scale
 
-            # 1. CORPO DA PEDRA
-            shapes.append(cv.Rect(x=x_off, y=y_off, width=w_px, height=h_px, paint=ft.Paint(color="#EEEEEE", style=ft.PaintingStyle.FILL)))
-            shapes.append(cv.Rect(x=x_off, y=y_off, width=w_px, height=h_px, paint=ft.Paint(color="black", stroke_width=2, style=ft.PaintingStyle.STROKE)))
+            # DESENHO DA PEDRA (COR ESCURA PARA CONTRASTE)
+            shapes.append(
+                cv.Rect(
+                    x=x_off, y=y_off, width=w_px, height=h_px,
+                    paint=ft.Paint(color=ft.colors.GREY_400, style=ft.PaintingStyle.FILL)
+                )
+            )
+            shapes.append(
+                cv.Rect(
+                    x=x_off, y=y_off, width=w_px, height=h_px,
+                    paint=ft.Paint(color=ft.colors.BLACK, stroke_width=2, style=ft.PaintingStyle.STROKE)
+                )
+            )
 
-            # 2. ACABAMENTOS (SAIA = AZUL, RODO = VERMELHO)
+            # ACABAMENTOS
             if peca.saia and peca.saia.lados:
-                p_saia = ft.Paint(color="blue", stroke_width=4)
+                p_saia = ft.Paint(color=ft.colors.BLUE_700, stroke_width=5)
                 if "frente" in peca.saia.lados: shapes.append(cv.Line(x_off, y_off + h_px, x_off + w_px, y_off + h_px, p_saia))
-                if "fundo" in peca.saia.lados: shapes.append(cv.Line(x_off, y_off, x_off + w_px, y_off, p_saia))
                 if "esquerda" in peca.saia.lados: shapes.append(cv.Line(x_off, y_off, x_off, y_off + h_px, p_saia))
                 if "direita" in peca.saia.lados: shapes.append(cv.Line(x_off + w_px, y_off, x_off + w_px, y_off + h_px, p_saia))
 
-            if peca.rodobanca and peca.rodobanca.lados:
-                p_rodo = ft.Paint(color="red", stroke_width=3)
-                if "fundo" in peca.rodobanca.lados: shapes.append(cv.Line(x_off, y_off - 4, x_off + w_px, y_off - 4, p_rodo))
-                if "esquerda" in peca.rodobanca.lados: shapes.append(cv.Line(x_off - 4, y_off, x_off - 4, y_off + h_px, p_rodo))
-                if "direita" in peca.rodobanca.lados: shapes.append(cv.Line(x_off + w_px + 4, y_off, x_off + w_px + 4, y_off + h_px, p_rodo))
-
-            # 3. ABERTURAS (BOJO / COOKTOP)
-            for ab in peca.aberturas:
-                ab_w = ab.largura * self.scale
-                ab_h = ab.profundidade * self.scale
-                ab_x = x_off + (w_px * ab.x_relativo) - (ab_w / 2)
-                ab_y = y_off + (h_px * ab.y_relativo) - (ab_h / 2)
-                
-                shapes.append(cv.Rect(x=ab_x, y=ab_y, width=ab_w, height=ab_h, paint=ft.Paint(color="red", stroke_width=1, style=ft.PaintingStyle.STROKE, stroke_dash_pattern=[5, 5])))
-                shapes.append(cv.Line(ab_x + ab_w/2, y_off - 10, ab_x + ab_w/2, y_off + h_px + 10, paint=ft.Paint(color="blue", stroke_width=1, stroke_dash_pattern=[10, 5])))
-                shapes.append(cv.Text(x=ab_x + ab_w/2 - 12, y=y_off - 25, text="EIXO", style=ft.TextStyle(size=8, color="blue")))
-
-            # 4. MEDIDAS
-            shapes.append(cv.Text(x=x_off + w_px/2 - 15, y=y_off - 40, text=f"{peca.largura}m", style=ft.TextStyle(size=11, weight="bold")))
-            shapes.append(cv.Text(x=x_off - 45, y=y_off + h_px/2 - 10, text=f"{peca.profundidade}m", style=ft.TextStyle(size=11, weight="bold")))
+            # MEDIDAS (TEXTO)
+            shapes.append(
+                cv.Text(
+                    x=x_off + w_px/2 - 20, y=y_off - 35,
+                    text=f"{peca.largura}m",
+                    style=ft.TextStyle(size=14, weight="bold", color=ft.colors.BLACK)
+                )
+            )
+            shapes.append(
+                cv.Text(
+                    x=x_off - 45, y=y_off + h_px/2 - 10,
+                    text=f"{peca.profundidade}m",
+                    style=ft.TextStyle(size=14, weight="bold", color=ft.colors.BLACK)
+                )
+            )
 
         return ft.Container(
-            content=cv.Canvas(shapes=shapes, width=500, height=300),
+            content=cv.Canvas(shapes=shapes, width=400, height=300),
+            bgcolor=ft.colors.WHITE,
+            border=ft.border.all(1, ft.colors.GREY_300),
+            border_radius=10,
             alignment=ft.alignment.center,
-            width=500,
+            width=400,
             height=300
         )

@@ -50,16 +50,6 @@ class BancadaPiece:
         if "direita" in self.saia.lados: total += self.profundidade
         return round(total, 3)
 
-    def metro_linear_rodobanca(self) -> float:
-        if not self.rodobanca:
-            return 0.0
-        total = 0.0
-        if "frente" in self.rodobanca.lados: total += self.largura
-        if "fundo" in self.rodobanca.lados: total += self.largura
-        if "esquerda" in self.rodobanca.lados: total += self.profundidade
-        if "direita" in self.rodobanca.lados: total += self.profundidade
-        return round(total, 3)
-
 class CompositionManager:
     def __init__(self):
         self.pecas: List[BancadaPiece] = []
