@@ -56,6 +56,18 @@ def _converter_de_firestore(doc):
         obj[k] = _extrair_valor(v)
     return obj
 
+def get_document(collection, doc_id):
+    if not verificar_conexao():
+        return None
+    try:
+        res = requests.get(f"{BASE_URL}/{collection}/{doc_id}")
+        if res.status_code == 200:
+            return _converter_de_firestore(res.json())
+        return None
+    except Exception as e:
+        print(f"Erro ao buscar documento {collection}/{doc_id}: {e}")
+        return None
+
 # --- CONEXÃO ---
 def verificar_conexao():
     try:
@@ -215,3 +227,4 @@ def get_collection_count(collection):
         return len(get_collection(collection))
     except:
         return 0
+
