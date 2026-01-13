@@ -24,6 +24,7 @@ def BudgetView(page: ft.Page):
         grid.controls.clear()
         lista = firebase_service.get_orcamentos_lista()
 
+        # Botão "Novo Orçamento"
         grid.controls.append(
             ft.Container(
                 col={"xs":12,"sm":6,"md":4,"lg":3},
@@ -35,10 +36,11 @@ def BudgetView(page: ft.Page):
                     ft.Icon(ft.icons.ADD_CIRCLE, size=40, color=COLOR_PRIMARY),
                     ft.Text("Novo Orçamento", weight="bold", color=COLOR_PRIMARY)
                 ], alignment="center", horizontal_alignment="center"),
-                on_click=lambda _: popup_novo()
+                on_click=lambda e: popup_novo()
             )
         )
 
+        # Cartões de orçamentos existentes
         for o in lista:
             grid.controls.append(card_cliente(o))
 
@@ -51,7 +53,6 @@ def BudgetView(page: ft.Page):
     def card_cliente(o):
         status = o.get("status","Em aberto")
         cor = COLOR_WARNING if status=="Em aberto" else COLOR_SUCCESS
-        # Corrigido para somar o valor total real gravado no banco
         total = float(o.get("total_geral", 0))
 
         return ft.Container(
@@ -73,9 +74,9 @@ def BudgetView(page: ft.Page):
                 ft.Text(f"Total: R$ {total:,.2f}", size=16, weight="bold", color=COLOR_PRIMARY),
                 ft.Divider(),
                 ft.Row([
-                    ft.IconButton(ft.icons.EDIT, on_click=lambda _: abrir_orcamento(o)),
-                    ft.IconButton(ft.icons.PICTURE_AS_PDF, on_click=lambda _: gerar_pdf_orcamento(o)),
-                    ft.IconButton(ft.icons.DELETE, icon_color=COLOR_ERROR, on_click=lambda _: confirmar_delete(o))
+                    ft.IconButton(ft.icons.EDIT, on_click=lambda e, it=o: abrir_orcamento(it)),
+                    ft.IconButton(ft.icons.PICTURE_AS_PDF, on_click=lambda e, it=o: gerar_pdf_orcamento(it)),
+                    ft.IconButton(ft.icons.DELETE, icon_color=COLOR_ERROR, on_click=lambda e, it=o: confirmar_delete(it))
                 ], alignment="end")
             ])
         )
@@ -137,7 +138,8 @@ def BudgetView(page: ft.Page):
             o["total_geral"] = total
             firebase_service.update_document("orcamentos", o["id"], o)
 
-        def adicionar_item(*args):
+        # ✅ Ajuste: adicionar_item recebe o evento 'e'
+        def adicionar_item(e=None):
             def salvar_item(item):
                 o["itens"].append(item)
                 atualizar_total()
@@ -146,7 +148,7 @@ def BudgetView(page: ft.Page):
             container.content = BudgetCalculator(
                 page,
                 on_save_item=salvar_item,
-                on_cancel=lambda _: abrir_orcamento(o)
+                on_cancel=lambda e=None: abrir_orcamento(o)
             )
             page.update()
 
@@ -161,7 +163,7 @@ def BudgetView(page: ft.Page):
                 page,
                 item=item,
                 on_save_item=salvar_item_editado,
-                on_cancel=lambda _: abrir_orcamento(o)
+                on_cancel=lambda e=None: abrir_orcamento(o)
             )
             page.update()
 
@@ -194,14 +196,21 @@ def BudgetView(page: ft.Page):
         total_atual = float(o.get("total_geral", 0))
 
         return ft.Column([
-            ft.Row([ft.IconButton(ft.icons.ARROW_BACK, on_click=lambda _: carregar()),
-                    ft.Text(o["cliente_nome"], size=20, weight="bold")]),
+            ft.Row([
+                ft.IconButton(ft.icons.ARROW_BACK, on_click=lambda e=None: carregar()),
+                ft.Text(o["cliente_nome"], size=20, weight="bold")
+            ]),
             ft.Column(cards_itens, spacing=10),
             ft.Divider(),
             ft.Row([
                 ft.Text(f"Total: R$ {total_atual:,.2f}", weight="bold", size=20, color=COLOR_PRIMARY),
-                ft.ElevatedButton("Adicionar Pedra", icon=ft.icons.ADD, bgcolor=COLOR_PRIMARY, color=COLOR_WHITE,
-                                  on_click=adicionar_item)
+                ft.ElevatedButton(
+                    "Adicionar Pedra",
+                    icon=ft.icons.ADD,
+                    bgcolor=COLOR_PRIMARY,
+                    color=COLOR_WHITE,
+                    on_click=adicionar_item  # callback agora recebe evento
+                )
             ], alignment="spaceBetween")
         ], scroll=ft.ScrollMode.AUTO)
 

@@ -1,7 +1,7 @@
 # src/views/components/budget_calculator.py
 import flet as ft
 from src.services import firebase_service
-from src.views.components.budget_composition import BancadaPiece, Saia, RodoBanca, CompositionManager, Abertura
+from src.views.components.budget_composition import BancadaPiece, Abertura, CompositionManager
 from src.views.components.budget_canvas import BudgetCanvas
 from src.config import COLOR_PRIMARY, COLOR_WHITE
 
@@ -23,7 +23,8 @@ class BudgetCalculator(ft.UserControl):
         docs = firebase_service.get_collection("estoque")
         self.pedras = [{"id": d.get("id"), "nome": d["nome"], "preco_m2": float(d["preco_m2"])} for d in docs if "nome" in d]
         self.dd_pedra.options = [ft.dropdown.Option(key=p["id"], text=p["nome"]) for p in self.pedras]
-        if self.item_para_editar: self._carregar_edicao()
+        if self.item_para_editar:
+            self._carregar_edicao()
         self.update()
 
     def build(self):
@@ -37,7 +38,7 @@ class BudgetCalculator(ft.UserControl):
         return ft.Container(
             padding=15, bgcolor=COLOR_WHITE,
             content=ft.Column(
-                scroll=ft.ScrollMode.ALWAYS, # Scroll para o botão não sumir
+                scroll=ft.ScrollMode.ALWAYS,
                 controls=[
                     ft.Text("Orçamento Técnico", size=22, weight="bold"),
                     self.dd_pedra,
@@ -55,28 +56,35 @@ class BudgetCalculator(ft.UserControl):
 
     def _atualizar_calculos(self, e=None):
         try:
-            if self.dd_pedra.value:
-                self.pedra_selecionada = next(p for p in self.pedras if p["id"] == self.dd_pedra.value)
-            peca = BancadaPiece(nome="Pia", largura=float(self.input_larg.value), profundidade=float(self.input_prof.value))
-            if self.sw_bojo.value: peca.aberturas.append(Abertura("bojo", 0.50, 0.40, 0.5, 0.5))
+            if not self.dd_pedra.value: return
+            self.pedra_selecionada = next(p for p in self.pedras if p["id"] == self.dd_pedra.value)
+            largura = float(self.input_larg.value or 0)
+            profundidade = float(self.input_prof.value or 0)
+
+            peca = BancadaPiece(nome="Pia", largura=largura, profundidade=profundidade)
+            if self.sw_bojo.value:
+                peca.aberturas.append(Abertura("bojo", 0.50, 0.40, 0.5, 0.5))
+
             self.composition.pecas = [peca]
-            self.canvas_area.content = BudgetCanvas(self.composition)
-            
-            p_m2 = self.pedra_selecionada["preco_m2"] if self.pedra_selecionada else 0
-            total = peca.area_m2() * p_m2
+            self.canvas_area.content = BudgetCanvas(self.composition, width=500, height=350, scale=200)
+
+            # Total
+            total = peca.area_m2() * self.pedra_selecionada["preco_m2"]
             self.txt_total.value = f"R$ {total:,.2f}"
             self.update()
-        except: pass
+        except Exception as err:
+            print("Erro ao atualizar cálculos:", err)
 
     def _salvar(self, e):
         if not self.pedra_selecionada: return
-        clean_total = self.txt_total.value.replace("R$ ", "").replace(".", "").replace(",", ".")
+        total = float(self.txt_total.value.replace("R$ ", "").replace(".", "").replace(",", "."))
         peca = self.composition.pecas[0]
         item = {
             "ambiente": "Cozinha",
             "material": self.pedra_selecionada["nome"],
             "largura": peca.largura,
             "profundidade": peca.profundidade,
-            "preco_total": float(clean_total)
+            "preco_total": total
         }
-        if self.on_save_item: self.on_save_item(item)
+        if self.on_save_item:
+            self.on_save_item(item)
