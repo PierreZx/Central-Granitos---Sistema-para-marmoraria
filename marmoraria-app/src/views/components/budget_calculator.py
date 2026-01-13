@@ -1,220 +1,177 @@
 import flet as ft
 from src.services import firebase_service
+from src.views.components.budget_composition import BancadaPiece, Saia, RodoBanca, CompositionManager
+from src.views.components.budget_canvas import BudgetCanvas
+from src.config import COLOR_PRIMARY, COLOR_WHITE, COLOR_TEXT, BORDER_RADIUS_LG
 
-# =========================
-# CONFIGURAÇÕES GERAIS
-# =========================
-COLLECTION_PEDRAS = "estoque"
-PRECO_METRO_LINEAR_PADRAO = 130.0
-
-# =========================
-# MODELO DE PEÇA
-# =========================
-class BancadaPeca:
-    def __init__(self, comprimento: float, profundidade: float):
-        self.comprimento = comprimento
-        self.profundidade = profundidade
-
-    @property
-    def area(self) -> float:
-        return self.comprimento * self.profundidade
-
-    @property
-    def metro_linear(self) -> float:
-        # 🔥 Mão de obra é calculada SOMENTE pelo comprimento frontal
-        return self.comprimento
-
-# =========================
-# FUNÇÃO DE CÁLCULO (DOMÍNIO)
-# =========================
-def calcular_bancada_reta(
-    ambiente: str,
-    material: str,
-    comprimento: float,
-    profundidade: float,
-    preco_m2: float,
-    preco_ml: float
-) -> dict:
-    area = comprimento * profundidade
-    valor_material = area * preco_m2
-    valor_mao_obra = comprimento * preco_ml
-    preco_total = valor_material + valor_mao_obra
-
-    return {
-        "ambiente": ambiente,
-        "material": material,
-        "largura": comprimento,
-        "profundidade": profundidade,
-        "area": round(area, 2),
-        "preco_material": round(valor_material, 2),
-        "preco_mao_obra": round(valor_mao_obra, 2),
-        "preco_total": round(preco_total, 2)
-    }
-
-# =========================
-# COMPONENTE PRINCIPAL
-# =========================
 class BudgetCalculator(ft.UserControl):
-    def __init__(self, page: ft.Page, on_save_item=None, on_cancel=None):
+    def __init__(self, page: ft.Page, item=None, on_save_item=None, on_cancel=None):
         super().__init__()
         self.page = page
+        self.item_para_editar = item
         self.on_save_item = on_save_item
         self.on_cancel = on_cancel
-
+        
+        self.composition = CompositionManager()
         self.pedras = []
         self.pedra_selecionada = None
-
         self._carregar_pedras()
-
-    # ---------------------
-    # FIREBASE
-    # ---------------------
+        
     def _carregar_pedras(self):
-        self.pedras.clear()
-        docs = firebase_service.get_collection(COLLECTION_PEDRAS)
-        for data in docs:
-            if "nome" in data and "preco_m2" in data:
-                self.pedras.append({
-                    "id": data.get("id"),
-                    "nome": data["nome"],
-                    "preco_m2": float(data["preco_m2"]),
-                })
+        docs = firebase_service.get_collection("estoque")
+        self.pedras = [
+            {"id": d.get("id"), "nome": d["nome"], "preco_m2": float(d["preco_m2"])}
+            for d in docs if "nome" in d and "preco_m2" in d
+        ]
 
-    # ---------------------
-    # CÁLCULO
-    # ---------------------
-    def _recalcular(self, _=None):
-        if not self.pedra_selecionada:
-            return
-
-        try:
-            comprimento = float(self.input_comprimento.value)
-            profundidade = float(self.input_profundidade.value)
-            preco_ml = float(self.input_preco_ml.value)
-        except (ValueError, TypeError):
-            return
-
-        peca = BancadaPeca(comprimento, profundidade)
-
-        custo_material = peca.area * self.pedra_selecionada["preco_m2"]
-        custo_mao_obra = peca.metro_linear * preco_ml
-        total = custo_material + custo_mao_obra
-
-        self.txt_area.value = f"{peca.area:.2f} m²"
-        self.txt_ml.value = f"{peca.metro_linear:.2f} m"
-        self.txt_material.value = f"R$ {custo_material:,.2f}"
-        self.txt_mao_obra.value = f"R$ {custo_mao_obra:,.2f}"
-        self.txt_total.value = f"R$ {total:,.2f}"
-
-        self.update()
-
-    # ---------------------
-    # UI
-    # ---------------------
     def build(self):
-        self.dropdown_pedra = ft.Dropdown(
-            label="Material (estoque)",
-            options=[
-                ft.dropdown.Option(
-                    key=p["id"],
-                    text=f'{p["nome"]} - R$ {p["preco_m2"]:.2f}/m²'
-                )
-                for p in self.pedras
-            ],
-            on_change=self._on_pedra_change
+        # 1. Definição dos Inputs
+        self.txt_ambiente = ft.TextField(label="Ambiente (ex: Cozinha)", value="Geral", border_radius=10)
+        
+        self.dd_pedra = ft.Dropdown(
+            label="Material",
+            border_radius=10,
+            options=[ft.dropdown.Option(key=p["id"], text=p["nome"]) for p in self.pedras],
+            on_change=self._atualizar_calculos
         )
 
-        self.input_comprimento = ft.TextField(
-            label="Comprimento (m)",
-            keyboard_type=ft.KeyboardType.NUMBER,
-            on_change=self._recalcular
+        self.input_larg = ft.TextField(label="Comprimento (m)", value="1.00", on_change=self._atualizar_calculos, expand=1)
+        self.input_prof = ft.TextField(label="Profundidade (m)", value="0.60", on_change=self._atualizar_calculos, expand=1)
+
+        self.check_saia = ft.Checkbox(label="Possui Saia", value=True, on_change=self._atualizar_calculos)
+        self.alt_saia = ft.TextField(label="Alt. Saia (m)", value="0.04", width=100, on_change=self._atualizar_calculos)
+        
+        self.check_rodo = ft.Checkbox(label="Possui Rodobanca", value=True, on_change=self._atualizar_calculos)
+        self.alt_rodo = ft.TextField(label="Alt. Rodo (m)", value="0.10", width=100, on_change=self._atualizar_calculos)
+
+        self.canvas_preview = ft.Container(
+            content=ft.Text("Aguardando medidas...", color="grey"),
+            alignment=ft.alignment.center,
+            bgcolor="#f8f9fa",
+            border=ft.border.all(1, "grey200"),
+            border_radius=10,
+            height=300,
+            expand=True
         )
 
-        self.input_profundidade = ft.TextField(
-            label="Profundidade (m)",
-            value="0.60",
-            keyboard_type=ft.KeyboardType.NUMBER,
-            on_change=self._recalcular
-        )
+        # 2. Resumo de Valores (Sintaxe segura com controls explícitos)
+        self.txt_res_area = ft.Text("0.00 m²", weight="bold")
+        self.txt_res_preco = ft.Text("R$ 0.00", size=20, weight="bold", color=COLOR_PRIMARY)
 
-        self.input_preco_ml = ft.TextField(
-            label="Preço por metro linear (mão de obra)",
-            value=str(PRECO_METRO_LINEAR_PADRAO),
-            keyboard_type=ft.KeyboardType.NUMBER,
-            on_change=self._recalcular
-        )
-
-        self.txt_area = ft.Text("0.00 m²")
-        self.txt_ml = ft.Text("0.00 m")
-        self.txt_material = ft.Text("R$ 0.00")
-        self.txt_mao_obra = ft.Text("R$ 0.00")
-        self.txt_total = ft.Text(
-            "R$ 0.00",
-            size=20,
-            weight=ft.FontWeight.BOLD
-        )
-
-        return ft.Column(
-            spacing=12,
+        self.resumo_valores = ft.Column(
+            spacing=5,
             controls=[
-                ft.Text("Cálculo de Bancada Reta", size=20, weight=ft.FontWeight.BOLD),
+                ft.Row(controls=[ft.Text("Área Total:"), self.txt_res_area]),
+                ft.Row(controls=[ft.Text("Preço Total:"), self.txt_res_preco])
+            ]
+        )
 
-                self.dropdown_pedra,
+        if self.item_para_editar:
+            self._preencher_edicao()
 
-                self.input_comprimento,
-                self.input_profundidade,
-                self.input_preco_ml,
-
+        # 3. Layout Final (Construção do Grid)
+        coluna_esquerda = ft.Column(
+            width=300,
+            spacing=15,
+            controls=[
+                self.txt_ambiente,
+                self.dd_pedra,
+                ft.Row(controls=[self.input_larg, self.input_prof]),
                 ft.Divider(),
+                ft.Text("Acabamentos", weight="bold"),
+                ft.Row(controls=[self.check_saia, self.alt_saia]),
+                ft.Row(controls=[self.check_rodo, self.alt_rodo])
+            ]
+        )
 
-                ft.Row([ft.Text("Área:"), self.txt_area]),
-                ft.Row([ft.Text("Metro linear:"), self.txt_ml]),
-                ft.Row([ft.Text("Material:"), self.txt_material]),
-                ft.Row([ft.Text("Mão de obra:"), self.txt_mao_obra]),
-
-                ft.Divider(),
-
-                ft.Row([ft.Text("Total:"), self.txt_total]),
-
+        coluna_direita = ft.Column(
+            expand=True,
+            spacing=15,
+            controls=[
+                ft.Text("Visualização Técnica", weight="bold"),
+                self.canvas_preview,
+                self.resumo_valores,
                 ft.Row(
-                    alignment=ft.MainAxisAlignment.END,
+                    alignment="end",
                     controls=[
                         ft.TextButton("Cancelar", on_click=self.on_cancel),
-                        ft.ElevatedButton("Salvar", on_click=lambda _: self._salvar())
+                        ft.ElevatedButton("Confirmar Peça", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=self._salvar)
                     ]
                 )
             ]
         )
 
-    # ---------------------
-    # EVENTOS
-    # ---------------------
-    def _on_pedra_change(self, e):
-        pedra_id = e.control.value
-        self.pedra_selecionada = next(
-            (p for p in self.pedras if p["id"] == pedra_id),
-            None
+        return ft.Container(
+            padding=20,
+            bgcolor=COLOR_WHITE,
+            border_radius=BORDER_RADIUS_LG,
+            content=ft.Column(
+                scroll=ft.ScrollMode.AUTO,
+                controls=[
+                    ft.Row(controls=[
+                        ft.Icon(ft.icons.CALCULATE_ROUNDED, color=COLOR_PRIMARY),
+                        ft.Text("Calculadora Técnica de Pedras", size=20, weight="bold")
+                    ]),
+                    ft.Divider(),
+                    ft.Row(
+                        expand=True,
+                        vertical_alignment="start",
+                        controls=[
+                            coluna_esquerda,
+                            ft.VerticalDivider(width=1),
+                            coluna_direita
+                        ]
+                    )
+                ]
+            )
         )
-        self._recalcular()
 
-    def _salvar(self):
-        if not self.on_save_item or not self.pedra_selecionada:
-            return
+    def _preencher_edicao(self):
+        it = self.item_para_editar
+        self.txt_ambiente.value = it.get("ambiente", "Geral")
+        self.input_larg.value = str(it.get("largura", 1.0))
+        self.input_prof.value = str(it.get("profundidade", 0.6))
+        for p in self.pedras:
+            if p["nome"] == it.get("material"):
+                self.dd_pedra.value = p["id"]
+                self.pedra_selecionada = p
+        self._atualizar_calculos()
 
+    def _atualizar_calculos(self, e=None):
         try:
-            comprimento = float(self.input_comprimento.value)
-            profundidade = float(self.input_profundidade.value)
-            preco_ml = float(self.input_preco_ml.value)
-        except (ValueError, TypeError):
+            larg = float(self.input_larg.value.replace(",", "."))
+            prof = float(self.input_prof.value.replace(",", "."))
+            peca = BancadaPiece(nome=self.txt_ambiente.value, largura=larg, profundidade=prof)
+            if self.check_saia.value:
+                peca.saia = Saia(altura=float(self.alt_saia.value), lados=["frente"])
+            if self.check_rodo.value:
+                peca.rodobanca = RodoBanca(altura=float(self.alt_rodo.value), lados=["fundo"])
+            self.composition.pecas = [peca]
+            self.canvas_preview.content = BudgetCanvas(self.composition)
+            area = peca.area_m2()
+            preco_m2 = self.pedra_selecionada["preco_m2"] if self.pedra_selecionada else 0
+            total = (area * preco_m2) + (peca.metro_linear_saia() * 150)
+            self.txt_res_area.value = f"{area:.2f} m²"
+            self.txt_res_preco.value = f"R$ {total:,.2f}"
+            self.update()
+        except Exception as err:
+            print(f"Erro no cálculo: {err}")
+
+    def _salvar(self, e):
+        if not self.dd_pedra.value:
+            self.page.snack_bar = ft.SnackBar(ft.Text("Selecione um material!"))
+            self.page.snack_bar.open = True
+            self.page.update()
             return
-
-        item = calcular_bancada_reta(
-            ambiente="Ambiente",
-            material=self.pedra_selecionada["nome"],
-            comprimento=comprimento,
-            profundidade=profundidade,
-            preco_m2=self.pedra_selecionada["preco_m2"],
-            preco_ml=preco_ml
-        )
-
-        self.on_save_item(item)
+        self.pedra_selecionada = next(p for p in self.pedras if p["id"] == self.dd_pedra.value)
+        peca = self.composition.pecas[0]
+        item_final = {
+            "ambiente": self.txt_ambiente.value,
+            "material": self.pedra_selecionada["nome"],
+            "largura": peca.largura,
+            "profundidade": peca.profundidade,
+            "area": peca.area_m2(),
+            "preco_total": float(self.txt_res_preco.value.replace("R$ ", "").replace(".", "").replace(",", "."))
+        }
+        if self.on_save_item:
+            self.on_save_item(item_final)

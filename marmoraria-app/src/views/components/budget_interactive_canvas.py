@@ -1,103 +1,96 @@
+# src/views/components/budget_interactive_canvas.py
+
 import flet as ft
-from src.views.components.budget_composition import BancadaPiece, CompositionManager
-
-SNAP_DISTANCE = 15
-
-
-class DraggablePiece(ft.GestureDetector):
-    def __init__(self, piece: BancadaPiece, scale: float = 100):
-        self.piece = piece
-        self.scale = scale
-
-        self.width_px = piece.largura * scale
-        self.depth_px = piece.profundidade * scale
-
-        self.x = 50
-        self.y = 50
-
-        super().__init__(
-            on_pan_update=self.on_drag,
-            on_pan_end=self.on_release,
-            content=self._build_piece()
-        )
-
-    def _build_piece(self):
-        return ft.Container(
-            width=self.width_px,
-            height=self.depth_px,
-            bgcolor=ft.colors.GREY_300,
-            border=ft.border.all(2, ft.colors.BLACK),
-            alignment=ft.alignment.center,
-            content=ft.Text(self.piece.nome, size=12)
-        )
-
-    def on_drag(self, e: ft.DragUpdateEvent):
-        self.x += e.delta_x
-        self.y += e.delta_y
-        self.update_position()
-
-    def on_release(self, e):
-        # Snap será tratado externamente
-        pass
-
-    def update_position(self):
-        # Garantir que o Positioned seja atualizado corretamente
-        if isinstance(self.parent, ft.Positioned):
-            self.parent.left = self.x
-            self.parent.top = self.y
-            self.parent.update()
-
+import flet.canvas as cv
+from src.views.components.budget_composition import CompositionManager, BancadaPiece
 
 class BudgetInteractiveCanvas(ft.UserControl):
-    def __init__(self, composition: CompositionManager):
+    def __init__(self, composition: CompositionManager, on_change=None):
         super().__init__()
         self.composition = composition
-        self.scale = 100
-        self.pieces_ui: list[DraggablePiece] = []
+        self.on_change = on_change
+        self.scale = 100  # Escala para o modo interativo (1m = 100px)
 
     def build(self):
-        self.stack = ft.Stack(
-            width=700,
-            height=400,
-            controls=[]
+        self.canvas = cv.Canvas(
+            allow_request_fixed_size=True,
+            on_resize=self.update_canvas,
+            shapes=[],
+            content=ft.GestureDetector(
+                on_pan_update=self.on_pan_update,
+                drag_interval=10,
+            )
+        )
+        
+        return ft.Container(
+            content=self.canvas,
+            bgcolor="#f0f0f0",
+            border_radius=10,
+            expand=True,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE
         )
 
-        for p in self.composition.pecas:
-            draggable = DraggablePiece(p, self.scale)
-            self.pieces_ui.append(draggable)
-
-            self.stack.controls.append(
-                ft.Positioned(
-                    left=draggable.x,
-                    top=draggable.y,
-                    content=draggable
+    def update_canvas(self, e=None):
+        """Redesenha todas as peças na tela com base em suas posições X, Y."""
+        self.canvas.shapes.clear()
+        
+        for peca in self.composition.pecas:
+            w = peca.largura * self.scale
+            h = peca.profundidade * self.scale
+            
+            # Desenho da Sombra/Corpo da Pedra
+            self.canvas.shapes.append(
+                cv.Rect(
+                    x=peca.x, y=peca.y, width=w, height=h,
+                    border_radius=3,
+                    paint=ft.Paint(color=ft.colors.with_opacity(0.8, ft.colors.GREY_400), style=ft.PaintingStyle.FILL)
                 )
             )
 
-        return ft.Container(
-            border=ft.border.all(1, ft.colors.GREY_400),
-            content=self.stack
-        )
+            # Contorno Principal
+            self.canvas.shapes.append(
+                cv.Rect(
+                    x=peca.x, y=peca.y, width=w, height=h,
+                    paint=ft.Paint(color=ft.colors.BLACK, stroke_width=2, style=ft.PaintingStyle.STROKE)
+                )
+            )
 
-    # =========================
-    # SNAP LOGIC
-    # =========================
-    def apply_snap(self):
-        for a in self.pieces_ui:
-            for b in self.pieces_ui:
-                if a == b:
-                    continue
+            # Indicação de Saia (Linha Azul na Frente)
+            if peca.saia:
+                self.canvas.shapes.append(
+                    cv.Line(
+                        peca.x, peca.y + h, peca.x + w, peca.y + h,
+                        paint=ft.Paint(color=ft.colors.BLUE_800, stroke_width=4)
+                    )
+                )
 
-                # Snap horizontal: direita e esquerda
-                if abs((a.x + a.width_px) - b.x) < SNAP_DISTANCE:
-                    a.x = b.x - a.width_px
-                elif abs(a.x - (b.x + b.width_px)) < SNAP_DISTANCE:
-                    a.x = b.x + b.width_px
+            # Indicação de Rodobanca (Linha Vermelha no Fundo)
+            if peca.rodobanca:
+                self.canvas.shapes.append(
+                    cv.Line(
+                        peca.x, peca.y, peca.x + w, peca.y,
+                        paint=ft.Paint(color=ft.colors.RED_800, stroke_width=3)
+                    )
+                )
 
-                # Snap vertical: cima e baixo
-                if abs((a.y + a.depth_px) - b.y) < SNAP_DISTANCE:
-                    a.y = b.y - a.depth_px
-                elif abs(a.y - (b.y + b.depth_px)) < SNAP_DISTANCE:
-                    a.y = b.y + b.depth_px
+            # Texto informativo sobre a peça
+            self.canvas.shapes.append(
+                cv.Text(
+                    peca.x + 5, peca.y + 5,
+                    f"{peca.largura}x{peca.profundidade}m",
+                    style=ft.TextStyle(size=12, weight="bold", color=ft.colors.BLACK)
+                )
+            )
 
-                a.update_position()
+        self.update()
+
+    def on_pan_update(self, e: ft.DragUpdateEvent):
+        """Lógica para arrastar as peças no canvas."""
+        # Se houver apenas uma peça (como no seu caso atual), movemos a primeira
+        if self.composition.pecas:
+            peca = self.composition.pecas[0]
+            peca.x += e.delta_x
+            peca.y += e.delta_y
+            self.update_canvas()
+            if self.on_change:
+                self.on_change()

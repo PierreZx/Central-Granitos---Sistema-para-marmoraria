@@ -193,10 +193,15 @@ def get_orcamentos_finalizados_nao_pagos():
 def receber_orcamento(item):
     item["pago"] = True
     item["status_pagamento"] = "Pago"
+    item["status"] = "Finalizado" # Garante que o status mude no card
     update_document("orcamentos", item["id"], item)
+    
+    # O valor deve vir do total_geral calculado na nova calculadora
+    valor_total = float(str(item.get("total_geral", 0)).replace(",", "."))
+    
     return add_movimentacao(
         "Entrada",
-        item.get("total_geral", 0),
+        valor_total,
         f"Receb. Orç: {item.get('cliente_nome')}",
         "Vendas"
     )

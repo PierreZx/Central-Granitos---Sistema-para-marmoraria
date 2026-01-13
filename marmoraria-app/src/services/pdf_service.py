@@ -160,36 +160,53 @@ def gerar_pdf_orcamento(orcamento: dict) -> bool:
         return False
 
 def desenhar_item_fpdf(pdf: PDF, item: dict, box_x: float, box_y: float, box_w: float, box_h: float):
-    """Desenha a representação técnica da pedra no PDF"""
+    """Desenha a representação técnica e descreve acabamentos no PDF"""
     try:
         larg = float(str(item.get('largura', 0)).replace(',', '.'))
         prof = float(str(item.get('profundidade', 0)).replace(',', '.'))
+        # Novos campos da calculadora reformulada
+        has_saia = item.get('has_saia', False) 
+        has_rodo = item.get('has_rodo', False)
 
         pdf.set_fill_color(252, 252, 252)
         pdf.set_draw_color(230, 230, 230)
         pdf.rect(box_x, box_y, box_w, box_h, 'FD')
 
-        # Escala automática para caber na box
         if larg > 0 and prof > 0:
-            scale = min((box_w - 60) / larg, (box_h - 60) / prof)
+            scale = min((box_w - 80) / larg, (box_h - 60) / prof)
             w_px = larg * scale
             h_px = prof * scale
+            off_x = box_x + (box_w - w_px) / 2
+            off_y = box_y + (box_h - h_px) / 2
 
-            offset_x = box_x + (box_w - w_px) / 2
-            offset_y = box_y + (box_h - h_px) / 2
-
-            pdf.set_fill_color(220, 220, 220)
+            # Desenho da pedra
+            pdf.set_fill_color(240, 240, 240)
             pdf.set_draw_color(50, 50, 50)
-            pdf.set_line_width(0.5)
-            pdf.rect(offset_x, offset_y, w_px, h_px, 'FD')
+            pdf.rect(off_x, off_y, w_px, h_px, 'FD')
 
+            # Indicações Visuais de Acabamento
+            if has_saia:
+                pdf.set_draw_color(20, 20, 180) # Azul para Saia
+                pdf.set_line_width(2.0)
+                pdf.line(off_x, off_y + h_px, off_x + w_px, off_y + h_px)
+            
+            if has_rodo:
+                pdf.set_draw_color(180, 20, 20) # Vermelho para Rodobanca
+                pdf.set_line_width(1.5)
+                pdf.line(off_x, off_y, off_x + w_px, off_y)
+
+            # Textos de Medida
             pdf.set_text_color(50, 50, 50)
-            pdf.set_font("Helvetica", "", 8)
-            pdf.text(offset_x + (w_px/2) - 10, offset_y - 5, f"{larg}m")
-            pdf.text(offset_x - 30, offset_y + (h_px/2), f"{prof}m")
-        else:
-            pdf.set_text_color(150, 0, 0)
-            pdf.text(box_x + 10, box_y + 20, "Dimensões inválidas para visualização")
+            pdf.set_font("Helvetica", "B", 8)
+            pdf.text(off_x + (w_px/2) - 10, off_y - 7, f"{larg}m")
+            pdf.text(off_x - 35, off_y + (h_px/2), f"{prof}m")
+            
+            # Legenda de Acabamentos no canto da box
+            pdf.set_font("Helvetica", "", 7)
+            txt_acabamento = []
+            if has_saia: txt_acabamento.append("C/ Saia")
+            if has_rodo: txt_acabamento.append("C/ Rodobanca")
+            pdf.text(box_x + 5, box_y + box_h - 5, " | ".join(txt_acabamento))
+            
     except Exception as e:
-        pdf.set_text_color(150, 0, 0)
-        pdf.text(box_x + 10, box_y + 20, "Visualização técnica indisponível")
+        pdf.text(box_x + 10, box_y + 20, "Erro na visualização")
