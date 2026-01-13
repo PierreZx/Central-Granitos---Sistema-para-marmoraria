@@ -1,16 +1,8 @@
 import flet as ft
 from datetime import datetime, date
 from src.views.layout_base import LayoutBase
-from src.config import (
-    COLOR_PRIMARY,
-    COLOR_WHITE,
-    COLOR_SUCCESS,
-    COLOR_ERROR,
-    SHADOW_MD,
-    BORDER_RADIUS_LG,
-    COLOR_TEXT
-)
 from src.services import firebase_service
+from src.config import *
 
 
 def parse_date_br(data):
@@ -20,116 +12,101 @@ def parse_date_br(data):
         return None
 
 
-def formatar_data_seguro(e):
-    nums = "".join(filter(str.isdigit, e.control.value))[:8]
-    if len(nums) >= 5:
-        e.control.value = f"{nums[:2]}/{nums[2:4]}/{nums[4:]}"
-    elif len(nums) >= 3:
-        e.control.value = f"{nums[:2]}/{nums[2:]}"
-    else:
-        e.control.value = nums
-    e.control.update()
+def match_pesquisa(item, termo):
+    if not termo:
+        return True
+
+    termo = termo.lower()
+    for v in item.values():
+        if termo in str(v).lower():
+            return True
+    return False
 
 
 def FinancialView(page: ft.Page):
 
     conteudo = ft.Column(expand=True, spacing=15, scroll=ft.ScrollMode.AUTO)
+    pesquisa = ft.TextField(
+        hint_text="Pesquisar por nome, data ou valor...",
+        prefix_icon=ft.icons.SEARCH,
+        filled=True
+    )
+
+    editando = {"id": None, "tipo": None}
 
     # ================= CAMPOS =================
 
-    txt_nome = ft.TextField(label="Nome da Dívida", filled=True)
-
-    txt_valor = ft.TextField(
+    nome = ft.TextField(label="Descrição", filled=True)
+    valor = ft.TextField(
         label="Valor",
         prefix_text="R$ ",
-        keyboard_type=ft.KeyboardType.TEXT,
-        input_filter=ft.InputFilter(regex_string=r"[0-9,.]"),
-        filled=True
-    )
-
-    txt_data = ft.TextField(
-        label="Vencimento",
-        hint_text="DD/MM/AAAA",
-        on_change=formatar_data_seguro,
-        filled=True
-    )
-
-    txt_parcelas = ft.TextField(
-        label="Parcelas",
-        value="1",
         keyboard_type=ft.KeyboardType.NUMBER,
         filled=True
     )
+    data = ft.TextField(label="Vencimento (DD/MM/AAAA)", filled=True)
+    parcelas = ft.TextField(label="Parcelas", value="1", filled=True)
+    fixa = ft.Checkbox(label="Dívida fixa")
 
-    chk_fixa = ft.Checkbox(label="Conta fixa mensal")
-
-    divida_editando = {"id": None}
-
-    # ================= LÓGICA =================
-
-    def alternar_fixa(e):
-        if chk_fixa.value:
-            txt_parcelas.disabled = True
-            txt_data.label = "Dia do vencimento mensal (1 a 28)"
-            txt_data.value = ""
-        else:
-            txt_parcelas.disabled = False
-            txt_data.label = "Vencimento"
-            txt_data.value = ""
-        page.update()
-
-    chk_fixa.on_change = alternar_fixa
+    # ================= UTIL =================
 
     def fechar_dialogo(e=None):
         page.dialog.open = False
         page.update()
 
-    def salvar_divida(e):
-        if not txt_nome.value or not txt_valor.value:
-            return
+    def confirmar(msg, acao):
+        page.dialog = ft.AlertDialog(
+            title=ft.Text("Confirmação"),
+            content=ft.Text(msg),
+            actions=[
+                ft.TextButton("Cancelar", on_click=fechar_dialogo),
+                ft.ElevatedButton(
+                    "Confirmar",
+                    on_click=lambda e: (fechar_dialogo(), acao())
+                )
+            ]
+        )
+        page.dialog.open = True
+        page.update()
 
+    # ================= SALVAR =================
+
+    def salvar_divida(e):
         dados = {
-            "nome": txt_nome.value,
-            "valor": txt_valor.value.replace(",", "."),
-            "status": "Pendente",
-            "permanente": chk_fixa.value,
-            "parcelas_totais": 1 if chk_fixa.value else int(txt_parcelas.value or 1),
-            "parcela_atual": 1,
-            "data_criacao": datetime.now().isoformat(),
-            "tipo": "Saida"
+            "descricao": nome.value,
+            "valor": float(valor.value.replace(",", ".")),
+            "data": data.value,
+            "parcelas": int(parcelas.value),
+            "tipo": editando["tipo"],
+            "fixa": fixa.value,
+            "status": "Pendente"
         }
 
-        if chk_fixa.value:
-            dados["dia_vencimento"] = int(txt_data.value)
-            dados["data_vencimento"] = txt_data.value
+        if editando["id"]:
+            firebase_service.update_divida(editando["id"], dados)
         else:
-            dados["data_vencimento"] = txt_data.value
+            firebase_service.add_divida(dados)
 
-        if divida_editando["id"]:
-            firebase_service.update_divida_fixa(divida_editando["id"], dados)
-        else:
-            firebase_service.add_divida_fixa(dados)
-
-        divida_editando["id"] = None
+        editando["id"] = None
         fechar_dialogo()
-        carregar_dados()
+        carregar()
 
-    def abrir_modal_divida(div=None):
-        divida_editando["id"] = div["id"] if div else None
+    # ================= MODAL =================
 
-        txt_nome.value = div.get("nome", "") if div else ""
-        txt_valor.value = div.get("valor", "") if div else ""
-        txt_data.value = div.get("data_vencimento", "") if div else ""
-        txt_parcelas.value = str(div.get("parcelas_totais", 1)) if div else "1"
-        chk_fixa.value = div.get("permanente", False) if div else False
-        alternar_fixa(None)
+    def abrir_modal(tipo, item=None):
+        editando["tipo"] = tipo
+        editando["id"] = item["id"] if item else None
+
+        nome.value = item.get("descricao", "") if item else ""
+        valor.value = str(item.get("valor", "")) if item else ""
+        data.value = item.get("data", "") if item else ""
+        parcelas.value = str(item.get("parcelas", 1)) if item else "1"
+        fixa.value = item.get("fixa", False) if item else False
 
         page.dialog = ft.AlertDialog(
-            title=ft.Text("Editar Conta" if div else "Nova Conta"),
+            title=ft.Text("Editar" if item else "Novo"),
             content=ft.Column(
-                [txt_nome, txt_valor, txt_data, txt_parcelas, chk_fixa],
-                tight=True,
-                spacing=10
+                [nome, valor, data, parcelas, fixa],
+                tight=True
             ),
             actions=[
                 ft.TextButton("Cancelar", on_click=fechar_dialogo),
@@ -139,34 +116,11 @@ def FinancialView(page: ft.Page):
         page.dialog.open = True
         page.update()
 
-    def pagar_divida(div):
-        firebase_service.pagar_divida_fixa(div)
-        carregar_dados()
+    # ================= ITENS =================
 
-    def deletar_divida(div):
-        firebase_service.delete_divida_fixa(div["id"])
-        carregar_dados()
-
-    # ================= UI =================
-
-    def criar_kpi(titulo, valor, cor, icone):
-        return ft.Container(
-            padding=15,
-            bgcolor=COLOR_WHITE,
-            border_radius=BORDER_RADIUS_LG,
-            shadow=SHADOW_MD,
-            content=ft.Row([
-                ft.Icon(icone, color=cor),
-                ft.Column([
-                    ft.Text(titulo, size=12, color="grey"),
-                    ft.Text(valor, weight="bold", color=COLOR_TEXT)
-                ])
-            ])
-        )
-
-    def criar_item_divida(div):
-        venc = parse_date_br(div.get("data_vencimento", ""))
-        vencida = venc and venc < date.today() and div.get("status") == "Pendente"
+    def item_divida(d):
+        venc = parse_date_br(d["data"])
+        vencida = venc and venc < date.today() and d["status"] == "Pendente"
 
         return ft.Container(
             padding=10,
@@ -174,92 +128,119 @@ def FinancialView(page: ft.Page):
             border_radius=10,
             shadow=SHADOW_MD,
             content=ft.Row([
-                ft.Icon(ft.icons.CIRCLE, size=10,
-                        color=COLOR_ERROR if vencida else COLOR_SUCCESS),
-                ft.Column([
-                    ft.Text(div.get("nome", ""), weight="bold"),
-                    ft.Text(div.get("data_vencimento", ""), size=12, color="grey")
-                ], expand=True),
-                ft.Checkbox(
-                    label="Já pagou?",
-                    visible=vencida,
-                    on_change=lambda e: pagar_divida(div)
+                ft.Icon(
+                    ft.icons.PUSH_PIN if d.get("fixa") else ft.icons.CIRCLE,
+                    size=14,
+                    color=COLOR_PRIMARY if d.get("fixa") else
+                    (COLOR_ERROR if vencida else COLOR_SUCCESS)
                 ),
-                ft.IconButton(ft.icons.EDIT, on_click=lambda e: abrir_modal_divida(div)),
-                ft.IconButton(ft.icons.DELETE, icon_color=COLOR_ERROR,
-                              on_click=lambda e: deletar_divida(div))
+                ft.Column([
+                    ft.Text(d["descricao"], weight="bold"),
+                    ft.Text(d["data"], size=12)
+                ], expand=True),
+                ft.IconButton(
+                    ft.icons.CHECK,
+                    on_click=lambda e: firebase_service.pagar_divida(d)
+                ),
+                ft.IconButton(
+                    ft.icons.EDIT,
+                    on_click=lambda e: abrir_modal(d["tipo"], d)
+                ),
+                ft.IconButton(
+                    ft.icons.DELETE,
+                    icon_color=COLOR_ERROR,
+                    on_click=lambda e: confirmar(
+                        "Deseja apagar esta dívida?",
+                        lambda: (firebase_service.delete_divida(d["id"]), carregar())
+                    )
+                )
             ])
         )
 
-    def criar_item_extrato(mov):
-        entrada = mov.get("tipo") == "Entrada"
+    def item_extrato(m):
+        entrada = m["tipo"] == "Entrada"
         return ft.Container(
             padding=10,
             content=ft.Row([
-                ft.Icon(ft.icons.CIRCLE,
-                        size=10,
-                        color=COLOR_SUCCESS if entrada else COLOR_ERROR),
+                ft.Icon(
+                    ft.icons.CIRCLE,
+                    size=10,
+                    color=COLOR_SUCCESS if entrada else COLOR_ERROR
+                ),
                 ft.Column([
-                    ft.Text(mov.get("descricao", "")),
-                    ft.Text(mov.get("data", "")[:10], size=11, color="grey")
+                    ft.Text(m["descricao"]),
+                    ft.Text(m["data"], size=11)
                 ], expand=True),
-                ft.Text(f"R$ {float(mov.get('valor',0)):.2f}",
-                        color=COLOR_SUCCESS if entrada else COLOR_ERROR)
+                ft.Text(f"R$ {m['valor']:.2f}"),
+                ft.IconButton(
+                    ft.icons.EDIT,
+                    on_click=lambda e: abrir_modal(m["tipo"], m)
+                ),
+                ft.IconButton(
+                    ft.icons.DELETE,
+                    icon_color=COLOR_ERROR,
+                    on_click=lambda e: confirmar(
+                        "Deseja apagar este lançamento?",
+                        lambda: (firebase_service.delete_extrato(m["id"]), carregar())
+                    )
+                )
             ])
         )
 
     # ================= CARREGAR =================
 
-    def carregar_dados():
+    def carregar():
         conteudo.controls.clear()
 
-        saldo = firebase_service.get_saldo_caixa() or 0
-        dividas = firebase_service.get_dividas_pendentes() or []
-        extrato = firebase_service.get_extrato_lista() or []
+        pagar = firebase_service.get_dividas("Saida")
+        receber = firebase_service.get_dividas("Entrada")
+        extrato = firebase_service.get_extrato()
+        saldo = firebase_service.get_saldo_caixa()
+        termo = pesquisa.value
+
+        def ordenar(lista):
+            fixas = [d for d in lista if d.get("fixa")]
+            normais = [d for d in lista if not d.get("fixa")]
+            return fixas + normais
+
+        pagar = ordenar([d for d in pagar if match_pesquisa(d, termo)])
+        receber = ordenar([d for d in receber if match_pesquisa(d, termo)])
+        extrato = [m for m in extrato if match_pesquisa(m, termo)]
 
         conteudo.controls.append(
-            ft.Row([
-                criar_kpi("Saldo", f"R$ {saldo:.2f}",
-                          COLOR_PRIMARY, ft.icons.ACCOUNT_BALANCE_WALLET),
-                criar_kpi("A Pagar", f"{len(dividas)}",
-                          COLOR_ERROR, ft.icons.MONEY_OFF)
-            ], spacing=10)
-        )
-
-        conteudo.controls.append(
-            ft.ElevatedButton(
-                "Agendar Conta",
-                icon=ft.icons.ADD,
-                on_click=lambda e: abrir_modal_divida()
-            )
+            ft.Column([
+                ft.Text(f"Saldo: R$ {saldo:.2f}", weight="bold"),
+                pesquisa,
+                ft.Row([
+                    ft.ElevatedButton(
+                        "Novo a Pagar",
+                        on_click=lambda e: abrir_modal("Saida")
+                    ),
+                    ft.ElevatedButton(
+                        "Novo a Receber",
+                        on_click=lambda e: abrir_modal("Entrada")
+                    )
+                ])
+            ])
         )
 
         tabs = ft.Tabs(
             tabs=[
-                ft.Tab(
-                    text="PAGAR",
-                    content=ft.Column(
-                        [criar_item_divida(d) for d in dividas],
-                        spacing=10
-                    )
-                ),
-                ft.Tab(
-                    text="EXTRATO",
-                    content=ft.Column(
-                        [criar_item_extrato(m) for m in extrato],
-                        spacing=10
-                    )
-                )
+                ft.Tab("A PAGAR", ft.Column([item_divida(d) for d in pagar])),
+                ft.Tab("A RECEBER", ft.Column([item_divida(d) for d in receber])),
+                ft.Tab("EXTRATO", ft.Column([item_extrato(m) for m in extrato]))
             ]
         )
 
         conteudo.controls.append(tabs)
         page.update()
 
-    carregar_dados()
+    pesquisa.on_change = lambda e: carregar()
+
+    carregar()
 
     return LayoutBase(
         page,
-        ft.Container(content=conteudo, padding=20),
+        ft.Container(conteudo, padding=20),
         titulo="Financeiro"
     )
