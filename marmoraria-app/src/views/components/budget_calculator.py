@@ -18,6 +18,7 @@ class BudgetCalculator(ft.UserControl):
         self.pedra_selecionada = None
         
     def did_mount(self):
+        # Chama o carregamento assim que o componente entra na tela
         self._carregar_pedras()
 
     def _carregar_pedras(self):
@@ -26,9 +27,13 @@ class BudgetCalculator(ft.UserControl):
             {"id": d.get("id"), "nome": d["nome"], "preco_m2": float(d["preco_m2"])}
             for d in docs if "nome" in d and "preco_m2" in d
         ]
+        # ATUALIZA O DROPDOWN COM AS OPÇÕES
+        self.dd_pedra.options = [
+            ft.dropdown.Option(key=p["id"], text=p["nome"]) for p in self.pedras
+        ]
         if self.item_para_editar:
             self._carregar_edicao()
-        self.update()
+        self.update() # Força o Flet a mostrar as opções no Dropdown
 
     def _carregar_edicao(self):
         it = self.item_para_editar
@@ -42,64 +47,44 @@ class BudgetCalculator(ft.UserControl):
         self._atualizar_calculos()
 
     def build(self):
-        # --- INPUTS ---
         self.txt_ambiente = ft.TextField(label="Ambiente", value="Cozinha", border_radius=10, on_change=self._atualizar_calculos)
-        self.dd_pedra = ft.Dropdown(
-            label="Material do Estoque",
-            border_radius=10,
-            on_change=self._atualizar_calculos
-        )
+        self.dd_pedra = ft.Dropdown(label="Material do Estoque", border_radius=10, on_change=self._atualizar_calculos)
         self.input_larg = ft.TextField(label="Largura (m)", value="1.00", on_change=self._atualizar_calculos, expand=1)
         self.input_prof = ft.TextField(label="Profundidade (m)", value="0.60", on_change=self._atualizar_calculos, expand=1)
         self.input_ml_valor = ft.TextField(label="Valor Mão de Obra (ML)", value="130", on_change=self._atualizar_calculos, width=120)
 
-        # --- CHECKBOXES LADOS ---
         self.cb_saia_frente = ft.Checkbox(label="Frente", value=True, on_change=self._atualizar_calculos)
         self.cb_saia_esq = ft.Checkbox(label="Esq.", on_change=self._atualizar_calculos)
         self.cb_saia_dir = ft.Checkbox(label="Dir.", on_change=self._atualizar_calculos)
-        
         self.cb_rodo_fundo = ft.Checkbox(label="Fundo", value=True, on_change=self._atualizar_calculos)
         self.cb_rodo_esq = ft.Checkbox(label="Esq.", on_change=self._atualizar_calculos)
         self.cb_rodo_dir = ft.Checkbox(label="Dir.", on_change=self._atualizar_calculos)
 
-        # --- SWITCHES FUROS ---
         self.sw_bojo = ft.Switch(label="Furo Bojo", value=False, on_change=self._atualizar_calculos)
         self.sw_cook = ft.Switch(label="Furo Cooktop", value=False, on_change=self._atualizar_calculos)
 
-        # --- RESULTADOS ---
-        self.canvas_area = ft.Container(
-            content=ft.Text("Inicie as medidas...", color="grey"),
-            height=320, bgcolor="#F8F9FA", border_radius=10, border=ft.border.all(1, "grey300"),
-            alignment=ft.alignment.center
-        )
+        self.canvas_area = ft.Container(content=ft.Text("Inicie as medidas...", color="grey"), height=320, bgcolor="#F8F9FA", border_radius=10, border=ft.border.all(1, "grey300"), alignment=ft.alignment.center)
         self.txt_area_res = ft.Text("0.00 m²", weight="bold")
         self.txt_total_res = ft.Text("R$ 0.00", size=24, weight="bold", color=COLOR_PRIMARY)
 
         return ft.Container(
-            padding=15,
-            bgcolor=COLOR_WHITE,
+            padding=15, bgcolor=COLOR_WHITE,
             content=ft.Column(
                 scroll=ft.ScrollMode.ALWAYS,
                 controls=[
                     ft.Text("Configuração Técnica", size=22, weight="bold"),
-                    self.txt_ambiente,
-                    self.dd_pedra,
+                    self.txt_ambiente, self.dd_pedra,
                     ft.Row([self.input_larg, self.input_prof, self.input_ml_valor], spacing=10),
-                    
                     ft.Divider(),
                     ft.Text("Lados com Saia (Azul)", weight="bold", size=12),
                     ft.Row([self.cb_saia_frente, self.cb_saia_esq, self.cb_saia_dir]),
-                    
                     ft.Text("Lados com Rodobanca (Vermelho)", weight="bold", size=12),
                     ft.Row([self.cb_rodo_fundo, self.cb_rodo_esq, self.cb_rodo_dir]),
-
                     ft.Divider(),
                     ft.Row([self.sw_bojo, self.sw_cook], alignment="center"),
-
                     ft.Divider(),
                     ft.Text("Desenho em Planta", weight="bold"),
                     self.canvas_area,
-                    
                     ft.Container(
                         padding=20, bgcolor="grey100", border_radius=10,
                         content=ft.Column([
@@ -107,7 +92,6 @@ class BudgetCalculator(ft.UserControl):
                             ft.Row([ft.Text("Investimento Total:"), self.txt_total_res], alignment="spaceBetween"),
                         ])
                     ),
-                    
                     ft.Row([
                         ft.TextButton("Cancelar", on_click=self.on_cancel),
                         ft.ElevatedButton("Salvar Peça", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=self._salvar, expand=True, height=50)
@@ -119,7 +103,6 @@ class BudgetCalculator(ft.UserControl):
 
     def _atualizar_calculos(self, e=None):
         try:
-            # Sincroniza Dropdown com Pedra Selecionada
             if self.dd_pedra.value:
                 self.pedra_selecionada = next((p for p in self.pedras if p["id"] == self.dd_pedra.value), None)
 
@@ -127,29 +110,22 @@ class BudgetCalculator(ft.UserControl):
             prof = float(self.input_prof.value or 0)
             v_ml = float(self.input_ml_valor.value or 0)
 
-            # Criar Peça
             peca = BancadaPiece(nome="Pia", largura=larg, profundidade=prof)
-            
-            # Acabamentos
             lados_s = []
             if self.cb_saia_frente.value: lados_s.append("frente")
             if self.cb_saia_esq.value: lados_s.append("esquerda")
             if self.cb_saia_dir.value: lados_s.append("direita")
             peca.saia = Saia(altura=0.04, lados=lados_s)
-
             lados_r = []
             if self.cb_rodo_fundo.value: lados_r.append("fundo")
             if self.cb_rodo_esq.value: lados_r.append("esquerda")
             if self.cb_rodo_dir.value: lados_r.append("direita")
             peca.rodobanca = RodoBanca(altura=0.10, lados=lados_r)
 
-            # Furos
             if self.sw_bojo.value: peca.aberturas.append(Abertura("bojo", 0.50, 0.40, 0.5, 0.5))
             if self.sw_cook.value: peca.aberturas.append(Abertura("cooktop", 0.55, 0.45, 0.8, 0.5))
 
             self.composition.pecas = [peca]
-            
-            # Atualiza Canvas e Resultados
             self.canvas_area.content = BudgetCanvas(self.composition)
             
             p_m2 = self.pedra_selecionada["preco_m2"] if self.pedra_selecionada else 0
@@ -158,7 +134,6 @@ class BudgetCalculator(ft.UserControl):
             self.txt_area_res.value = f"{peca.area_m2():.2f} m²"
             self.txt_total_res.value = f"R$ {total:,.2f}"
             self.update()
-            
         except Exception as err:
             print(f"Erro Cálculo: {err}")
 
@@ -168,7 +143,6 @@ class BudgetCalculator(ft.UserControl):
             self.page.snack_bar.open = True
             self.page.update()
             return
-            
         peca = self.composition.pecas[0]
         item = {
             "ambiente": self.txt_ambiente.value,
