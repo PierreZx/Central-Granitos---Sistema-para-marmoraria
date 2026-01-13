@@ -27,14 +27,18 @@ class BancadaPiece:
         """Calcula a área da pedra principal."""
         return self.largura * self.profundidade
 
+    # Adicione ou atualize este método na classe BancadaPiece:
+
     def metro_linear_saia(self) -> float:
-        """Calcula o total de metros lineares de saia baseado nos lados escolhidos."""
-        total = 0
-        if self.saia:
-            if "frente" in self.saia.lados: total += self.largura
-            if "esquerda" in self.saia.lados: total += self.profundidade
-            if "direita" in self.saia.lados: total += self.profundidade
-        return total
+        """Soma o comprimento de todos os lados que possuem saia."""
+        if not self.saia:
+            return 0.0
+        total = 0.0
+        if "frente" in self.saia.lados: total += self.largura
+        if "fundo" in self.saia.lados: total += self.largura
+        if "esquerda" in self.saia.lados: total += self.profundidade
+        if "direita" in self.saia.lados: total += self.profundidade
+        return round(total, 3)
 
     def area_rodobanca(self) -> float:
         """Calcula a área total das rodobancas (que também consomem material)."""

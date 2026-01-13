@@ -1,8 +1,8 @@
 import flet as ft
 from src.services import firebase_service
-from src.views.components.budget_composition import BancadaPiece, Saia, RodoBanca, CompositionManager
+from src.views.components.budget_composition import BancadaPiece, Saia, RodoBanca, CompositionManager, Abertura
 from src.views.components.budget_canvas import BudgetCanvas
-from src.config import COLOR_PRIMARY, COLOR_WHITE, COLOR_TEXT, BORDER_RADIUS_LG
+from src.config import COLOR_PRIMARY, COLOR_WHITE, BORDER_RADIUS_LG
 
 class BudgetCalculator(ft.UserControl):
     def __init__(self, page: ft.Page, item=None, on_save_item=None, on_cancel=None):
@@ -24,116 +24,150 @@ class BudgetCalculator(ft.UserControl):
         ]
 
     def build(self):
-        # --- 1. CAMPOS DE ENTRADA (TOP) ---
-        self.txt_ambiente = ft.TextField(label="Ambiente", value="Cozinha", border_radius=10)
+        # --- INPUTS BÁSICOS ---
         self.dd_pedra = ft.Dropdown(
-            label="Material",
-            border_radius=10,
+            label="Material do Estoque",
             options=[ft.dropdown.Option(key=p["id"], text=p["nome"]) for p in self.pedras],
             on_change=self._atualizar_calculos
         )
         self.input_larg = ft.TextField(label="Comprimento (m)", value="1.00", on_change=self._atualizar_calculos, expand=True)
         self.input_prof = ft.TextField(label="Profundidade (m)", value="0.60", on_change=self._atualizar_calculos, expand=True)
+        self.input_ml_valor = ft.TextField(label="Valor ML Mão de Obra", value="130", on_change=self._atualizar_calculos, width=150)
 
-        # --- 2. ACABAMENTOS ---
-        self.check_saia = ft.Checkbox(label="Saia", value=True, on_change=self._atualizar_calculos)
-        self.alt_saia = ft.TextField(label="Alt. (m)", value="0.04", width=80, on_change=self._atualizar_calculos)
-        self.check_rodo = ft.Checkbox(label="Rodo", value=True, on_change=self._atualizar_calculos)
-        self.alt_rodo = ft.TextField(label="Alt. (m)", value="0.10", width=80, on_change=self._atualizar_calculos)
+        # --- SELEÇÃO DE LADOS (SAIA E RODO) ---
+        self.lados_saia = {
+            "frente": ft.Checkbox(label="Frente", value=True, on_change=self._atualizar_calculos),
+            "fundo": ft.Checkbox(label="Fundo", on_change=self._atualizar_calculos),
+            "esquerda": ft.Checkbox(label="Esq.", on_change=self._atualizar_calculos),
+            "direita": ft.Checkbox(label="Dir.", on_change=self._atualizar_calculos),
+        }
+        self.lados_rodo = {
+            "fundo": ft.Checkbox(label="Fundo", value=True, on_change=self._atualizar_calculos),
+            "frente": ft.Checkbox(label="Frente", on_change=self._atualizar_calculos),
+            "esquerda": ft.Checkbox(label="Esq.", on_change=self._atualizar_calculos),
+            "direita": ft.Checkbox(label="Dir.", on_change=self._atualizar_calculos),
+        }
 
-        # --- 3. ÁREA DE DESENHO (FIXA) ---
+        # --- FUROS (BOJO / COOKTOP) ---
+        self.check_bojo = ft.Checkbox(label="Incluir Bojo", on_change=self._atualizar_calculos)
+        self.bojo_w = ft.TextField(label="Larg. Bojo", value="0.50", visible=False, width=100, on_change=self._atualizar_calculos)
+        self.bojo_h = ft.TextField(label="Prof. Bojo", value="0.40", visible=False, width=100, on_change=self._atualizar_calculos)
+
+        self.check_cook = ft.Checkbox(label="Incluir Cooktop", on_change=self._atualizar_calculos)
+        self.cook_w = ft.TextField(label="Larg. Cook", value="0.55", visible=False, width=100, on_change=self._atualizar_calculos)
+
+        # --- ÁREA VISUAL ---
         self.canvas_container = ft.Container(
-            content=ft.Text("Ajuste as medidas para ver o desenho", color="grey700"),
-            alignment=ft.alignment.center,
-            bgcolor="#f8f9fa",
-            border=ft.border.all(1, "grey300"),
-            border_radius=10,
-            height=250, # Altura fixa para não sumir no mobile
+            content=ft.Text("Carregando projeto..."),
+            height=300, bgcolor="#f8f9fa", border_radius=10, border=ft.border.all(1, "grey300")
         )
 
-        # --- 4. RESUMO FINANCEIRO ---
-        self.txt_res_area = ft.Text("0.00 m²", weight="bold", size=16)
-        self.txt_res_preco = ft.Text("R$ 0.00", size=22, weight="bold", color=COLOR_PRIMARY)
+        self.txt_res_total = ft.Text("R$ 0.00", size=24, weight="bold", color=COLOR_PRIMARY)
 
-        # Se for edição, carrega os dados
-        if self.item_para_editar:
-            self.page.run_task(self._preencher_edicao_atrasado)
-
-        # MONTAGEM FINAL DA TELA
         return ft.Container(
             padding=15,
-            bgcolor=COLOR_WHITE,
             content=ft.Column(
-                tight=True,
-                scroll=ft.ScrollMode.ALWAYS, # Scroll obrigatório para mobile
+                scroll=ft.ScrollMode.ALWAYS,
                 controls=[
-                    ft.Row([ft.Icon(ft.icons.CALCULATE), ft.Text("Calculadora Técnica", size=20, weight="bold")]),
-                    ft.Divider(),
-                    
-                    # Seção de Medidas
-                    self.txt_ambiente,
+                    ft.Text("Configuração Técnica da Peça", size=20, weight="bold"),
                     self.dd_pedra,
-                    ft.Row([self.input_larg, self.input_prof], spacing=10),
+                    ft.Row([self.input_larg, self.input_prof, self.input_ml_valor]),
                     
                     ft.Divider(),
-                    ft.Text("Acabamentos", weight="bold"),
-                    ft.Row([self.check_saia, self.alt_saia, self.check_rodo, self.alt_rodo], wrap=True),
+                    ft.Text("Lados com Saia (Acabamento)", weight="bold"),
+                    ft.Row(list(self.lados_saia.values()), wrap=True),
                     
+                    ft.Text("Lados com Rodobanca (Parede)", weight="bold"),
+                    ft.Row(list(self.lados_rodo.values()), wrap=True),
+
                     ft.Divider(),
-                    ft.Text("Desenho Técnico", weight="bold"),
+                    ft.Text("Aberturas e Furos", weight="bold"),
+                    ft.Row([self.check_bojo, self.bojo_w, self.bojo_h]),
+                    ft.Row([self.check_cook, self.cook_w]),
+
+                    ft.Divider(),
                     self.canvas_container,
                     
-                    ft.Divider(),
-                    ft.Column([
-                        ft.Row([ft.Text("Área:"), self.txt_res_area], alignment="spaceBetween"),
-                        ft.Row([ft.Text("Total:"), self.txt_res_preco], alignment="spaceBetween"),
-                    ]),
-                    
-                    ft.Divider(),
-                    ft.Row([
-                        ft.TextButton("Cancelar", on_click=self.on_cancel),
-                        ft.ElevatedButton("Salvar Peça", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=self._salvar, expand=True)
-                    ], spacing=20),
-                    ft.Container(height=50) # Espaço extra no final
+                    ft.Row([ft.Text("Investimento:"), self.txt_res_total], alignment="spaceBetween"),
+                    ft.ElevatedButton("Finalizar e Salvar", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=self._salvar, height=50)
                 ]
             )
         )
 
-    async def _preencher_edicao_atrasado(self):
-        it = self.item_para_editar
-        self.txt_ambiente.value = it.get("ambiente", "Geral")
-        self.input_larg.value = str(it.get("largura", 1.0))
-        self.input_prof.value = str(it.get("profundidade", 0.6))
-        for p in self.pedras:
-            if p["nome"] == it.get("material"):
-                self.dd_pedra.value = p["id"]
-                self.pedra_selecionada = p
-        self._atualizar_calculos()
-
     def _atualizar_calculos(self, e=None):
         try:
-            larg = float(self.input_larg.value.replace(",", "."))
-            prof = float(self.input_prof.value.replace(",", "."))
-            peca = BancadaPiece(nome=self.txt_ambiente.value, largura=larg, profundidade=prof)
+            # Visibilidade dos campos de furos
+            self.bojo_w.visible = self.bojo_h.visible = self.check_bojo.value
+            self.cook_w.visible = self.check_cook.value
             
-            if self.check_saia.value:
-                peca.saia = Saia(altura=float(self.alt_saia.value), lados=["frente"])
-            if self.check_rodo.value:
-                peca.rodobanca = RodoBanca(altura=float(self.alt_rodo.value), lados=["fundo"])
+            larg = float(self.input_larg.value or 0)
+            prof = float(self.input_prof.value or 0)
+            v_ml = float(self.input_ml_valor.value or 0)
+
+            # Criar Peça Técnica
+            peca = BancadaPiece(nome="Peça", largura=larg, profundidade=prof)
             
+            # Definir Lados
+            lados_s = [k for k, v in self.lados_saia.items() if v.value]
+            peca.saia = Saia(altura=0.04, lados=lados_s)
+            
+            lados_r = [k for k, v in self.lados_rodo.items() if v.value]
+            peca.rodobanca = RodoBanca(altura=0.10, lados=lados_r)
+
+            # Adicionar Aberturas
+            if self.check_bojo.value:
+                peca.aberturas.append(Abertura(tipo="bojo", largura=float(self.bojo_w.value), profundidade=float(self.bojo_h.value), offset_x=0.2, offset_y=0.1))
+
             self.composition.pecas = [peca]
             self.canvas_container.content = BudgetCanvas(self.composition)
+
+            # Lógica Financeira Real
+            preco_m2 = next((p["preco_m2"] for p in self.pedras if p["id"] == self.dd_pedra.value), 0)
             
-            area = peca.area_m2()
-            preco_m2 = self.pedra_selecionada["preco_m2"] if self.pedra_selecionada else 0
-            # Regra de negócio: Pedra + Mão de obra (ML da saia * 150)
-            total = (area * preco_m2) + (peca.metro_linear_saia() * 150)
-            
-            self.txt_res_area.value = f"{area:.2f} m²"
-            self.txt_res_preco.value = f"R$ {total:,.2f}"
+            custo_pedra = peca.area_m2() * preco_m2
+            custo_mao_obra = peca.metro_linear_saia() * v_ml
+            # Adicional por furo (ex: R$ 50 por furo)
+            custo_furos = len(peca.aberturas) * 50 
+
+            total = custo_pedra + custo_mao_obra + custo_furos
+            self.txt_res_total.value = f"R$ {total:,.2f}"
             self.update()
         except Exception as err:
-            print(f"Erro cálculo: {err}")
+            print(f"Erro: {err}")
+
+        async def _preencher_edicao_atrasado(self):
+            it = self.item_para_editar
+            if not it: return
+            
+            # Medidas Básicas
+            self.txt_ambiente.value = it.get("ambiente", "Geral")
+            self.input_larg.value = str(it.get("largura", 1.0))
+            self.input_prof.value = str(it.get("profundidade", 0.6))
+            
+            # Material
+            for p in self.pedras:
+                if p["nome"] == it.get("material"):
+                    self.dd_pedra.value = p["id"]
+                    self.pedra_selecionada = p
+
+            # Acabamentos (Lados da Saia)
+            saia_data = it.get("saia", {})
+            lados_s = saia_data.get("lados", [])
+            for lado, cb in self.lados_saia.items():
+                cb.value = lado in lados_s
+                
+            # Acabamentos (Lados da Rodobanca)
+            rodo_data = it.get("rodobanca", {})
+            lados_r = rodo_data.get("lados", [])
+            for lado, cb in self.lados_rodo.items():
+                cb.value = lado in lados_r
+
+            # Aberturas (Furos)
+            abs_list = it.get("aberturas", [])
+            self.check_bojo.value = any(a["tipo"] == "bojo" for a in abs_list)
+            self.check_cook.value = any(a["tipo"] == "cooktop" for a in abs_list)
+
+            self._atualizar_calculos()
 
     def _salvar(self, e):
         if not self.dd_pedra.value:
@@ -141,17 +175,49 @@ class BudgetCalculator(ft.UserControl):
             self.page.snack_bar.open = True
             self.page.update()
             return
-        
+
+        # Busca os dados da pedra selecionada
         self.pedra_selecionada = next(p for p in self.pedras if p["id"] == self.dd_pedra.value)
+        
+        # A peça técnica atualizada pela função _atualizar_calculos
         peca = self.composition.pecas[0]
         
+        # Montagem do objeto final para o Firebase
         item_final = {
             "ambiente": self.txt_ambiente.value,
             "material": self.pedra_selecionada["nome"],
+            "material_id": self.pedra_selecionada["id"],
             "largura": peca.largura,
             "profundidade": peca.profundidade,
             "area": peca.area_m2(),
-            "preco_total": float(self.txt_res_preco.value.replace("R$ ", "").replace(".", "").replace(",", "."))
+            # Limpeza do preço para garantir que seja um número puro
+            "preco_total": float(self.txt_res_total.value.replace("R$ ", "").replace(".", "").replace(",", ".")),
+            
+            # Dados detalhados de acabamento para o PDF e manutenção
+            "saia": {
+                "altura": float(self.alt_saia.value),
+                "lados": peca.saia.lados if peca.saia else []
+            },
+            "rodobanca": {
+                "altura": float(self.alt_rodo.value),
+                "lados": peca.rodobanca.lados if peca.rodobanca else []
+            },
+            
+            # Flags simplificadas para o PDF service antigo se necessário
+            "has_saia": peca.saia is not None and len(peca.saia.lados) > 0,
+            "has_rodo": peca.rodobanca is not None and len(peca.rodobanca.lados) > 0,
+
+            # Lista de aberturas (Bojo/Cooktop)
+            "aberturas": [
+                {
+                    "tipo": ab.tipo,
+                    "largura": ab.largura,
+                    "profundidade": ab.profundidade,
+                    "offset_x": ab.offset_x,
+                    "offset_y": ab.offset_y
+                } for ab in peca.aberturas
+            ]
         }
+        
         if self.on_save_item:
             self.on_save_item(item_final)
