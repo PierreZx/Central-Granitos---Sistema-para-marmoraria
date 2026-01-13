@@ -185,3 +185,12 @@ def verify_user_password(email, password):
     return False
 
 def initialize_firebase(): return True
+
+# Adicione esta função em qualquer lugar do seu firebase_service.py
+def get_collection_count(collection):
+    """Retorna a quantidade de itens em uma coleção (usado no Dashboard)"""
+    try:
+        lista = get_collection(collection)
+        return len(lista)
+    except:
+        return 0

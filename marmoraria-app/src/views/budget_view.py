@@ -107,7 +107,7 @@ def BudgetView(page: ft.Page):
             txt_nome,
             ft.Text("Itens do Orçamento", weight="bold"),
             # Aqui entraria a BudgetCalculator (Componente)
-            ft.ElevatedButton("Adicionar Item / Calcular", icon=ft.icons.CALCULATOR, on_click=lambda _: ir_para_calculadora()),
+            ft.ElevatedButton("Adicionar Item / Calcular", icon=ft.icons.CALCULATE, on_click=lambda _: ir_para_calculadora()),
             ft.ElevatedButton("Salvar Orçamento", bgcolor=COLOR_SUCCESS, color=COLOR_WHITE, on_click=salvar_tudo)
         ], scroll=ft.ScrollMode.AUTO)
         page.update()
