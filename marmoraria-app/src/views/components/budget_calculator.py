@@ -28,10 +28,14 @@ class BudgetCalculator(ft.Container):
 
         self.canvas = cv.Canvas(
             width=360,
-            height=260,
+            height=260
+        )
+
+        self.gesture = ft.GestureDetector(
             on_pan_start=self.pan_start,
             on_pan_update=self.pan_update,
-            on_pan_end=self.pan_end
+            on_pan_end=self.pan_end,
+            content=self.canvas
         )
 
         self.lbl_area = ft.Text("Área: 0.00 m²", weight="bold")
@@ -55,11 +59,12 @@ class BudgetCalculator(ft.Container):
             ft.Row([self.comp, self.prof, btn_add_seg]),
 
             ft.Container(
-                self.canvas,
+                self.gesture,
                 bgcolor="#F5F5F5",
                 padding=8,
                 border_radius=10
             ),
+
 
             ft.Row([btn_add_cuba, btn_add_rec], alignment="spaceBetween"),
 
