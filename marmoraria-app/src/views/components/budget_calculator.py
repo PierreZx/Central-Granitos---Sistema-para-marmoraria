@@ -1,13 +1,11 @@
 import flet as ft
-from src.services.firebase_service import firebase_db
-
+from src.services import firebase_service
 
 # =========================
 # CONFIGURAÇÕES GERAIS
 # =========================
 COLLECTION_PEDRAS = "estoque"
 PRECO_METRO_LINEAR_PADRAO = 130.0
-
 
 # =========================
 # MODELO DE PEÇA
@@ -25,7 +23,6 @@ class BancadaPeca:
     def metro_linear(self) -> float:
         # 🔥 Mão de obra é calculada SOMENTE pelo comprimento frontal
         return self.comprimento
-
 
 # =========================
 # FUNÇÃO DE CÁLCULO (DOMÍNIO)
@@ -54,7 +51,6 @@ def calcular_bancada_reta(
         "preco_total": round(preco_total, 2)
     }
 
-
 # =========================
 # COMPONENTE PRINCIPAL
 # =========================
@@ -75,12 +71,11 @@ class BudgetCalculator(ft.UserControl):
     # ---------------------
     def _carregar_pedras(self):
         self.pedras.clear()
-        docs = firebase_db.collection(COLLECTION_PEDRAS).stream()
-        for doc in docs:
-            data = doc.to_dict()
+        docs = firebase_service.get_collection(COLLECTION_PEDRAS)
+        for data in docs:
             if "nome" in data and "preco_m2" in data:
                 self.pedras.append({
-                    "id": doc.id,
+                    "id": data.get("id"),
                     "nome": data["nome"],
                     "preco_m2": float(data["preco_m2"]),
                 })
