@@ -2,131 +2,182 @@ import flet as ft
 from src.views.layout_base import LayoutBase
 from src.views.components.budget_calculator import BudgetCalculator
 from src.config import (
-    COLOR_BACKGROUND, COLOR_PRIMARY, COLOR_WHITE, COLOR_SECONDARY, 
-    COLOR_TEXT, COLOR_SUCCESS, COLOR_ERROR, COLOR_WARNING, 
-    SHADOW_MD, BORDER_RADIUS_LG, BORDER_RADIUS_MD
+    COLOR_PRIMARY, COLOR_WHITE, COLOR_TEXT,
+    COLOR_SUCCESS, COLOR_WARNING, COLOR_ERROR,
+    SHADOW_MD, BORDER_RADIUS_LG
 )
 from src.services import firebase_service
 from src.services.pdf_service import gerar_pdf_orcamento
 import datetime
 
 def BudgetView(page: ft.Page):
-    # Estado para controlar se vemos a lista ou o editor
-    estado = {"orcamento_atual": None, "id_atual": None}
-    conteudo_principal = ft.Container(expand=True)
+    grid = ft.ResponsiveRow(spacing=20, run_spacing=20)
+    container = ft.Container(expand=True)
 
-    def render_lista_principal(e=None):
-        """Renderiza a grade de orçamentos (Cards)"""
-        lista_orcamentos = firebase_service.get_orcamentos_lista()
-        
-        grid = ft.ResponsiveRow(spacing=20, run_spacing=20)
-        
-        # Botão Novo Orçamento (Primeiro Card)
+    # ------------------ HELPERS ------------------
+    def fechar_dialogo(e=None):
+        page.dialog.open = False
+        page.update()
+
+    def carregar():
+        grid.controls.clear()
+        lista = firebase_service.get_orcamentos_lista()
+
+        # CARD NOVO
         grid.controls.append(
             ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.icons.ADD_CIRCLE_OUTLINE, size=40, color=COLOR_PRIMARY),
-                    ft.Text("Novo Orçamento", weight="bold", color=COLOR_PRIMARY)
-                ], alignment="center", horizontal_alignment="center"),
-                bgcolor=COLOR_WHITE,
+                col={"xs":12,"sm":6,"md":4,"lg":3},
                 padding=30,
+                bgcolor=COLOR_WHITE,
                 border_radius=BORDER_RADIUS_LG,
                 border=ft.border.all(2, COLOR_PRIMARY),
-                on_click=lambda _: abrir_editor_novo(),
-                col={"xs": 12, "sm": 6, "md": 4, "lg": 3}
+                content=ft.Column([
+                    ft.Icon(ft.icons.ADD_CIRCLE, size=40, color=COLOR_PRIMARY),
+                    ft.Text("Novo Orçamento", weight="bold", color=COLOR_PRIMARY)
+                ], alignment="center", horizontal_alignment="center"),
+                on_click=lambda _: popup_novo()
             )
         )
 
-        for orc in lista_orcamentos:
-            grid.controls.append(criar_card_orcamento(orc))
+        if not lista:
+            grid.controls.append(
+                ft.Container(
+                    col=12,
+                    padding=40,
+                    content=ft.Text("Nenhum orçamento criado ainda.", color="grey"),
+                    alignment=ft.alignment.center
+                )
+            )
+        else:
+            for o in lista:
+                grid.controls.append(card_orcamento(o))
 
-        conteudo_principal.content = ft.Column([
-            ft.Text("Orçamentos e Projetos", size=28, weight="bold", color=COLOR_TEXT),
+        container.content = ft.Column([
+            ft.Text("Orçamentos", size=28, weight="bold"),
             grid
         ], scroll=ft.ScrollMode.AUTO)
         page.update()
 
-    def criar_card_orcamento(orc):
-        status = orc.get('status', 'Pendente')
-        cor_status = COLOR_SUCCESS if status == "Finalizado" else COLOR_WARNING
-        
+    # ------------------ CARD ------------------
+    def card_orcamento(o):
+        status = o.get("status","Em aberto")
+        cor = COLOR_WARNING if status=="Em aberto" else COLOR_SUCCESS
+
         return ft.Container(
+            col={"xs":12,"sm":6,"md":4,"lg":3},
+            padding=20,
+            bgcolor=COLOR_WHITE,
+            border_radius=BORDER_RADIUS_LG,
+            shadow=SHADOW_MD,
             content=ft.Column([
                 ft.Row([
-                    ft.Text(f"#{orc['id'][-5:]}", size=12, color="grey"),
+                    ft.Text(o.get("cliente_nome","Cliente"), weight="bold", size=16),
                     ft.Container(
-                        content=ft.Text(status, size=10, color=COLOR_WHITE, weight="bold"),
-                        bgcolor=cor_status, padding=ft.padding.symmetric(6, 12), border_radius=15
+                        bgcolor=cor,
+                        padding=ft.padding.symmetric(6,12),
+                        border_radius=12,
+                        content=ft.Text(status, size=10, color=COLOR_WHITE)
                     )
                 ], alignment="spaceBetween"),
-                ft.Text(orc.get('cliente_nome', 'Cliente sem nome'), weight="bold", size=18, max_lines=1),
-                ft.Text(f"R$ {float(orc.get('total_geral', 0)):,.2f}", size=20, weight="bold", color=COLOR_PRIMARY),
-                ft.Divider(height=10, color="transparent"),
+                ft.Text(f"R$ {float(o.get('total_geral',0)):,.2f}", size=18, weight="bold", color=COLOR_PRIMARY),
+                ft.Divider(),
                 ft.Row([
-                    ft.IconButton(ft.icons.EDIT_OUT_LINED, on_click=lambda _: editar_orcamento(orc)),
-                    ft.IconButton(ft.icons.PICTURE_AS_PDF, on_click=lambda _: gerar_pdf_orcamento(orc)),
-                    ft.IconButton(ft.icons.DELETE_OUTLINE, icon_color=COLOR_ERROR, on_click=lambda _: deletar_orcamento(orc))
+                    ft.IconButton(ft.icons.EDIT, on_click=lambda _: abrir_orcamento(o)),
+                    ft.IconButton(ft.icons.PICTURE_AS_PDF, on_click=lambda _: gerar_pdf_orcamento(o)),
+                    ft.IconButton(ft.icons.DELETE, icon_color=COLOR_ERROR, on_click=lambda _: confirmar_delete(o))
                 ], alignment="end")
-            ]),
-            bgcolor=COLOR_WHITE, padding=20, border_radius=BORDER_RADIUS_LG, shadow=SHADOW_MD,
-            col={"xs": 12, "sm": 6, "md": 4, "lg": 3}
+            ])
         )
 
-    def abrir_editor_novo():
-        estado['id_atual'] = None
-        estado['orcamento_atual'] = {
-            "cliente_nome": "", "cliente_telefone": "", "itens": [], 
-            "total_geral": 0.0, "status": "Pendente", "data": datetime.datetime.now().isoformat()
-        }
-        render_tela_editor()
+    # ------------------ POPUPS ------------------
+    def popup_novo():
+        nome = ft.TextField(label="Nome do Cliente")
+        contato = ft.TextField(label="Contato")
+        endereco = ft.TextField(label="Endereço (opcional)")
 
-    def editar_orcamento(orc):
-        estado['id_atual'] = orc['id']
-        estado['orcamento_atual'] = orc
-        render_tela_editor()
+        def salvar(e):
+            dados = {
+                "cliente_nome": nome.value,
+                "cliente_contato": contato.value,
+                "cliente_endereco": endereco.value,
+                "status": "Em aberto",
+                "itens": [],
+                "total_geral": 0,
+                "data": datetime.datetime.now().isoformat()
+            }
+            firebase_service.add_document("orcamentos", dados)
+            fechar_dialogo()
+            carregar()
 
-    def render_tela_editor():
-        """Abre a calculadora e campos de cliente"""
-        orc = estado['orcamento_atual']
-        
-        txt_nome = ft.TextField(label="Nome do Cliente", value=orc['cliente_nome'], border_radius=10)
-        
-        def salvar_tudo(e):
-            orc['cliente_nome'] = txt_nome.value
-            if estado['id_atual']:
-                firebase_service.update_document("orcamentos", estado['id_atual'], orc)
-            else:
-                firebase_service.add_document("orcamentos", orc)
-            render_lista_principal()
+        page.dialog = ft.AlertDialog(
+            title=ft.Text("Novo Orçamento"),
+            content=ft.Column([nome, contato, endereco], tight=True),
+            actions=[
+                ft.TextButton("Cancelar", on_click=fechar_dialogo),
+                ft.ElevatedButton("Criar", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=salvar)
+            ]
+        )
+        page.dialog.open = True
+        page.update()
 
-        conteudo_principal.content = ft.Column([
+    def confirmar_delete(o):
+        def deletar(e):
+            firebase_service.delete_document("orcamentos", o["id"])
+            fechar_dialogo()
+            carregar()
+
+        page.dialog = ft.AlertDialog(
+            title=ft.Text("Excluir orçamento"),
+            content=ft.Text("Deseja realmente excluir este orçamento?"),
+            actions=[
+                ft.TextButton("Cancelar", on_click=fechar_dialogo),
+                ft.TextButton("Excluir", on_click=deletar, style=ft.ButtonStyle(color=COLOR_ERROR))
+            ]
+        )
+        page.dialog.open = True
+        page.update()
+
+    # ------------------ ORÇAMENTO ABERTO ------------------
+    def abrir_orcamento(o):
+        container.content = editor_orcamento(o)
+        page.update()
+
+    def editor_orcamento(o):
+        def adicionar_item():
+            def salvar_item(item):
+                o["itens"].append(item)
+                o["total_geral"] = sum(float(i["preco_total"]) for i in o["itens"])
+                firebase_service.update_document("orcamentos", o["id"], o)
+                abrir_orcamento(o)
+
+            container.content = BudgetCalculator(
+                page,
+                on_save_item=salvar_item,
+                on_cancel=lambda _: abrir_orcamento(o)
+            )
+            page.update()
+
+        lista_itens = ft.Column([
+            ft.ListTile(
+                title=ft.Text(f"{i['ambiente']} - {i['material']}"),
+                subtitle=ft.Text(f"R$ {float(i['preco_total']):,.2f}")
+            ) for i in o.get("itens",[])
+        ])
+
+        return ft.Column([
             ft.Row([
-                ft.IconButton(ft.icons.ARROW_BACK, on_click=render_lista_principal),
-                ft.Text("Editar Orçamento", size=20, weight="bold")
+                ft.IconButton(ft.icons.ARROW_BACK, on_click=lambda _: carregar()),
+                ft.Text(o["cliente_nome"], size=20, weight="bold")
             ]),
-            txt_nome,
-            ft.Text("Itens do Orçamento", weight="bold"),
-            # Aqui entraria a BudgetCalculator (Componente)
-            ft.ElevatedButton("Adicionar Item / Calcular", icon=ft.icons.CALCULATE, on_click=lambda _: ir_para_calculadora()),
-            ft.ElevatedButton("Salvar Orçamento", bgcolor=COLOR_SUCCESS, color=COLOR_WHITE, on_click=salvar_tudo)
+            lista_itens,
+            ft.ElevatedButton(
+                "Adicionar Pedra",
+                icon=ft.icons.ADD,
+                bgcolor=COLOR_PRIMARY,
+                color=COLOR_WHITE,
+                on_click=lambda _: adicionar_item()
+            )
         ], scroll=ft.ScrollMode.AUTO)
-        page.update()
 
-    def ir_para_calculadora():
-        def ao_salvar(novo_item):
-            estado['orcamento_atual']['itens'].append(novo_item)
-            # Recalcula total
-            total = sum(float(i.get('subtotal', 0)) for i in estado['orcamento_atual']['itens'])
-            estado['orcamento_atual']['total_geral'] = total
-            render_tela_editor()
-            
-        calc = BudgetCalculator(page, on_save_item=ao_salvar, on_cancel=render_tela_editor)
-        conteudo_principal.content = calc
-        page.update()
-
-    def deletar_orcamento(orc):
-        firebase_service.delete_document("orcamentos", orc['id'])
-        render_lista_principal()
-
-    render_lista_principal()
-    return LayoutBase(page, conteudo_principal, titulo="Orçamentos")
+    carregar()
+    return LayoutBase(page, container, titulo="Orçamentos")
