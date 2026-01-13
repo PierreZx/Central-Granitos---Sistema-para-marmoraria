@@ -154,7 +154,7 @@ def BudgetView(page: ft.Page):
             firebase_service.update_document("orcamentos", o["id"], o)
 
         # Função para adicionar item usando a calculadora
-        def adicionar_item():
+        def adicionar_item(*args):
             def salvar_item(item):
                 o["itens"].append(item)
                 atualizar_total()
