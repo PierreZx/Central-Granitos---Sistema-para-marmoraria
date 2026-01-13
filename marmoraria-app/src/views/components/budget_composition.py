@@ -20,8 +20,8 @@ class Abertura:
     tipo: Literal["bojo", "cooktop"]
     largura: float
     profundidade: float
-    x_relativo: float  # Posição X (0.0 a 1.0) para centralizar ou mover
-    y_relativo: float  # Posição Y (0.0 a 1.0)
+    x_relativo: float
+    y_relativo: float
 
 @dataclass
 class BancadaPiece:
