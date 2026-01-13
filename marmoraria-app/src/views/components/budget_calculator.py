@@ -18,7 +18,6 @@ class BudgetCalculator(ft.UserControl):
         self.pedra_selecionada = None
         
     def did_mount(self):
-        # Chama o carregamento assim que o componente entra na tela
         self._carregar_pedras()
 
     def _carregar_pedras(self):
@@ -27,13 +26,13 @@ class BudgetCalculator(ft.UserControl):
             {"id": d.get("id"), "nome": d["nome"], "preco_m2": float(d["preco_m2"])}
             for d in docs if "nome" in d and "preco_m2" in d
         ]
-        # ATUALIZA O DROPDOWN COM AS OPÇÕES
-        self.dd_pedra.options = [
-            ft.dropdown.Option(key=p["id"], text=p["nome"]) for p in self.pedras
-        ]
+        # Carrega as opções no dropdown fisicamente
+        self.dd_pedra.options = [ft.dropdown.Option(key=p["id"], text=p["nome"]) for p in self.pedras]
+        
         if self.item_para_editar:
             self._carregar_edicao()
-        self.update() # Força o Flet a mostrar as opções no Dropdown
+        
+        self.update()
 
     def _carregar_edicao(self):
         it = self.item_para_editar
@@ -116,6 +115,7 @@ class BudgetCalculator(ft.UserControl):
             if self.cb_saia_esq.value: lados_s.append("esquerda")
             if self.cb_saia_dir.value: lados_s.append("direita")
             peca.saia = Saia(altura=0.04, lados=lados_s)
+            
             lados_r = []
             if self.cb_rodo_fundo.value: lados_r.append("fundo")
             if self.cb_rodo_esq.value: lados_r.append("esquerda")

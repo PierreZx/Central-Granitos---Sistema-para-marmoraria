@@ -42,9 +42,11 @@ class BudgetCanvas(ft.UserControl):
                 ab_y = y_off + (h_px * ab.y_relativo) - (ab_h / 2)
                 shapes.append(cv.Rect(x=ab_x, y=ab_y, width=ab_w, height=ab_h, paint=ft.Paint(color="red", stroke_width=1, style=ft.PaintingStyle.STROKE, stroke_dash_pattern=[5, 5])))
                 shapes.append(cv.Line(ab_x + ab_w/2, y_off - 10, ab_x + ab_w/2, y_off + h_px + 10, paint=ft.Paint(color="blue", stroke_width=1, stroke_dash_pattern=[10, 5])))
-                shapes.append(cv.Text(ab_x + ab_w/2 - 12, y_off - 25, "EIXO", size=8, color="blue"))
+                # CORREÇÃO AQUI: font_size em vez de size
+                shapes.append(cv.Text(ab_x + ab_w/2 - 12, y_off - 25, "EIXO", font_size=8, color="blue"))
 
-            shapes.append(cv.Text(x_off + w_px/2 - 15, y_off - 40, f"{peca.largura}m", size=11, weight="bold"))
-            shapes.append(cv.Text(x_off - 45, y_off + h_px/2 - 10, f"{peca.profundidade}m", size=11, weight="bold"))
+            # CORREÇÃO AQUI: font_size em vez de size
+            shapes.append(cv.Text(x_off + w_px/2 - 15, y_off - 40, f"{peca.largura}m", font_size=11, weight="bold"))
+            shapes.append(cv.Text(x_off - 45, y_off + h_px/2 - 10, f"{peca.profundidade}m", font_size=11, weight="bold"))
 
         return ft.Container(content=cv.Canvas(shapes=shapes, width=500, height=300), alignment=ft.alignment.center, width=500, height=300)
