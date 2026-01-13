@@ -1,36 +1,46 @@
 # src/views/components/budget_composition.py
 
+from dataclasses import dataclass, field
+from typing import List, Literal, Optional
+
+Side = Literal["esquerda", "direita", "frente", "fundo"]
+
+@dataclass
 class Saia:
-    def __init__(self, altura: float = 0.04, lados: list = None):
-        self.altura = altura
-        self.lados = lados or ["frente"] # Lados onde haverá saia (acabamento)
+    altura: float
+    lados: List[Side]
 
+@dataclass
 class RodoBanca:
-    def __init__(self, altura: float = 0.10, lados: list = None):
-        self.altura = altura
-        self.lados = lados or ["fundo"] # Lados onde haverá rodobanca (parede)
+    altura: float
+    lados: List[Side]
 
+@dataclass
+class Abertura:
+    tipo: Literal["bojo", "cooktop"]
+    largura: float
+    profundidade: float
+    x_relativo: float  # Posição X (0.0 a 1.0) para centralizar ou mover
+    y_relativo: float  # Posição Y (0.0 a 1.0)
+
+@dataclass
 class BancadaPiece:
-    def __init__(self, nome: str, largura: float, profundidade: float, material: str = ""):
-        self.nome = nome
-        self.largura = largura  # Em metros
-        self.profundidade = profundidade  # Em metros
-        self.material = material
-        self.saia = None
-        self.rodobanca = None
-        
-        # Para o Canvas Interativo (posicionamento na tela)
-        self.x = 0
-        self.y = 0
+    nome: str
+    largura: float
+    profundidade: float
+    material: str = ""
+    preco_m2: float = 0.0
+    saia: Optional[Saia] = None
+    rodobanca: Optional[RodoBanca] = None
+    aberturas: List[Abertura] = field(default_factory=list)
+    encaixada_em: Optional[Side] = None
+    x: float = 0.0
+    y: float = 0.0
 
     def area_m2(self) -> float:
-        """Calcula a área da pedra principal."""
-        return self.largura * self.profundidade
-
-    # Adicione ou atualize este método na classe BancadaPiece:
+        return round(self.largura * self.profundidade, 4)
 
     def metro_linear_saia(self) -> float:
-        """Soma o comprimento de todos os lados que possuem saia."""
         if not self.saia:
             return 0.0
         total = 0.0
@@ -40,24 +50,22 @@ class BancadaPiece:
         if "direita" in self.saia.lados: total += self.profundidade
         return round(total, 3)
 
-    def area_rodobanca(self) -> float:
-        """Calcula a área total das rodobancas (que também consomem material)."""
-        total_ml = 0
-        if self.rodobanca:
-            if "fundo" in self.rodobanca.lados: total_ml += self.largura
-            if "esquerda" in self.rodobanca.lados: total_ml += self.profundidade
-            if "direita" in self.rodobanca.lados: total_ml += self.profundidade
-            return total_ml * self.rodobanca.altura
-        return 0
+    def metro_linear_rodobanca(self) -> float:
+        if not self.rodobanca:
+            return 0.0
+        total = 0.0
+        if "frente" in self.rodobanca.lados: total += self.largura
+        if "fundo" in self.rodobanca.lados: total += self.largura
+        if "esquerda" in self.rodobanca.lados: total += self.profundidade
+        if "direita" in self.rodobanca.lados: total += self.profundidade
+        return round(total, 3)
 
 class CompositionManager:
-    """Gerencia a lista de peças que formam uma bancada (ex: L ou U)."""
     def __init__(self):
-        self.pecas = []
+        self.pecas: List[BancadaPiece] = []
 
     def adicionar_peca(self, peca: BancadaPiece):
         self.pecas.append(peca)
 
-    def calcular_total_area(self) -> float:
-        """Soma a área de todas as peças e suas rodobancas."""
-        return sum(p.area_m2() + p.area_rodobanca() for p in self.pecas)
+    def area_total(self) -> float:
+        return round(sum(p.area_m2() for p in self.pecas), 4)
