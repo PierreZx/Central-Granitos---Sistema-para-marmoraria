@@ -26,7 +26,6 @@ class BudgetCalculator(ft.UserControl):
             {"id": d.get("id"), "nome": d["nome"], "preco_m2": float(d["preco_m2"])}
             for d in docs if "nome" in d and "preco_m2" in d
         ]
-        # Carrega as opções no dropdown fisicamente
         self.dd_pedra.options = [ft.dropdown.Option(key=p["id"], text=p["nome"]) for p in self.pedras]
         
         if self.item_para_editar:
@@ -62,7 +61,7 @@ class BudgetCalculator(ft.UserControl):
         self.sw_bojo = ft.Switch(label="Furo Bojo", value=False, on_change=self._atualizar_calculos)
         self.sw_cook = ft.Switch(label="Furo Cooktop", value=False, on_change=self._atualizar_calculos)
 
-        self.canvas_area = ft.Container(content=ft.Text("Inicie as medidas...", color="grey"), height=320, bgcolor="#F8F9FA", border_radius=10, border=ft.border.all(1, "grey300"), alignment=ft.alignment.center)
+        self.canvas_area = ft.Container(content=ft.Text("Aguardando material...", color="grey"), height=320, bgcolor="#F8F9FA", border_radius=10, border=ft.border.all(1, "grey300"), alignment=ft.alignment.center)
         self.txt_area_res = ft.Text("0.00 m²", weight="bold")
         self.txt_total_res = ft.Text("R$ 0.00", size=24, weight="bold", color=COLOR_PRIMARY)
 
