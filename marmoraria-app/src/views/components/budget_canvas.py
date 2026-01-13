@@ -1,67 +1,85 @@
 # src/views/components/budget_canvas.py
 
 import flet as ft
-import flet.canvas as cv
+import io
+from PIL import Image, ImageDraw, ImageFont
 from src.views.components.budget_composition import CompositionManager
 
 class BudgetCanvas(ft.UserControl):
     def __init__(self, composition: CompositionManager):
         super().__init__()
         self.composition = composition
-        self.scale = 120 
-        self.padding = 50
+        self.width = 800
+        self.height = 600
+        self.scale = 200 # 1 metro = 200 pixels
 
     def build(self):
-        shapes = []
+        # Criamos uma imagem em branco (RGB) com fundo branco
+        img = Image.new("RGB", (self.width, self.height), "white")
+        draw = ImageDraw.Draw(img)
+        
+        # Tenta carregar uma fonte, se não houver, usa a padrão
+        try:
+            font = ImageFont.truetype("arial.ttf", 16)
+            font_small = ImageFont.truetype("arial.ttf", 12)
+        except:
+            font = ImageFont.load_default()
+            font_small = ImageFont.load_default()
+
+        margin_x, margin_y = 100, 150
+
         for peca in self.composition.pecas:
-            x_off = self.padding
-            y_off = self.padding
-            w_px = peca.largura * self.scale
-            h_px = peca.profundidade * self.scale
+            w = peca.largura * self.scale
+            h = peca.profundidade * self.scale
+            
+            x0, y0 = margin_x, margin_y
+            x1, y1 = x0 + w, y0 + h
 
-            # DESENHO DA PEDRA (COR ESCURA PARA CONTRASTE)
-            shapes.append(
-                cv.Rect(
-                    x=x_off, y=y_off, width=w_px, height=h_px,
-                    paint=ft.Paint(color=ft.colors.GREY_400, style=ft.PaintingStyle.FILL)
-                )
-            )
-            shapes.append(
-                cv.Rect(
-                    x=x_off, y=y_off, width=w_px, height=h_px,
-                    paint=ft.Paint(color=ft.colors.BLACK, stroke_width=2, style=ft.PaintingStyle.STROKE)
-                )
-            )
+            # 1. DESENHO DA PEDRA (CORPO)
+            draw.rectangle([x0, y0, x1, y1], fill="#E0E0E0", outline="black", width=2)
 
-            # ACABAMENTOS
+            # 2. ACABAMENTOS (SAIA EM AZUL)
             if peca.saia and peca.saia.lados:
-                p_saia = ft.Paint(color=ft.colors.BLUE_700, stroke_width=5)
-                if "frente" in peca.saia.lados: shapes.append(cv.Line(x_off, y_off + h_px, x_off + w_px, y_off + h_px, p_saia))
-                if "esquerda" in peca.saia.lados: shapes.append(cv.Line(x_off, y_off, x_off, y_off + h_px, p_saia))
-                if "direita" in peca.saia.lados: shapes.append(cv.Line(x_off + w_px, y_off, x_off + w_px, y_off + h_px, p_saia))
+                if "frente" in peca.saia.lados:
+                    draw.line([x0, y1, x1, y1], fill="blue", width=5)
 
-            # MEDIDAS (TEXTO)
-            shapes.append(
-                cv.Text(
-                    x=x_off + w_px/2 - 20, y=y_off - 35,
-                    text=f"{peca.largura}m",
-                    style=ft.TextStyle(size=14, weight="bold", color=ft.colors.BLACK)
-                )
-            )
-            shapes.append(
-                cv.Text(
-                    x=x_off - 45, y=y_off + h_px/2 - 10,
-                    text=f"{peca.profundidade}m",
-                    style=ft.TextStyle(size=14, weight="bold", color=ft.colors.BLACK)
-                )
-            )
+            # 3. RODOBANCAS (PAREDE EM VERMELHO)
+            if peca.rodobanca and peca.rodobanca.lados:
+                if "fundo" in peca.rodobanca.lados:
+                    draw.line([x0, y0-2, x1, y0-2], fill="red", width=3)
 
-        return ft.Container(
-            content=cv.Canvas(shapes=shapes, width=400, height=300),
-            bgcolor=ft.colors.WHITE,
-            border=ft.border.all(1, ft.colors.GREY_300),
-            border_radius=10,
-            alignment=ft.alignment.center,
-            width=400,
-            height=300
+            # 4. ABERTURAS (BOJO / COOKTOP)
+            for ab in peca.aberturas:
+                ab_w = ab.largura * self.scale
+                ab_h = ab.profundidade * self.scale
+                ab_x = x0 + (w * ab.x_relativo) - (ab_w / 2)
+                ab_y = y0 + (h * ab.y_relativo) - (ab_h / 2)
+                
+                # Desenha o furo (tracejado simulado)
+                draw.rectangle([ab_x, ab_y, ab_x + ab_w, ab_y + ab_h], outline="red", width=2)
+                
+                # LINHA DE EIXO (Igual à imagem base)
+                draw.line([ab_x + ab_w/2, y0 - 40, ab_x + ab_w/2, y1 + 20], fill="blue", width=1)
+                draw.text((ab_x + ab_w/2 - 15, y0 - 60), "EIXO", fill="blue", font=font_small)
+
+            # 5. COTAS (MEDIDAS)
+            # Largura
+            draw.line([x0, y0 - 20, x1, y0 - 20], fill="black", width=1)
+            draw.text((x0 + w/2 - 20, y0 - 45), f"{peca.largura}m", fill="black", font=font)
+            
+            # Profundidade
+            draw.line([x0 - 20, y0, x0 - 20, y1], fill="black", width=1)
+            draw.text((x0 - 70, y0 + h/2 - 10), f"{peca.profundidade}m", fill="black", font=font)
+
+        # Converter imagem PIL para Bytes para o Flet exibir
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_base64 = buffered.getvalue()
+
+        return ft.Image(
+            src_base64=buffered.getvalue().hex(), # Método simples de conversão
+            src=None,
+            width=self.width / 2, # Ajuste de escala para tela
+            height=self.height / 2,
+            fit=ft.ImageFit.CONTAIN,
         )
