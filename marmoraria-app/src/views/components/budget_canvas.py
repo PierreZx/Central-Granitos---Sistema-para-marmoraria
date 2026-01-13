@@ -23,7 +23,7 @@ class BudgetCanvas(ft.UserControl):
             shapes.append(cv.Rect(x=x_off, y=y_off, width=w_px, height=h_px, paint=ft.Paint(color="#EEEEEE", style=ft.PaintingStyle.FILL)))
             shapes.append(cv.Rect(x=x_off, y=y_off, width=w_px, height=h_px, paint=ft.Paint(color="black", stroke_width=2, style=ft.PaintingStyle.STROKE)))
 
-            # 2. ACABAMENTOS
+            # 2. ACABAMENTOS (SAIA = AZUL, RODO = VERMELHO)
             if peca.saia and peca.saia.lados:
                 p_saia = ft.Paint(color="blue", stroke_width=4)
                 if "frente" in peca.saia.lados: shapes.append(cv.Line(x_off, y_off + h_px, x_off + w_px, y_off + h_px, p_saia))
@@ -37,19 +37,24 @@ class BudgetCanvas(ft.UserControl):
                 if "esquerda" in peca.rodobanca.lados: shapes.append(cv.Line(x_off - 4, y_off, x_off - 4, y_off + h_px, p_rodo))
                 if "direita" in peca.rodobanca.lados: shapes.append(cv.Line(x_off + w_px + 4, y_off, x_off + w_px + 4, y_off + h_px, p_rodo))
 
-            # 3. ABERTURAS
+            # 3. ABERTURAS (BOJO / COOKTOP)
             for ab in peca.aberturas:
                 ab_w = ab.largura * self.scale
                 ab_h = ab.profundidade * self.scale
                 ab_x = x_off + (w_px * ab.x_relativo) - (ab_w / 2)
                 ab_y = y_off + (h_px * ab.y_relativo) - (ab_h / 2)
+                
                 shapes.append(cv.Rect(x=ab_x, y=ab_y, width=ab_w, height=ab_h, paint=ft.Paint(color="red", stroke_width=1, style=ft.PaintingStyle.STROKE, stroke_dash_pattern=[5, 5])))
                 shapes.append(cv.Line(ab_x + ab_w/2, y_off - 10, ab_x + ab_w/2, y_off + h_px + 10, paint=ft.Paint(color="blue", stroke_width=1, stroke_dash_pattern=[10, 5])))
-                # Texto do Eixo sem font_size direto
                 shapes.append(cv.Text(x=ab_x + ab_w/2 - 12, y=y_off - 25, text="EIXO", style=ft.TextStyle(size=8, color="blue")))
 
-            # 4. MEDIDAS (COTAS) - Usando a sintaxe TextStyle para evitar erros
+            # 4. MEDIDAS
             shapes.append(cv.Text(x=x_off + w_px/2 - 15, y=y_off - 40, text=f"{peca.largura}m", style=ft.TextStyle(size=11, weight="bold")))
             shapes.append(cv.Text(x=x_off - 45, y=y_off + h_px/2 - 10, text=f"{peca.profundidade}m", style=ft.TextStyle(size=11, weight="bold")))
 
-        return ft.Container(content=cv.Canvas(shapes=shapes, width=500, height=300), alignment=ft.alignment.center, width=500, height=300)
+        return ft.Container(
+            content=cv.Canvas(shapes=shapes, width=500, height=300),
+            alignment=ft.alignment.center,
+            width=500,
+            height=300
+        )

@@ -128,6 +128,7 @@ class BudgetCalculator(ft.UserControl):
             self.canvas_area.content = BudgetCanvas(self.composition)
             
             p_m2 = self.pedra_selecionada["preco_m2"] if self.pedra_selecionada else 0
+            # Corrigido cálculo: (Área * Preço m2) + (Metro Linear Saia * Preço ML)
             total = (peca.area_m2() * p_m2) + (peca.metro_linear_saia() * v_ml)
             
             self.txt_area_res.value = f"{peca.area_m2():.2f} m²"
@@ -142,6 +143,10 @@ class BudgetCalculator(ft.UserControl):
             self.page.snack_bar.open = True
             self.page.update()
             return
+        
+        # Garante que o valor final seja salvo como número
+        valor_final = float(self.txt_total_res.value.replace("R$ ", "").replace(".", "").replace(",", "."))
+        
         peca = self.composition.pecas[0]
         item = {
             "ambiente": self.txt_ambiente.value,
@@ -149,7 +154,7 @@ class BudgetCalculator(ft.UserControl):
             "largura": peca.largura,
             "profundidade": peca.profundidade,
             "area": peca.area_m2(),
-            "preco_total": float(self.txt_total_res.value.replace("R$ ", "").replace(".", "").replace(",", "."))
+            "preco_total": valor_final
         }
         if self.on_save_item:
             self.on_save_item(item)
