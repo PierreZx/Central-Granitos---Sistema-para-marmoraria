@@ -105,16 +105,14 @@ class BudgetCalculator(ft.UserControl):
             ], scroll=ft.ScrollMode.ALWAYS))
         ], expand=1)
 
-        # CORREÇÃO: Usando a propriedade aspect_ratio do Container em vez de ft.AspectRatio
         return ft.Container(padding=10, content=ft.Column([
             ft.Container(tabs, height=280, bgcolor=COLOR_WHITE, border_radius=10, padding=10),
             ft.Container(
                 content=self.canvas,
-                aspect_ratio=1.0, # Isso garante que o desenho seja sempre um quadrado perfeito
                 bgcolor="white", 
                 border_radius=10, 
                 border=ft.border.all(1, "#ddd"),
-                padding=20,
+                height=350, # Voltando ao tamanho fixo que não cortava no horizontal
                 alignment=ft.alignment.center
             ),
             ft.Row([self.lbl_total, ft.ElevatedButton("Salvar", on_click=self.salvar)], alignment="spaceBetween")
@@ -171,93 +169,65 @@ class BudgetCalculator(ft.UserControl):
 
     def desenhar(self):
         self.canvas.shapes.clear()
-        
-        # 1. Obter medidas reais
         w1, h1 = max(0.01, self.to_f(self.p1["l"].value)), max(0.01, self.to_f(self.p1["p"].value))
         w2, h2 = (self.to_f(self.p2["l"].value), self.to_f(self.p2["p"].value)) if self.tem_p2 else (0,0)
         w3, h3 = (self.to_f(self.p3["l"].value), self.to_f(self.p3["p"].value)) if self.tem_p3 else (0,0)
 
-        # 2. CALCULAR O REQUADRO TOTAL (Bounding Box)
-        # Vamos definir as posições das peças em relação à P1 (que está no 0,0)
-        p1_x_rel, p1_y_rel = 0, 0
-        
-        p2_x_rel = 0
-        if self.tem_p2:
-            p2_x_rel = w1 if self.p2["lado"].value == "direita" else -w2
-            
-        p3_x_rel = 0
-        if self.tem_p3:
-            # Se P2 e P3 estiverem no mesmo lado, elas se somam
-            if self.tem_p2 and self.p2["lado"].value == self.p3["lado"].value:
-                if self.p3["lado"].value == "direita": p3_x_rel = w1 + w2
-                else: p3_x_rel = -w2 - w3
-            else:
-                p3_x_rel = w1 if self.p3["lado"].value == "direita" else -w3
+        # Voltando ao cálculo de escala que funcionava no horizontal
+        total_w = w1 + w2 + w3
+        max_h = max(h1, h2, h3)
+        scale = min(280 / max(0.1, total_w), 250 / max(0.1, max_h))
 
-        # Descobrir os limites extremos
-        todos_x = [0, w1, p2_x_rel, p2_x_rel + w2, p3_x_rel, p3_x_rel + w3]
-        min_x = min(todos_x)
-        max_x = max(todos_x)
-        largura_total = max_x - min_x
-        altura_max = max(h1, h2, h3)
+        # Posição baseada na P1 (Versão estável anterior)
+        p1_x = 175 - (w1*scale)/2
+        if self.tem_p2 and self.p2["lado"].value == "esquerda": p1_x += (w2*scale)/2
+        if self.tem_p3 and self.p3["lado"].value == "esquerda": p1_x += (w3*scale)/2
+        p1_y = 150 - (h1*scale)/2
 
-        # 3. ESCALA E CENTRALIZAÇÃO
-        # O Canvas tem 350x350. Vamos usar 280 para ter uma margem de segurança.
-        scale = min(280 / max(0.1, largura_total), 250 / max(0.1, altura_max))
-        
-        # O centro do desenho deve bater com o centro do Canvas (175, 175)
-        offset_x = 175 - (min_x + max_x) * scale / 2
-        offset_y = 175 - altura_max * scale / 2
+        def draw_box(w, h, x, y, rodo, saia, j_esq, j_dir):
+            wp, hp = w*scale, h*scale
+            self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="fill", color="#F5F5F5")))
+            self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="stroke", color="black", stroke_width=1)))
+            self.canvas.shapes.append(cv.Text(x + 5, y + 5, f"{w}x{h}", style=ft.TextStyle(size=10, weight="bold")))
 
-        def draw_box(w, h, x_rel, y_rel, rodo, saia, j_esq, j_dir):
-            wp, hp = w * scale, h * scale
-            x_final = offset_x + x_rel * scale
-            y_final = offset_y + y_rel * scale
-            
-            # Pedra
-            self.canvas.shapes.append(cv.Rect(x_final, y_final, wp, hp, paint=ft.Paint(style="fill", color="#F5F5F5")))
-            self.canvas.shapes.append(cv.Rect(x_final, y_final, wp, hp, paint=ft.Paint(style="stroke", color="black", stroke_width=1)))
-            
-            # Medida discreta no canto
-            self.canvas.shapes.append(cv.Text(x_final + 5, y_final + 5, f"{w}x{h}", style=ft.TextStyle(size=10, weight="bold")))
-
-            # Acabamentos
-            lados = {"fundo": (x_final, y_final, x_final + wp, y_final), 
-                     "frente": (x_final, y_final + hp, x_final + wp, y_final + hp), 
-                     "esquerda": (x_final, y_final, x_final, y_final + hp), 
-                     "direita": (x_final + wp, y_final, x_final + wp, y_final + hp)}
-            
+            lados = {"fundo": (x,y,x+wp,y), "frente": (x,y+hp,x+wp,y+hp), "esquerda": (x,y,x,y+hp), "direita": (x+wp,y,x+wp,y+hp)}
             for lado, (x1, y1, x2, y2) in lados.items():
                 if (lado == "esquerda" and j_esq) or (lado == "direita" and j_dir):
                     if h <= h1: continue
-                    else: y1 = y_final + h1 * scale
-                
+                    else: y1 = y + h1*scale
                 if rodo[lado].value:
                     self.canvas.shapes.append(cv.Line(x1, y1, x2, y2, paint=ft.Paint(color="red", stroke_width=3)))
+                    self.canvas.shapes.append(cv.Text((x1+x2)/2 - 10, y1-15 if lado=="fundo" else y1+5, f"R:{w if lado in ['fundo','frente'] else h}", style=ft.TextStyle(size=8, color="red")))
                 if saia[lado].value:
                     off = 4 if rodo[lado].value else 0
                     self.canvas.shapes.append(cv.Line(x1+off, y1+off, x2+off, y2+off, paint=ft.Paint(color="blue", stroke_width=4)))
+                    self.canvas.shapes.append(cv.Text((x1+x2)/2 - 10, y1+12 if lado=="fundo" else y1-15, f"S:{w if lado in ['fundo','frente'] else h}", style=ft.TextStyle(size=8, color="blue")))
 
-        # 4. DESENHAR PEÇAS
-        # Peça 1 (Ponto base 0,0)
+        # Peças
+        pecas_coords = {"P1": (p1_x, p1_y, w1, h1)}
         j1_e = (self.tem_p2 and self.p2["lado"].value=="esquerda") or (self.tem_p3 and self.p3["lado"].value=="esquerda")
         j1_d = (self.tem_p2 and self.p2["lado"].value=="direita") or (self.tem_p3 and self.p3["lado"].value=="direita")
-        draw_box(w1, h1, 0, 0, self.p1_rodo, self.p1_saia, j1_e, j1_d)
+        draw_box(w1, h1, p1_x, p1_y, self.p1_rodo, self.p1_saia, j1_e, j1_d)
+        
+        for p_idx, tem, dados, rodo, saia in [("P2", self.tem_p2, self.p2, self.p2_rodo, self.p2_saia), ("P3", self.tem_p3, self.p3, self.p3_rodo, self.p3_saia)]:
+            if tem:
+                lx, px = self.to_f(dados["l"].value), self.to_f(dados["p"].value)
+                pos_x = (p1_x + w1*scale) if dados["lado"].value == "direita" else (p1_x - lx*scale)
+                draw_box(lx, px, pos_x, p1_y, rodo, saia, j_esq=(dados["lado"].value=="direita"), j_dir=(dados["lado"].value=="esquerda"))
+                pecas_coords[p_idx] = (pos_x, p1_y, lx, px)
 
-        # Peças Laterais
-        if self.tem_p2:
-            draw_box(w2, h2, p2_x_rel, 0, self.p2_rodo, self.p2_saia, 
-                     j_esq=(self.p2["lado"].value=="direita"), j_dir=(self.p2["lado"].value=="esquerda"))
-        if self.tem_p3:
-            draw_box(w3, h3, p3_x_rel, 0, self.p3_rodo, self.p3_saia, 
-                     j_esq=(self.p3["lado"].value=="direita"), j_dir=(self.p3["lado"].value=="esquerda"))
-
-        # 5. FUROS (Sempre na P1)
-        for f, cor in [(self.f_bojo, "orange"), (self.f_cook, "green")]:
-            if f["sw"].value:
+        # Furos
+        for f, cor, tipo in [(self.f_bojo, "orange", "cuba"), (self.f_cook, "green", "bocas")]:
+            if f["sw"].value and f["peca"].value in pecas_coords:
+                bx, by, bw, bh = pecas_coords[f["peca"].value]
                 fw, fh, fx, fy = self.to_f(f["w"].value)*scale, self.to_f(f["h"].value)*scale, self.to_f(f["x"].value)*scale, self.to_f(f["y"].value)*scale
-                # Furo posicionado relativo ao offset da P1
-                self.canvas.shapes.append(cv.Rect(offset_x + fx - fw/2, offset_y + fy, fw, fh, paint=ft.Paint(style="stroke", color=cor, stroke_width=2)))
+                f_x_pos, f_y_pos = bx + fx - fw/2, by + fy
+                self.canvas.shapes.append(cv.Rect(f_x_pos, f_y_pos, fw, fh, border_radius=5 if tipo=="cuba" else 2, paint=ft.Paint(style="stroke", color=cor, stroke_width=2)))
+                if tipo == "cuba":
+                    self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2, f_y_pos + fh/2, 3, paint=ft.Paint(color=cor)))
+                else:
+                    for ox, oy in [(-0.2, -0.2), (0.2, -0.2), (-0.2, 0.2), (0.2, 0.2), (0,0)]:
+                        self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2 + (ox*fw), f_y_pos + fh/2 + (oy*fh), 3, paint=ft.Paint(style="stroke", color=cor)))
 
         self.canvas.update()
 
