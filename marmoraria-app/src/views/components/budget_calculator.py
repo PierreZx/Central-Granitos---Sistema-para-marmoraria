@@ -2,9 +2,8 @@
 
 import flet as ft
 import flet.canvas as cv
-from src.config import COLOR_PRIMARY, COLOR_WHITE
+from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE, COLOR_BACKGROUND
 from src.services import firebase_service
-
 
 class BudgetCalculator(ft.UserControl):
     def __init__(self, page, on_save_item, on_cancel, item=None):
@@ -12,211 +11,218 @@ class BudgetCalculator(ft.UserControl):
         self.page = page
         self.on_save_item = on_save_item
         self.on_cancel = on_cancel
-        self.item_para_editar = item
-
+        self.item_para_editar = item 
         self.mapa_precos = {}
         self.tem_p2 = False
         self.tem_p3 = False
 
-    # ===============================
-    # UTIL
-    # ===============================
     def to_f(self, v):
         try:
             return float(str(v).replace(",", ".")) if v else 0.0
         except:
             return 0.0
 
-    # ===============================
-    # BUILD
-    # ===============================
     def build(self):
         chapas = firebase_service.get_collection("estoque")
-
-        self.mapa_precos = {
-            c["id"]: {
-                "nome": c.get("nome", ""),
-                "preco": float(c.get("preco_m2", 0))
-            }
-            for c in chapas
-        }
-
-        opcoes_pedras = [
-            ft.dropdown.Option(
-                key=c["id"],
-                text=f"{c.get('nome')} - R$ {float(c.get('preco_m2', 0)):.2f}/m²"
-            )
-            for c in chapas
-        ]
+        opcoes_pedras = [ft.dropdown.Option(key=c['id'], text=f"{c.get('nome')} - R$ {float(c.get('preco_m2',0)):.2f}/m²") for c in chapas]
+        for c in chapas: 
+            self.mapa_precos[c['id']] = {'nome': c.get('nome'), 'preco': float(c.get('preco_m2',0))}
 
         def on_num_change(e):
-            if "," in e.control.value:
+            if e.control.value and "," in e.control.value:
                 e.control.value = e.control.value.replace(",", ".")
             self.calcular()
 
-        # -------- CAMPOS --------
-        self.txt_ambiente = ft.TextField(label="Ambiente", value="Cozinha")
-        self.dd_pedra = ft.Dropdown(label="Material", options=opcoes_pedras, on_change=self.calcular)
-        self.txt_acab = ft.TextField(label="Mão de Obra (R$/ML)", value="130", on_change=on_num_change)
+        # --- CAMPOS DE ENTRADA ---
+        self.txt_ambiente = ft.TextField(label="Ambiente", value="Cozinha", height=45)
+        self.dd_pedra = ft.Dropdown(label="Material", options=opcoes_pedras, height=45, on_change=self.calcular)
+        self.txt_acab = ft.TextField(label="Mão de Obra (R$/ML)", value="130.00", on_change=on_num_change)
 
-        def criar_peca(visivel=True):
+        def criar_inputs_peca(nome, visivel=True):
             return {
-                "l": ft.TextField(label="Comprimento (m)", value="1.00", on_change=on_num_change, visible=visivel),
-                "p": ft.TextField(label="Profundidade (m)", value="0.60", on_change=on_num_change, visible=visivel),
-                "lado": ft.Dropdown(
-                    label="Posição",
-                    value="direita",
-                    options=[ft.dropdown.Option("esquerda"), ft.dropdown.Option("direita")],
-                    on_change=self.calcular,
-                    visible=visivel
-                )
+                "l": ft.TextField(label=f"Comp. {nome} (m)", value="1.00", expand=True, on_change=on_num_change, visible=visivel),
+                "p": ft.TextField(label=f"Prof. {nome} (m)", value="0.60", expand=True, on_change=on_num_change, visible=visivel),
+                "lado": ft.Dropdown(label="Posição", value="direita" if nome != "P1" else None, visible=visivel, 
+                                   options=[ft.dropdown.Option("esquerda"), ft.dropdown.Option("direita")], on_change=self.calcular)
             }
 
-        self.p1 = criar_peca(True)
-        self.p2 = criar_peca(False)
-        self.p3 = criar_peca(False)
+        self.p1 = criar_inputs_peca("P1")
+        self.p2 = criar_inputs_peca("P2 (L)", False)
+        self.p3 = criar_inputs_peca("P3 (U)", False)
 
-        def lados():
-            return {k: ft.Checkbox(label=k.capitalize(), on_change=self.calcular)
-                    for k in ["fundo", "frente", "esquerda", "direita"]}
+        def seletor_lados():
+            return {l: ft.Checkbox(label=l.capitalize()[:3], on_change=self.calcular) for l in ["fundo", "frente", "esquerda", "direita"]}
 
-        self.p1_rodo = lados()
-        self.p1_saia = lados()
-        self.p1_rodo["fundo"].value = True
-        self.p1_saia["frente"].value = True
+        self.p1_rodo = seletor_lados(); self.p1_rodo["fundo"].value = True
+        self.p1_saia = seletor_lados(); self.p1_saia["frente"].value = True
+        self.p2_rodo = seletor_lados(); self.p2_saia = seletor_lados()
+        self.p3_rodo = seletor_lados(); self.p3_saia = seletor_lados()
 
-        self.p2_rodo = lados()
-        self.p2_saia = lados()
-        self.p3_rodo = lados()
-        self.p3_saia = lados()
+        def ctrl_furo(label):
+            return {
+                "sw": ft.Switch(label=label, on_change=self.calcular),
+                "peca": ft.Dropdown(value="P1", options=[ft.dropdown.Option("P1"), ft.dropdown.Option("P2"), ft.dropdown.Option("P3")], width=75, on_change=self.calcular),
+                "w": ft.TextField(label="L", value="0.50", width=65, on_change=on_num_change),
+                "h": ft.TextField(label="P", value="0.40", width=65, on_change=on_num_change),
+                "x": ft.TextField(label="X", value="0.50", width=65, on_change=on_num_change)
+            }
+        self.f_bojo = ctrl_furo("Bojo")
+        self.f_cook = ctrl_furo("Cook")
 
-        # -------- CANVAS --------
         self.canvas = cv.Canvas(width=350, height=350, shapes=[])
+        self.lbl_total = ft.Text("R$ 0.00", size=24, weight="bold", color=COLOR_PRIMARY)
 
-        self.lbl_total = ft.Text("R$ 0,00", size=24, weight="bold", color=COLOR_PRIMARY)
+        def toggle_p(e, n):
+            if n == 2: 
+                self.tem_p2 = not self.tem_p2
+                p = self.p2
+                v = self.tem_p2
+            else: 
+                self.tem_p3 = not self.tem_p3
+                p = self.p3
+                v = self.tem_p3
+            
+            p["l"].visible = p["p"].visible = p["lado"].visible = v
+            self.calcular()
 
-        # -------- TABS --------
-        tabs = ft.Tabs(tabs=[
+        # Se for edição, carrega os dados aqui
+        if self.item_para_editar:
+            self.txt_ambiente.value = self.item_para_editar.get("ambiente", "")
+            self.p1["l"].value = str(self.item_para_editar.get("largura", "1.00"))
+            self.p1["p"].value = str(self.item_para_editar.get("profundidade", "0.60"))
+
+        tabs = ft.Tabs(selected_index=0, tabs=[
             ft.Tab(text="Base", content=ft.Column([
-                self.txt_ambiente,
-                self.dd_pedra,
+                self.txt_ambiente, self.dd_pedra, 
                 ft.Row([self.p1["l"], self.p1["p"]]),
-                ft.ElevatedButton("+ Peça L", on_click=lambda e: self.toggle_p(2)),
-                ft.Row([self.p2["l"], self.p2["p"]]),
-                self.p2["lado"],
-                ft.ElevatedButton("+ Peça U", on_click=lambda e: self.toggle_p(3)),
-                ft.Row([self.p3["l"], self.p3["p"]]),
-                self.p3["lado"],
+                ft.Row([
+                    ft.ElevatedButton("+ P2", on_click=lambda e: toggle_p(e, 2)),
+                    ft.ElevatedButton("+ P3", on_click=lambda e: toggle_p(e, 3)),
+                ]),
+                ft.Column([ft.Row([self.p2["l"], self.p2["p"]]), self.p2["lado"]]),
+                ft.Column([ft.Row([self.p3["l"], self.p3["p"]]), self.p3["lado"]]),
                 self.txt_acab
-            ], scroll=ft.ScrollMode.AUTO)),
-        ])
+            ], scroll=ft.ScrollMode.ALWAYS)),
+            ft.Tab(text="Acabam.", content=ft.Column([
+                ft.Text("P1 (Rodo / Saia)", weight="bold"), ft.Row([*self.p1_rodo.values()], wrap=True), ft.Row([*self.p1_saia.values()], wrap=True),
+                ft.Divider(), ft.Text("P2 (Rodo / Saia)", weight="bold"), ft.Row([*self.p2_rodo.values()], wrap=True), ft.Row([*self.p2_saia.values()], wrap=True),
+                ft.Divider(), ft.Text("P3 (Rodo / Saia)", weight="bold"), ft.Row([*self.p3_rodo.values()], wrap=True), ft.Row([*self.p3_saia.values()], wrap=True),
+            ], scroll=ft.ScrollMode.ALWAYS)),
+            ft.Tab(text="Furos", content=ft.Column([
+                ft.Row([self.f_bojo["sw"], self.f_bojo["peca"]]),
+                ft.Row([self.f_bojo["w"], self.f_bojo["h"], self.f_bojo["x"]], spacing=5),
+                ft.Divider(),
+                ft.Row([self.f_cook["sw"], self.f_cook["peca"]]),
+                ft.Row([self.f_cook["w"], self.f_cook["h"], self.f_cook["x"]], spacing=5),
+            ]))
+        ], height=320)
 
-        return ft.Column([
-            tabs,
-            ft.Container(
-                self.canvas,
-                bgcolor=COLOR_WHITE,
-                border=ft.border.all(1, "#DDD"),
-                border_radius=10,
-                alignment=ft.alignment.center
-            ),
-            ft.Row([
-                self.lbl_total,
-                ft.ElevatedButton("Salvar", on_click=self.salvar)
-            ], alignment="spaceBetween")
-        ], scroll=ft.ScrollMode.AUTO)
+        return ft.Container(padding=10, content=ft.Column([
+            ft.Container(content=tabs, padding=10, bgcolor=COLOR_WHITE, border_radius=10),
+            ft.Container(content=self.canvas, bgcolor=ft.colors.WHITE, border_radius=10, border=ft.border.all(1, "#ddd"), height=350, alignment=ft.alignment.center),
+            ft.Container(padding=15, bgcolor=COLOR_WHITE, border_radius=10, content=ft.Row([self.lbl_total, ft.ElevatedButton("Salvar", on_click=self.salvar)], alignment="spaceBetween"))
+        ], scroll=ft.ScrollMode.ALWAYS))
 
-    # ===============================
-    # TOGGLES
-    # ===============================
-    def toggle_p(self, n):
-        if n == 2:
-            self.tem_p2 = not self.tem_p2
-            vis = self.tem_p2
-            p = self.p2
-        else:
-            self.tem_p3 = not self.tem_p3
-            vis = self.tem_p3
-            p = self.p3
-
-        for c in p.values():
-            c.visible = vis
-
-        self.calcular()
-
-    # ===============================
-    # CÁLCULO
-    # ===============================
     def calcular(self, e=None):
-        if not self.dd_pedra.value:
-            return
+        try:
+            if not self.dd_pedra.value: return
+            p_m2 = self.mapa_precos[self.dd_pedra.value]['preco']
+            v_ml = self.to_f(self.txt_acab.value)
+            
+            total_m2 = 0; total_ml = 0
 
-        preco_m2 = self.mapa_precos[self.dd_pedra.value]["preco"]
-        ml = 0
-        total = 0
+            def calc_peca(l_ctrl, p_ctrl, rodo, saia):
+                l, p = self.to_f(l_ctrl.value), self.to_f(p_ctrl.value)
+                ml = 0
+                for k, v in rodo.items():
+                    if v.value: ml += (l if k in ["fundo", "frente"] else p)
+                for k, v in saia.items():
+                    if v.value: ml += (l if k in ["fundo", "frente"] else p)
+                return (l * p * p_m2), ml
 
-        def calc(l, p):
-            return self.to_f(l.value) * self.to_f(p.value)
+            v1, m1 = calc_peca(self.p1["l"], self.p1["p"], self.p1_rodo, self.p1_saia)
+            total_m2 += v1; total_ml += m1
 
-        total += calc(self.p1["l"], self.p1["p"]) * preco_m2
+            if self.tem_p2:
+                v2, m2 = calc_peca(self.p2["l"], self.p2["p"], self.p2_rodo, self.p2_saia)
+                total_m2 += v2; total_ml += m2
+            if self.tem_p3:
+                v3, m3 = calc_peca(self.p3["l"], self.p3["p"], self.p3_rodo, self.p3_saia)
+                total_m2 += v3; total_ml += m3
 
-        if self.tem_p2:
-            total += calc(self.p2["l"], self.p2["p"]) * preco_m2
-        if self.tem_p3:
-            total += calc(self.p3["l"], self.p3["p"]) * preco_m2
+            total_final = total_m2 + (total_ml * v_ml)
+            if self.f_bojo["sw"].value: total_final += 150
+            if self.f_cook["sw"].value: total_final += 100
+            
+            self.lbl_total.value = f"R$ {total_final:,.2f}"
+            self.desenhar()
+            self.update()
+        except: pass
 
-        total += ml * self.to_f(self.txt_acab.value)
-
-        self.lbl_total.value = f"R$ {total:,.2f}"
-        self.desenhar()
-        self.update()
-
-    # ===============================
-    # DESENHO (CORRIGIDO)
-    # ===============================
     def desenhar(self):
         self.canvas.shapes.clear()
+        # Fallback de 0.01 para evitar divisão por zero na escala
+        w1, h1 = max(0.01, self.to_f(self.p1["l"].value)), max(0.01, self.to_f(self.p1["p"].value))
+        w2, h2 = (self.to_f(self.p2["l"].value), self.to_f(self.p2["p"].value)) if self.tem_p2 else (0,0)
+        w3, h3 = (self.to_f(self.p3["l"].value), self.to_f(self.p3["p"].value)) if self.tem_p3 else (0,0)
 
-        w = self.to_f(self.p1["l"].value)
-        h = self.to_f(self.p1["p"].value)
+        # Cálculo da área total para escala
+        total_w_m = w1 + (w2 if self.tem_p2 else 0) + (w3 if self.tem_p3 else 0)
+        max_h_m = max(h1, h2, h3)
+        scale = min(300 / max(0.1, total_w_m), 250 / max(0.1, max_h_m))
 
-        if w <= 0 or h <= 0:
-            self.canvas.update()
-            return
+        # Define o X inicial da P1 (centralizando o conjunto)
+        offset_x = 175 - (total_w_m * scale) / 2
+        p1_x = offset_x + (w2 * scale if (self.tem_p2 and self.p2["lado"].value == "esquerda") else 0)
+        if self.tem_p3 and self.p3["lado"].value == "esquerda": p1_x += (w3 * scale)
+        p1_y = 175 - (h1 * scale) / 2
 
-        scale = min(300 / w, 200 / h)
-        x = 175 - (w * scale) / 2
-        y = 175 - (h * scale) / 2
+        def draw_peca(w, h, x, y, rodo, saia, j_esq=False, j_dir=False):
+            wp, hp = w*scale, h*scale
+            self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="fill", color="#F5F5F5")))
+            self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="stroke", color="black", stroke_width=1.5)))
+            
+            # Linhas de acabamento
+            acabs = {"fundo": (x,y,x+wp,y), "frente": (x,y+hp,x+wp,y+hp), "esquerda": (x,y,x,y+hp), "direita": (x+wp,y,x+wp,y+hp)}
+            for lado, coords in acabs.items():
+                if (lado == "esquerda" and j_esq) or (lado == "direita" and j_dir): continue
+                if rodo[lado].value:
+                    self.canvas.shapes.append(cv.Line(coords[0], coords[1], coords[2], coords[3], paint=ft.Paint(color="red", stroke_width=4)))
+                if saia[lado].value:
+                    self.canvas.shapes.append(cv.Line(coords[0], coords[1], coords[2], coords[3], paint=ft.Paint(color="blue", stroke_width=6)))
 
-        self.canvas.shapes.append(
-            cv.Rect(
-                x, y,
-                w * scale, h * scale,
-                paint=ft.Paint(style="stroke", color="black", stroke_width=2)
-            )
-        )
+        # Desenha P1
+        j1_e = (self.tem_p2 and self.p2["lado"].value == "esquerda") or (self.tem_p3 and self.p3["lado"].value == "esquerda")
+        j1_d = (self.tem_p2 and self.p2["lado"].value == "direita") or (self.tem_p3 and self.p3["lado"].value == "direita")
+        draw_peca(w1, h1, p1_x, p1_y, self.p1_rodo, self.p1_saia, j1_e, j1_d)
 
-        self.canvas.shapes.append(
-            cv.Text(x + (w * scale) / 2 - 15, y - 20, f"{w}m")
-        )
+        # Desenha P2 e P3
+        for p_idx, tem, dados, rodo, saia in [("P2", self.tem_p2, self.p2, self.p2_rodo, self.p2_saia), ("P3", self.tem_p3, self.p3, self.p3_rodo, self.p3_saia)]:
+            if tem:
+                lx, px = self.to_f(dados["l"].value), self.to_f(dados["p"].value)
+                pos_x = (p1_x + w1*scale) if dados["lado"].value == "direita" else (p1_x - lx*scale)
+                draw_peca(lx, px, pos_x, p1_y, rodo, saia, j_esq=(dados["lado"].value=="direita"), j_dir=(dados["lado"].value=="esquerda"))
+
+        # Desenha Furos
+        for f in [self.f_bojo, self.f_cook]:
+            if f["sw"].value:
+                # Localiza em qual peça o furo está
+                peca_ref = f["peca"].value
+                fx_base = p1_x
+                if peca_ref == "P2" and self.tem_p2: fx_base = (p1_x + w1*scale) if self.p2["lado"].value=="direita" else (p1_x - self.to_f(self.p2["l"].value)*scale)
+                if peca_ref == "P3" and self.tem_p3: fx_base = (p1_x + w1*scale) if self.p3["lado"].value=="direita" else (p1_x - self.to_f(self.p3["l"].value)*scale)
+                
+                fx, fw, fh = self.to_f(f["x"].value)*scale, self.to_f(f["w"].value)*scale, self.to_f(f["h"].value)*scale
+                self.canvas.shapes.append(cv.Rect(fx_base+fx-fw/2, p1_y + 10, fw, fh, border_radius=2, paint=ft.Paint(style="stroke", color="blue", stroke_width=2)))
 
         self.canvas.update()
 
-    # ===============================
-    # SALVAR
-    # ===============================
     def salvar(self, e):
-        total = float(
-            self.lbl_total.value
-            .replace("R$", "")
-            .replace(".", "")
-            .replace(",", ".")
-        )
-
+        t = float(self.lbl_total.value.replace("R$ ","").replace(".","").replace(",","."))
         self.on_save_item({
-            "ambiente": self.txt_ambiente.value,
-            "material": self.mapa_precos[self.dd_pedra.value]["nome"],
-            "largura": self.p1["l"].value,
-            "profundidade": self.p1["p"].value,
-            "preco_total": total
+            "ambiente": self.txt_ambiente.value, 
+            "material": self.mapa_precos[self.dd_pedra.value]['nome'] if self.dd_pedra.value else "N/A", 
+            "largura": self.p1["l"].value, 
+            "profundidade": self.p1["p"].value, 
+            "preco_total": t
         })
