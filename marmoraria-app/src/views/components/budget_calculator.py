@@ -2,6 +2,7 @@
 
 import flet as ft
 import flet.canvas as cv
+import math
 from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE
 from src.services import firebase_service
 
@@ -57,8 +58,16 @@ class BudgetCalculator(ft.UserControl):
         self.p2_rodo = seletor("red"); self.p2_saia = seletor("blue")
         self.p3_rodo = seletor("red"); self.p3_saia = seletor("blue")
 
-        self.f_bojo = {"sw": ft.Switch(label="Bojo", on_change=self.calcular), "w": 0.50, "h": 0.40}
-        self.f_cook = {"sw": ft.Switch(label="Cooktop", on_change=self.calcular), "w": 0.55, "h": 0.45}
+        def ctrl_furo(label):
+            return {
+                "sw": ft.Switch(label=label, on_change=self.calcular),
+                "peca": ft.Dropdown(value="P1", options=[ft.dropdown.Option("P1"), ft.dropdown.Option("P2"), ft.dropdown.Option("P3")], width=80, on_change=self.calcular),
+                "w": ft.TextField(label="L", value="0.50", width=65, on_change=on_num_change),
+                "h": ft.TextField(label="P", value="0.40", width=65, on_change=on_num_change),
+                "x": ft.TextField(label="X (Eixo)", value="0.50", width=65, on_change=on_num_change)
+            }
+        self.f_bojo = ctrl_furo("Bojo")
+        self.f_cook = ctrl_furo("Cooktop")
 
         self.canvas = cv.Canvas(width=350, height=350)
         self.lbl_total = ft.Text("R$ 0.00", size=22, weight="bold", color=COLOR_PRIMARY)
@@ -73,26 +82,32 @@ class BudgetCalculator(ft.UserControl):
             ft.Tab(text="Medidas", content=ft.Column([
                 self.txt_ambiente, self.dd_pedra, ft.Row([self.p1["l"], self.p1["p"]]),
                 ft.Row([ft.ElevatedButton("+ P2", on_click=lambda _: toggle_p(2)), ft.ElevatedButton("+ P3", on_click=lambda _: toggle_p(3))]),
-                ft.Row([self.p2["l"], self.p2["p"]]), self.p2["lado"],
-                ft.Row([self.p3["l"], self.p3["p"]]), self.p3["lado"],
+                ft.Column([ft.Row([self.p2["l"], self.p2["p"]]), self.p2["lado"]]),
+                ft.Column([ft.Row([self.p3["l"], self.p3["p"]]), self.p3["lado"]]),
             ], scroll=ft.ScrollMode.ALWAYS)),
             ft.Tab(text="Acabamento", content=ft.Column([
                 ft.Row([self.h_rodo, self.h_saia]),
                 ft.Text("P1 - Rodo / Saia", weight="bold"),
-                ft.Row([*self.p1_rodo.values()]), ft.Row([*self.p1_saia.values()]),
+                ft.Row([*self.p1_rodo.values()], wrap=True), ft.Row([*self.p1_saia.values()], wrap=True),
                 ft.Divider(),
                 ft.Text("P2 - Rodo / Saia", weight="bold"),
-                ft.Row([*self.p2_rodo.values()]), ft.Row([*self.p2_saia.values()]),
+                ft.Row([*self.p2_rodo.values()], wrap=True), ft.Row([*self.p2_saia.values()], wrap=True),
                 ft.Divider(),
                 ft.Text("P3 - Rodo / Saia", weight="bold"),
-                ft.Row([*self.p3_rodo.values()]), ft.Row([*self.p3_saia.values()]),
+                ft.Row([*self.p3_rodo.values()], wrap=True), ft.Row([*self.p3_saia.values()], wrap=True),
             ], scroll=ft.ScrollMode.ALWAYS)),
-            ft.Tab(text="Furos", content=ft.Column([self.f_bojo["sw"], self.f_cook["sw"]]))
+            ft.Tab(text="Furos", content=ft.Column([
+                ft.Row([self.f_bojo["sw"], self.f_bojo["peca"]]),
+                ft.Row([self.f_bojo["w"], self.f_bojo["h"], self.f_bojo["x"]], spacing=5),
+                ft.Divider(),
+                ft.Row([self.f_cook["sw"], self.f_cook["peca"]]),
+                ft.Row([self.f_cook["w"], self.f_cook["h"], self.f_cook["x"]], spacing=5),
+            ], scroll=ft.ScrollMode.ALWAYS))
         ], expand=1)
 
         return ft.Container(padding=10, content=ft.Column([
             ft.Container(tabs, height=300, bgcolor=COLOR_WHITE, border_radius=10, padding=10),
-            ft.Container(self.canvas, bgcolor="white", border_radius=10, border=ft.border.all(1, "#ddd"), height=350),
+            ft.Container(self.canvas, bgcolor="white", border_radius=10, border=ft.border.all(1, "#ddd"), height=350, alignment=ft.alignment.top_center),
             ft.Row([self.lbl_total, ft.ElevatedButton("Salvar", on_click=self.salvar)], alignment="spaceBetween")
         ], scroll=ft.ScrollMode.ALWAYS))
 
@@ -102,7 +117,6 @@ class BudgetCalculator(ft.UserControl):
             p_m2 = self.mapa_precos[self.dd_pedra.value]['preco']
             v_ml = self.to_f(self.txt_acab_preco.value)
             
-            # --- TRAVA DE JUNÇÃO (DESABILITAR CHECKBOXES) ---
             lados_ocupados = []
             if self.tem_p2: lados_ocupados.append(self.p2["lado"].value)
             if self.tem_p3: lados_ocupados.append(self.p3["lado"].value)
@@ -111,9 +125,7 @@ class BudgetCalculator(ft.UserControl):
                 is_ocupado = lado in lados_ocupados
                 self.p1_rodo[lado].disabled = is_ocupado
                 self.p1_saia[lado].disabled = is_ocupado
-                if is_ocupado:
-                    self.p1_rodo[lado].value = False
-                    self.p1_saia[lado].value = False
+                if is_ocupado: self.p1_rodo[lado].value = self.p1_saia[lado].value = False
 
             total_m2 = 0; total_ml = 0
 
@@ -122,19 +134,16 @@ class BudgetCalculator(ft.UserControl):
                 ml = 0
                 for lado, cb in rodo.items():
                     if cb.value:
-                        if not is_p1 and (lado == "esquerda" or lado == "direita"):
-                            ml += max(0, p - self.to_f(self.p1["p"].value))
+                        if not is_p1 and (lado == "esquerda" or lado == "direita"): ml += max(0, p - self.to_f(self.p1["p"].value))
                         else: ml += (l if lado in ["fundo", "frente"] else p)
                 for lado, cb in saia.items():
                     if cb.value:
-                        if not is_p1 and (lado == "esquerda" or lado == "direita"):
-                            ml += max(0, p - self.to_f(self.p1["p"].value))
+                        if not is_p1 and (lado == "esquerda" or lado == "direita"): ml += max(0, p - self.to_f(self.p1["p"].value))
                         else: ml += (l if lado in ["fundo", "frente"] else p)
                 return (l * p), ml
 
             m1, ml1 = calc_peca(self.p1["l"], self.p1["p"], self.p1_rodo, self.p1_saia, True)
             total_m2 += m1; total_ml += ml1
-
             if self.tem_p2:
                 m2, ml2 = calc_peca(self.p2["l"], self.p2["p"], self.p2_rodo, self.p2_saia)
                 total_m2 += m2; total_ml += ml2
@@ -142,8 +151,8 @@ class BudgetCalculator(ft.UserControl):
                 m3, ml3 = calc_peca(self.p3["l"], self.p3["p"], self.p3_rodo, self.p3_saia)
                 total_m2 += m3; total_ml += ml3
 
-            if self.f_bojo["sw"].value: total_ml += (self.f_bojo["w"] + self.f_bojo["h"]) * 2
-            if self.f_cook["sw"].value: total_ml += (self.f_cook["w"] + self.f_cook["h"]) * 2
+            if self.f_bojo["sw"].value: total_ml += (self.to_f(self.f_bojo["w"].value) + self.to_f(self.f_bojo["h"].value)) * 2
+            if self.f_cook["sw"].value: total_ml += (self.to_f(self.f_cook["w"].value) + self.to_f(self.f_cook["h"].value)) * 2
 
             v_final = (total_m2 * p_m2) + (total_ml * v_ml)
             self.lbl_total.value = f"R$ {v_final:,.2f}"
@@ -159,51 +168,64 @@ class BudgetCalculator(ft.UserControl):
 
         total_w = w1 + w2 + w3
         max_h = max(h1, h2, h3)
-        scale = min(280 / max(0.1, total_w), 280 / max(0.1, max_h))
+        scale = min(300 / max(0.1, total_w), 280 / max(0.1, max_h))
 
-        # Centralizar P1 com espaço para P2/P3 nas laterais
         p1_x = 175 - (w1*scale)/2
         if self.tem_p2 and self.p2["lado"].value == "esquerda": p1_x += (w2*scale)/2
         if self.tem_p3 and self.p3["lado"].value == "esquerda": p1_x += (w3*scale)/2
-        p1_y = 175 - (h1*scale)/2
+        p1_y = 60 # Ajustado para subir o desenho e não cortar embaixo
 
         def draw_box(w, h, x, y, rodo, saia, j_esq, j_dir):
             wp, hp = w*scale, h*scale
             self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="fill", color="#F5F5F5")))
             self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="stroke", color="black")))
-            self.canvas.shapes.append(cv.Text(x + wp/2 - 15, y + hp/2 - 5, f"{w}x{h}", style=ft.TextStyle(size=10, weight="bold")))
+            # Texto da medida no canto superior esquerdo
+            self.canvas.shapes.append(cv.Text(x + 5, y + 5, f"{w}x{h}", style=ft.TextStyle(size=9, weight="bold")))
 
             lados = {"fundo": (x,y,x+wp,y), "frente": (x,y+hp,x+wp,y+hp), "esquerda": (x,y,x,y+hp), "direita": (x+wp,y,x+wp,y+hp)}
             for lado, (x1, y1, x2, y2) in lados.items():
                 if (lado == "esquerda" and j_esq) or (lado == "direita" and j_dir):
                     if h <= h1: continue
                     else: y1 = y + h1*scale
-                
                 if rodo[lado].value:
                     self.canvas.shapes.append(cv.Line(x1, y1, x2, y2, paint=ft.Paint(color="red", stroke_width=3)))
                     self.canvas.shapes.append(cv.Text((x1+x2)/2 - 10, y1-15 if lado=="fundo" else y1+5, f"R:{w if lado in ['fundo','frente'] else h}", style=ft.TextStyle(size=8, color="red")))
                 if saia[lado].value:
                     off = 4 if rodo[lado].value else 0
                     self.canvas.shapes.append(cv.Line(x1+off, y1+off, x2+off, y2+off, paint=ft.Paint(color="blue", stroke_width=4)))
-                    self.canvas.shapes.append(cv.Text((x1+x2)/2 - 10, y1+15 if lado=="fundo" else y1-15, f"S:{w if lado in ['fundo','frente'] else h}", style=ft.TextStyle(size=8, color="blue")))
+                    self.canvas.shapes.append(cv.Text((x1+x2)/2 - 10, y1+12 if lado=="fundo" else y1-15, f"S:{w if lado in ['fundo','frente'] else h}", style=ft.TextStyle(size=8, color="blue")))
 
         # P1
         j1_e = (self.tem_p2 and self.p2["lado"].value=="esquerda") or (self.tem_p3 and self.p3["lado"].value=="esquerda")
         j1_d = (self.tem_p2 and self.p2["lado"].value=="direita") or (self.tem_p3 and self.p3["lado"].value=="direita")
         draw_box(w1, h1, p1_x, p1_y, self.p1_rodo, self.p1_saia, j1_e, j1_d)
         
-        # P2 e P3
+        # P2 e P3 e Furos
+        pecas_coords = {"P1": (p1_x, p1_y, w1, h1)}
         for p_idx, tem, dados, rodo, saia in [("P2", self.tem_p2, self.p2, self.p2_rodo, self.p2_saia), ("P3", self.tem_p3, self.p3, self.p3_rodo, self.p3_saia)]:
             if tem:
                 lx, px = self.to_f(dados["l"].value), self.to_f(dados["p"].value)
                 pos_x = (p1_x + w1*scale) if dados["lado"].value == "direita" else (p1_x - lx*scale)
                 draw_box(lx, px, pos_x, p1_y, rodo, saia, j_esq=(dados["lado"].value=="direita"), j_dir=(dados["lado"].value=="esquerda"))
+                pecas_coords[p_idx] = (pos_x, p1_y, lx, px)
 
-        # Furos (Bojo e Cooktop)
-        for f, cor in [(self.f_bojo, "orange"), (self.f_cook, "green")]:
+        # Desenho Artístico dos Furos
+        for f, cor, tipo in [(self.f_bojo, "orange", "cuba"), (self.f_cook, "green", "bocas")]:
             if f["sw"].value:
-                fw, fh = f["w"]*scale, f["h"]*scale
-                self.canvas.shapes.append(cv.Rect(p1_x + (w1*scale)/2 - fw/2, p1_y + 10, fw, fh, paint=ft.Paint(style="stroke", color=cor, stroke_width=2)))
+                p_ref = f["peca"].value
+                if p_ref in pecas_coords:
+                    bx, by, bw, bh = pecas_coords[p_ref]
+                    fw, fh, fx = self.to_f(f["w"].value)*scale, self.to_f(f["h"].value)*scale, self.to_f(f["x"].value)*scale
+                    f_x_pos, f_y_pos = bx + fx - fw/2, by + 15
+                    
+                    # Desenho do Furo (Retângulo base)
+                    self.canvas.shapes.append(cv.Rect(f_x_pos, f_y_pos, fw, fh, border_radius=5 if tipo=="cuba" else 2, paint=ft.Paint(style="stroke", color=cor, stroke_width=2)))
+                    
+                    if tipo == "cuba": # Detalhe do ralo
+                        self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2, f_y_pos + fh/2, 3, paint=ft.Paint(color=cor)))
+                    else: # Detalhe das bocas do cooktop
+                        for ox, oy in [(-0.2, -0.2), (0.2, -0.2), (-0.2, 0.2), (0.2, 0.2), (0,0)]:
+                            self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2 + (ox*fw), f_y_pos + fh/2 + (oy*fh), 4, paint=ft.Paint(style="stroke", color=cor)))
 
         self.canvas.update()
 
