@@ -31,10 +31,10 @@ class BudgetCalculator(ft.UserControl):
             if e.control.value and "," in e.control.value: e.control.value = e.control.value.replace(",", ".")
             self.calcular()
 
-        # --- CAMPOS DE ENTRADA ---
+        # --- CAMPOS ---
         self.txt_ambiente = ft.TextField(label="Ambiente", value="Cozinha", height=45)
         self.dd_pedra = ft.Dropdown(label="Material", options=opcoes_pedras, height=45, on_change=self.calcular)
-        self.txt_acab_preco = ft.TextField(label="Mão de Obra (R$/ML)", value="130.00", on_change=on_num_change)
+        self.txt_acab_preco = ft.TextField(label="Preço Mão de Obra (R$/ML)", value="130.00", on_change=on_num_change)
         self.h_rodo = ft.TextField(label="Alt. Rodo (m)", value="0.10", width=100, on_change=on_num_change)
         self.h_saia = ft.TextField(label="Alt. Saia (m)", value="0.04", width=100, on_change=on_num_change)
 
@@ -105,15 +105,16 @@ class BudgetCalculator(ft.UserControl):
             ], scroll=ft.ScrollMode.ALWAYS))
         ], expand=1)
 
-        # O segredo está no ft.AspectRatio(1) para manter o desenho quadrado e visível
+        # CORREÇÃO: Usando a propriedade aspect_ratio do Container em vez de ft.AspectRatio
         return ft.Container(padding=10, content=ft.Column([
             ft.Container(tabs, height=280, bgcolor=COLOR_WHITE, border_radius=10, padding=10),
             ft.Container(
-                ft.AspectRatio(1.0, content=self.canvas),
+                content=self.canvas,
+                aspect_ratio=1.0, # Isso garante que o desenho seja sempre um quadrado perfeito
                 bgcolor="white", 
                 border_radius=10, 
                 border=ft.border.all(1, "#ddd"),
-                padding=20 # Margem interna para o desenho não encostar na borda
+                padding=20 
             ),
             ft.Row([self.lbl_total, ft.ElevatedButton("Salvar", on_click=self.salvar)], alignment="spaceBetween")
         ], scroll=ft.ScrollMode.ALWAYS))
@@ -173,14 +174,13 @@ class BudgetCalculator(ft.UserControl):
         w2, h2 = (self.to_f(self.p2["l"].value), self.to_f(self.p2["p"].value)) if self.tem_p2 else (0,0)
         w3, h3 = (self.to_f(self.p3["l"].value), self.to_f(self.p3["p"].value)) if self.tem_p3 else (0,0)
 
-        # Cálculo de largura total e altura máxima para escala
         total_w = w1 + w2 + w3
         total_h = max(h1, h2, h3)
         
-        # Escala baseada em 300 unidades virtuais para garantir que cabe no AspectRatio
+        # Escala segura para o canvas expandido
         scale = min(260 / max(0.1, total_w), 260 / max(0.1, total_h))
 
-        # Centralização absoluta dentro do Canvas virtual
+        # Coordenadas virtuais para centralizar (base 300x300)
         mid_x, mid_y = 150, 150
         
         p1_x = mid_x - (w1 * scale) / 2
@@ -208,7 +208,7 @@ class BudgetCalculator(ft.UserControl):
                     self.canvas.shapes.append(cv.Line(x1+off, y1+off, x2+off, y2+off, paint=ft.Paint(color="blue", stroke_width=4)))
                     self.canvas.shapes.append(cv.Text((x1+x2)/2 - 10, y1+12 if lado=="fundo" else y1-15, f"S:{w if lado in ['fundo','frente'] else h}", style=ft.TextStyle(size=8, color="blue")))
 
-        # Renderização das peças
+        # Peças
         pecas_coords = {"P1": (p1_x, p1_y, w1, h1)}
         j1_e = (self.tem_p2 and self.p2["lado"].value=="esquerda") or (self.tem_p3 and self.p3["lado"].value=="esquerda")
         j1_d = (self.tem_p2 and self.p2["lado"].value=="direita") or (self.tem_p3 and self.p3["lado"].value=="direita")
@@ -221,7 +221,7 @@ class BudgetCalculator(ft.UserControl):
                 draw_box(lx, px, pos_x, p1_y, rodo, saia, j_esq=(dados["lado"].value=="direita"), j_dir=(dados["lado"].value=="esquerda"))
                 pecas_coords[p_idx] = (pos_x, p1_y, lx, px)
 
-        # Furos (Bojo e Cooktop)
+        # Furos
         for f, cor, tipo in [(self.f_bojo, "orange", "cuba"), (self.f_cook, "green", "bocas")]:
             if f["sw"].value and f["peca"].value in pecas_coords:
                 bx, by, bw, bh = pecas_coords[f["peca"].value]
