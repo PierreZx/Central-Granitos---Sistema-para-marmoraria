@@ -2,7 +2,6 @@
 
 import flet as ft
 import flet.canvas as cv
-import math
 from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_WHITE
 from src.services import firebase_service
 
@@ -64,7 +63,8 @@ class BudgetCalculator(ft.UserControl):
                 "peca": ft.Dropdown(value="P1", options=[ft.dropdown.Option("P1"), ft.dropdown.Option("P2"), ft.dropdown.Option("P3")], width=80, on_change=self.calcular),
                 "w": ft.TextField(label="L", value="0.50", width=65, on_change=on_num_change),
                 "h": ft.TextField(label="P", value="0.40", width=65, on_change=on_num_change),
-                "x": ft.TextField(label="X (Eixo)", value="0.50", width=65, on_change=on_num_change)
+                "x": ft.TextField(label="X", value="0.50", width=65, on_change=on_num_change),
+                "y": ft.TextField(label="Y", value="0.30", width=65, on_change=on_num_change) # Novo campo Y
             }
         self.f_bojo = ctrl_furo("Bojo")
         self.f_cook = ctrl_furo("Cooktop")
@@ -98,16 +98,16 @@ class BudgetCalculator(ft.UserControl):
             ], scroll=ft.ScrollMode.ALWAYS)),
             ft.Tab(text="Furos", content=ft.Column([
                 ft.Row([self.f_bojo["sw"], self.f_bojo["peca"]]),
-                ft.Row([self.f_bojo["w"], self.f_bojo["h"], self.f_bojo["x"]], spacing=5),
+                ft.Row([self.f_bojo["w"], self.f_bojo["h"], self.f_bojo["x"], self.f_bojo["y"]], spacing=5),
                 ft.Divider(),
                 ft.Row([self.f_cook["sw"], self.f_cook["peca"]]),
-                ft.Row([self.f_cook["w"], self.f_cook["h"], self.f_cook["x"]], spacing=5),
+                ft.Row([self.f_cook["w"], self.f_cook["h"], self.f_cook["x"], self.f_cook["y"]], spacing=5),
             ], scroll=ft.ScrollMode.ALWAYS))
         ], expand=1)
 
         return ft.Container(padding=10, content=ft.Column([
             ft.Container(tabs, height=300, bgcolor=COLOR_WHITE, border_radius=10, padding=10),
-            ft.Container(self.canvas, bgcolor="white", border_radius=10, border=ft.border.all(1, "#ddd"), height=350, alignment=ft.alignment.top_center),
+            ft.Container(self.canvas, bgcolor="white", border_radius=10, border=ft.border.all(1, "#ddd"), height=350, alignment=ft.alignment.center),
             ft.Row([self.lbl_total, ft.ElevatedButton("Salvar", on_click=self.salvar)], alignment="spaceBetween")
         ], scroll=ft.ScrollMode.ALWAYS))
 
@@ -168,18 +168,24 @@ class BudgetCalculator(ft.UserControl):
 
         total_w = w1 + w2 + w3
         max_h = max(h1, h2, h3)
-        scale = min(300 / max(0.1, total_w), 280 / max(0.1, max_h))
+        
+        # Escala segura para caber no Canvas (considerando margens)
+        scale = min(320 / max(0.1, total_w), 320 / max(0.1, max_h))
 
-        p1_x = 175 - (w1*scale)/2
-        if self.tem_p2 and self.p2["lado"].value == "esquerda": p1_x += (w2*scale)/2
-        if self.tem_p3 and self.p3["lado"].value == "esquerda": p1_x += (w3*scale)/2
-        p1_y = 60 # Ajustado para subir o desenho e não cortar embaixo
+        # Posição central dinâmica
+        canvas_mid_x = 175
+        canvas_mid_y = 175
+        
+        p1_x = canvas_mid_x - (w1 * scale) / 2
+        if self.tem_p2 and self.p2["lado"].value == "esquerda": p1_x += (w2 * scale) / 2
+        if self.tem_p3 and self.p3["lado"].value == "esquerda": p1_x += (w3 * scale) / 2
+        
+        p1_y = canvas_mid_y - (max_h * scale) / 2
 
         def draw_box(w, h, x, y, rodo, saia, j_esq, j_dir):
             wp, hp = w*scale, h*scale
             self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="fill", color="#F5F5F5")))
             self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="stroke", color="black")))
-            # Texto da medida no canto superior esquerdo
             self.canvas.shapes.append(cv.Text(x + 5, y + 5, f"{w}x{h}", style=ft.TextStyle(size=9, weight="bold")))
 
             lados = {"fundo": (x,y,x+wp,y), "frente": (x,y+hp,x+wp,y+hp), "esquerda": (x,y,x,y+hp), "direita": (x+wp,y,x+wp,y+hp)}
@@ -209,23 +215,21 @@ class BudgetCalculator(ft.UserControl):
                 draw_box(lx, px, pos_x, p1_y, rodo, saia, j_esq=(dados["lado"].value=="direita"), j_dir=(dados["lado"].value=="esquerda"))
                 pecas_coords[p_idx] = (pos_x, p1_y, lx, px)
 
-        # Desenho Artístico dos Furos
+        # Desenho dos Furos
         for f, cor, tipo in [(self.f_bojo, "orange", "cuba"), (self.f_cook, "green", "bocas")]:
             if f["sw"].value:
                 p_ref = f["peca"].value
                 if p_ref in pecas_coords:
                     bx, by, bw, bh = pecas_coords[p_ref]
-                    fw, fh, fx = self.to_f(f["w"].value)*scale, self.to_f(f["h"].value)*scale, self.to_f(f["x"].value)*scale
-                    f_x_pos, f_y_pos = bx + fx - fw/2, by + 15
+                    fw, fh, fx, fy = self.to_f(f["w"].value)*scale, self.to_f(f["h"].value)*scale, self.to_f(f["x"].value)*scale, self.to_f(f["y"].value)*scale
+                    f_x_pos, f_y_pos = bx + fx - fw/2, by + fy
                     
-                    # Desenho do Furo (Retângulo base)
                     self.canvas.shapes.append(cv.Rect(f_x_pos, f_y_pos, fw, fh, border_radius=5 if tipo=="cuba" else 2, paint=ft.Paint(style="stroke", color=cor, stroke_width=2)))
-                    
-                    if tipo == "cuba": # Detalhe do ralo
+                    if tipo == "cuba":
                         self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2, f_y_pos + fh/2, 3, paint=ft.Paint(color=cor)))
-                    else: # Detalhe das bocas do cooktop
+                    else:
                         for ox, oy in [(-0.2, -0.2), (0.2, -0.2), (-0.2, 0.2), (0.2, 0.2), (0,0)]:
-                            self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2 + (ox*fw), f_y_pos + fh/2 + (oy*fh), 4, paint=ft.Paint(style="stroke", color=cor)))
+                            self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2 + (ox*fw), f_y_pos + fh/2 + (oy*fh), 3.5, paint=ft.Paint(style="stroke", color=cor)))
 
         self.canvas.update()
 
