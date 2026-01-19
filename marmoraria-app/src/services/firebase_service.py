@@ -234,7 +234,6 @@ def get_collection_count(collection):
         return 0
 
 def get_orcamentos_by_status(status):
-    """Busca orçamentos filtrados pelo status (PENDENTE, PRODUZINDO, etc)"""
-    todos = get_collection("orcamentos")
-    # Filtra a lista localmente, já que estamos usando a API REST simples
+    """Filtra orçamentos pelo status para a tela de produção"""
+    todos = get_collection("orcamentos") # Busca todos via API REST
     return [o for o in todos if o.get("status") == status]
