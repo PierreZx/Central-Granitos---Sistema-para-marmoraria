@@ -44,7 +44,7 @@ class BudgetCalculator(ft.UserControl):
             return {
                 "l": ft.TextField(label=f"Comp. {nome}", value="1.00", expand=True, on_change=on_num_change, visible=visivel),
                 "p": ft.TextField(label=f"Prof. {nome}", value="0.60", expand=True, on_change=on_num_change, visible=visivel),
-                "lado": ft.Dropdown(label="Posição", value="direita" if nome != "P1" else None, visible=visivel, 
+                "lado": ft.Dropdown(label="Lado", value="direita" if nome != "P1" else None, visible=visivel, 
                                    options=[ft.dropdown.Option("esquerda"), ft.dropdown.Option("direita")], on_change=self.calcular)
             }
 
@@ -74,6 +74,44 @@ class BudgetCalculator(ft.UserControl):
 
         self.canvas = cv.Canvas(width=350, height=350, shapes=[])
         self.lbl_total = ft.Text("R$ 0.00", size=24, weight="bold", color=COLOR_PRIMARY)
+
+        # --- LÓGICA DE CARREGAMENTO PARA EDIÇÃO ---
+        if self.item_para_editar:
+            item = self.item_para_editar
+            self.txt_ambiente.value = item.get("ambiente", "Cozinha")
+            
+            # Tenta encontrar o ID do material pelo nome salvo
+            for k, v in self.mapa_precos.items():
+                if v['nome'] == item.get("material"):
+                    self.dd_pedra.value = k
+            
+            config = item.get("configuracoes_tecnicas", {})
+            self.txt_acab_preco.value = str(config.get("valor_mao_de_obra_ml", "130.00"))
+            self.h_rodo.value = str(config.get("altura_rodobanca", "0.10"))
+            self.h_saia.value = str(config.get("altura_saia", "0.04"))
+
+            pecas = item.get("pecas", {})
+            if "p1" in pecas:
+                self.p1["l"].value = str(pecas["p1"].get("l", "1.00"))
+                self.p1["p"].value = str(pecas["p1"].get("p", "0.60"))
+                for lado, val in pecas["p1"].get("acabamentos", {}).get("rodo", {}).items():
+                    if lado in self.p1_rodo: self.p1_rodo[lado].value = val
+                for lado, val in pecas["p1"].get("acabamentos", {}).get("saia", {}).items():
+                    if lado in self.p1_saia: self.p1_saia[lado].value = val
+
+            if "p2" in pecas:
+                self.tem_p2 = True
+                self.p2["l"].visible = self.p2["p"].visible = self.p2["lado"].visible = True
+                self.p2["l"].value = str(pecas["p2"].get("l", "1.00"))
+                self.p2["p"].value = str(pecas["p2"].get("p", "0.60"))
+                self.p2["lado"].value = pecas["p2"].get("lado", "direita")
+
+            if "p3" in pecas:
+                self.tem_p3 = True
+                self.p3["l"].visible = self.p3["p"].visible = self.p3["lado"].visible = True
+                self.p3["l"].value = str(pecas["p3"].get("l", "1.00"))
+                self.p3["p"].value = str(pecas["p3"].get("p", "0.60"))
+                self.p3["lado"].value = pecas["p3"].get("lado", "esquerda")
 
         def toggle_p(e, n):
             if n == 2: self.tem_p2 = not self.tem_p2; p, v = self.p2, self.tem_p2
@@ -117,7 +155,7 @@ class BudgetCalculator(ft.UserControl):
 
         return ft.Container(padding=10, content=ft.Column([
             ft.Container(content=tabs, padding=10, bgcolor=COLOR_WHITE, border_radius=10),
-            ft.Container(content=self.canvas, bgcolor=ft.colors.WHITE, border_radius=10, border=ft.border.all(1, "#ddd"), height=350, alignment=ft.alignment.center),
+            ft.Container(content=self.canvas, aspect_ratio=1.0, bgcolor=ft.colors.WHITE, border_radius=10, border=ft.border.all(1, "#ddd"), alignment=ft.alignment.center),
             ft.Container(padding=15, bgcolor=COLOR_WHITE, border_radius=10, content=ft.Row([self.lbl_total, ft.ElevatedButton("Salvar", on_click=self.salvar)], alignment="spaceBetween"))
         ], scroll=ft.ScrollMode.ALWAYS))
 
@@ -127,7 +165,6 @@ class BudgetCalculator(ft.UserControl):
             p_m2 = self.mapa_precos[self.dd_pedra.value]['preco']
             v_ml = self.to_f(self.txt_acab_preco.value)
             
-            # Trava de junção automática
             lados_ocupados = []
             if self.tem_p2: lados_ocupados.append(self.p2["lado"].value)
             if self.tem_p3: lados_ocupados.append(self.p3["lado"].value)
@@ -139,7 +176,6 @@ class BudgetCalculator(ft.UserControl):
                 if is_ocupado: self.p1_rodo[lado].value = self.p1_saia[lado].value = False
 
             total_m2 = 0; total_ml = 0
-            
             def calc_peca(l_ctrl, p_ctrl, rodo, saia, is_p1=False):
                 l, p = self.to_f(l_ctrl.value), self.to_f(p_ctrl.value)
                 ml = 0
@@ -164,7 +200,6 @@ class BudgetCalculator(ft.UserControl):
                 m3, ml3 = calc_peca(self.p3["l"], self.p3["p"], self.p3_rodo, self.p3_saia)
                 total_m2 += m3; total_ml += ml3
 
-            # Furos no ML
             if self.f_bojo["sw"].value: total_ml += (self.to_f(self.f_bojo["w"].value) + self.to_f(self.f_bojo["h"].value)) * 2
             if self.f_cook["sw"].value: total_ml += (self.to_f(self.f_cook["w"].value) + self.to_f(self.f_cook["h"].value)) * 2
 
@@ -180,7 +215,6 @@ class BudgetCalculator(ft.UserControl):
         w2, h2 = (self.to_f(self.p2["l"].value), self.to_f(self.p2["p"].value)) if self.tem_p2 else (0,0)
         w3, h3 = (self.to_f(self.p3["l"].value), self.to_f(self.p3["p"].value)) if self.tem_p3 else (0,0)
 
-        # POSICIONAMENTO DA VERSÃO ESTÁVEL SOLICITADA
         total_w = w1 + (w2 if self.tem_p2 else 0) + (w3 if self.tem_p3 else 0)
         max_h = max(h1, h2, h3)
         scale = min(280 / max(0.1, total_w), 280 / max(0.1, max_h))
@@ -190,7 +224,7 @@ class BudgetCalculator(ft.UserControl):
         if self.tem_p3 and self.p3["lado"].value == "esquerda": p1_x += (w3 * scale)
         p1_y = 175 - (max_h * scale) / 2
 
-        def draw_peca(w, h, x, y, rodo, saia, j_esq, j_dir):
+        def draw_box(w, h, x, y, rodo, saia, j_esq, j_dir):
             wp, hp = w*scale, h*scale
             self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="fill", color="#F5F5F5")))
             self.canvas.shapes.append(cv.Rect(x, y, wp, hp, paint=ft.Paint(style="stroke", color="black", stroke_width=1)))
@@ -203,44 +237,43 @@ class BudgetCalculator(ft.UserControl):
                     else: y1 = y + h1*scale
                 if rodo[lado].value:
                     self.canvas.shapes.append(cv.Line(x1, y1, x2, y2, paint=ft.Paint(color="red", stroke_width=3)))
-                    self.canvas.shapes.append(cv.Text((x1+x2)/2 - 10, y1-15 if lado=="fundo" else y1+5, f"R:{w if lado in ['fundo','frente'] else h}", style=ft.TextStyle(size=8, color="red")))
                 if saia[lado].value:
                     off = 4 if rodo[lado].value else 0
                     self.canvas.shapes.append(cv.Line(x1+off, y1+off, x2+off, y2+off, paint=ft.Paint(color="blue", stroke_width=4)))
-                    self.canvas.shapes.append(cv.Text((x1+x2)/2 - 10, y1+12 if lado=="fundo" else y1-15, f"S:{w if lado in ['fundo','frente'] else h}", style=ft.TextStyle(size=8, color="blue")))
 
-        # Peças Coordenadas para Furos
         pecas_coords = {"P1": (p1_x, p1_y, w1, h1)}
         j1_e = (self.tem_p2 and self.p2["lado"].value == "esquerda") or (self.tem_p3 and self.p3["lado"].value == "esquerda")
         j1_d = (self.tem_p2 and self.p2["lado"].value == "direita") or (self.tem_p3 and self.p3["lado"].value == "direita")
-        draw_peca(w1, h1, p1_x, p1_y, self.p1_rodo, self.p1_saia, j1_e, j1_d)
+        draw_box(w1, h1, p1_x, p1_y, self.p1_rodo, self.p1_saia, j1_e, j1_d)
 
         for p_idx, tem, dados, rodo, saia in [("P2", self.tem_p2, self.p2, self.p2_rodo, self.p2_saia), ("P3", self.tem_p3, self.p3, self.p3_rodo, self.p3_saia)]:
             if tem:
                 lx, px = self.to_f(dados["l"].value), self.to_f(dados["p"].value)
                 pos_x = (p1_x + w1*scale) if dados["lado"].value == "direita" else (p1_x - lx*scale)
-                draw_peca(lx, px, pos_x, p1_y, rodo, saia, j_esq=(dados["lado"].value=="direita"), j_dir=(dados["lado"].value=="esquerda"))
+                draw_box(lx, px, pos_x, p1_y, rodo, saia, j_esq=(dados["lado"].value=="direita"), j_dir=(dados["lado"].value=="esquerda"))
                 pecas_coords[p_idx] = (pos_x, p1_y, lx, px)
 
-        # Furos Técnicos
         for f, cor, tipo in [(self.f_bojo, "orange", "cuba"), (self.f_cook, "green", "bocas")]:
             if f["sw"].value and f["peca"].value in pecas_coords:
                 bx, by, bw, bh = pecas_coords[f["peca"].value]
                 fw, fh, fx, fy = self.to_f(f["w"].value)*scale, self.to_f(f["h"].value)*scale, self.to_f(f["x"].value)*scale, self.to_f(f["y"].value)*scale
                 f_x_pos, f_y_pos = bx + fx - fw/2, by + fy
                 self.canvas.shapes.append(cv.Rect(f_x_pos, f_y_pos, fw, fh, border_radius=5 if tipo=="cuba" else 2, paint=ft.Paint(style="stroke", color=cor, stroke_width=2)))
-                if tipo == "cuba":
-                    self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2, f_y_pos + fh/2, 3, paint=ft.Paint(color=cor)))
-                else:
-                    for ox, oy in [(-0.2, -0.2), (0.2, -0.2), (-0.2, 0.2), (0.2, 0.2), (0,0)]:
-                        self.canvas.shapes.append(cv.Circle(f_x_pos + fw/2 + (ox*fw), f_y_pos + fh/2 + (oy*fh), 3, paint=ft.Paint(style="stroke", color=cor)))
 
         self.canvas.update()
 
     def salvar(self, e):
         try:
-            val = self.lbl_total.value.replace("R$ ","").replace(".","").replace(",",".")
-            preco_total = float(val)
+            # CORREÇÃO DEFINITIVA DO VALOR: Extrai apenas números e o ponto decimal
+            # Remove o "R$ ", tira pontos de milhar e garante o ponto decimal
+            preco_raw = self.lbl_total.value.replace("R$ ", "").strip()
+            if "." in preco_raw and "," in preco_raw: # Padrão 1.234,56
+                preco_raw = preco_raw.replace(".", "").replace(",", ".")
+            elif "," in preco_raw: # Padrão 1234,56
+                preco_raw = preco_raw.replace(",", ".")
+            
+            preco_total = float(preco_raw)
+
             dados_orcamento = {
                 "ambiente": self.txt_ambiente.value,
                 "material": self.mapa_precos[self.dd_pedra.value]['nome'] if self.dd_pedra.value else "N/A",
@@ -268,8 +301,6 @@ class BudgetCalculator(ft.UserControl):
                                                               "saia": {k: v.value for k, v in self.p3_saia.items()}}}
             
             self.on_save_item(dados_orcamento)
-            self.page.snack_bar = ft.SnackBar(ft.Text("Orçamento salvo com sucesso!"), bgcolor="green")
-            self.page.snack_bar.open = True
-            self.page.update()
+            self.page.show_snack_bar(ft.SnackBar(ft.Text("Salvo com sucesso!"), bgcolor="green"))
         except Exception as ex:
             print(f"Erro ao salvar: {ex}")
