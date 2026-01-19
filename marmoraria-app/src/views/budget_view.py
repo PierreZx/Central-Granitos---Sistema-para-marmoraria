@@ -168,7 +168,8 @@ def BudgetView(page: ft.Page):
                 content=ft.Row([
                     ft.Column([
                         ft.Text(f"{i.get('material')} - {i.get('ambiente')}", weight="bold"),
-                        ft.Text(f"{i.get('largura')}m x {i.get('profundidade')}m"),
+                        # ✅ CORREÇÃO: Acessa os dados da P1 para mostrar na lista
+                        ft.Text(f"Qtd: {i.get('quantidade', 1)} | Peça Principal: {i.get('pecas', {}).get('p1', {}).get('l')}m x {i.get('pecas', {}).get('p1', {}).get('p')}m"),
                         ft.Text(f"R$ {float(i.get('preco_total', 0)):,.2f}", color=COLOR_PRIMARY, weight="bold")
                     ], expand=True),
                     ft.Row([

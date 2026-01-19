@@ -35,15 +35,18 @@ class BudgetCalculator(ft.UserControl):
 
         # --- CAMPOS DE ENTRADA ---
         self.txt_ambiente = ft.TextField(label="Ambiente", value="Cozinha", height=45)
-        self.dd_pedra = ft.Dropdown(label="Material", options=opcoes_pedras, height=45, on_change=self.calcular)
-        self.txt_acab_preco = ft.TextField(label="Preço Mão de Obra (R$/ML)", value="130.00", on_change=on_num_change)
+        # NOVO CAMPO: Quantidade de peças iguais
+        self.txt_qtd = ft.TextField(label="Qtd", value="1", width=80, height=45, on_change=on_num_change, keyboard_type=ft.KeyboardType.NUMBER)
+        
+        self.dd_pedra = ft.Dropdown(label="Material", options=opcoes_pedras, height=45, on_change=self.calcular, expand=True)
+        self.txt_acab_preco = ft.TextField(label="Mão de Obra (R$/ML)", value="130.00", on_change=on_num_change)
         self.h_rodo = ft.TextField(label="Alt. Rodo (m)", value="0.10", width=100, on_change=on_num_change)
         self.h_saia = ft.TextField(label="Alt. Saia (m)", value="0.04", width=100, on_change=on_num_change)
 
         def criar_inputs_peca(nome, visivel=True):
             return {
-                "l": ft.TextField(label=f"Comp. {nome}", value="1.00", expand=True, on_change=on_num_change, visible=visivel),
-                "p": ft.TextField(label=f"Prof. {nome}", value="0.60", expand=True, on_change=on_num_change, visible=visivel),
+                "l": ft.TextField(label=f"Comp. {nome} (m)", value="1.00", expand=True, on_change=on_num_change, visible=visivel),
+                "p": ft.TextField(label=f"Prof. {nome} (m)", value="0.60", expand=True, on_change=on_num_change, visible=visivel),
                 "lado": ft.Dropdown(label="Lado", value="direita" if nome != "P1" else None, visible=visivel, 
                                    options=[ft.dropdown.Option("esquerda"), ft.dropdown.Option("direita")], on_change=self.calcular)
             }
@@ -79,8 +82,8 @@ class BudgetCalculator(ft.UserControl):
         if self.item_para_editar:
             item = self.item_para_editar
             self.txt_ambiente.value = item.get("ambiente", "Cozinha")
+            self.txt_qtd.value = str(item.get("quantidade", "1")) # Carrega Qtd
             
-            # Tenta encontrar o ID do material pelo nome salvo
             for k, v in self.mapa_precos.items():
                 if v['nome'] == item.get("material"):
                     self.dd_pedra.value = k
@@ -131,7 +134,8 @@ class BudgetCalculator(ft.UserControl):
 
         tabs = ft.Tabs(selected_index=0, tabs=[
             ft.Tab(text="Medidas", content=ft.Column([
-                self.txt_ambiente, self.dd_pedra, 
+                ft.Row([self.txt_ambiente, self.txt_qtd], spacing=10), # Ambiente e Qtd lado a lado
+                self.dd_pedra, 
                 ft.Row([self.p1["l"], self.p1["p"]]),
                 ft.Row([ft.ElevatedButton("+ P2", on_click=lambda e: toggle_p(e, 2)), ft.ElevatedButton("+ P3", on_click=lambda e: toggle_p(e, 3))]),
                 ft.Column([ft.Row([self.p2["l"], self.p2["p"]]), self.p2["lado"]]),
@@ -164,6 +168,7 @@ class BudgetCalculator(ft.UserControl):
             if not self.dd_pedra.value: return
             p_m2 = self.mapa_precos[self.dd_pedra.value]['preco']
             v_ml = self.to_f(self.txt_acab_preco.value)
+            qtd = max(1, int(self.to_f(self.txt_qtd.value))) # Quantidade mínima é 1
             
             lados_ocupados = []
             if self.tem_p2: lados_ocupados.append(self.p2["lado"].value)
@@ -203,7 +208,8 @@ class BudgetCalculator(ft.UserControl):
             if self.f_bojo["sw"].value: total_ml += (self.to_f(self.f_bojo["w"].value) + self.to_f(self.f_bojo["h"].value)) * 2
             if self.f_cook["sw"].value: total_ml += (self.to_f(self.f_cook["w"].value) + self.to_f(self.f_cook["h"].value)) * 2
 
-            v_final = (total_m2 * p_m2) + (total_ml * v_ml)
+            # VALOR TOTAL MULTIPLICADO PELA QUANTIDADE
+            v_final = ((total_m2 * p_m2) + (total_ml * v_ml)) * qtd
             self.lbl_total.value = f"R$ {v_final:,.2f}"
             self.desenhar()
             self.update()
@@ -264,18 +270,17 @@ class BudgetCalculator(ft.UserControl):
 
     def salvar(self, e):
         try:
-            # CORREÇÃO DEFINITIVA DO VALOR: Extrai apenas números e o ponto decimal
-            # Remove o "R$ ", tira pontos de milhar e garante o ponto decimal
             preco_raw = self.lbl_total.value.replace("R$ ", "").strip()
-            if "." in preco_raw and "," in preco_raw: # Padrão 1.234,56
+            if "." in preco_raw and "," in preco_raw:
                 preco_raw = preco_raw.replace(".", "").replace(",", ".")
-            elif "," in preco_raw: # Padrão 1234,56
+            elif "," in preco_raw:
                 preco_raw = preco_raw.replace(",", ".")
             
             preco_total = float(preco_raw)
 
             dados_orcamento = {
                 "ambiente": self.txt_ambiente.value,
+                "quantidade": int(self.to_f(self.txt_qtd.value)), # SALVA A QUANTIDADE
                 "material": self.mapa_precos[self.dd_pedra.value]['nome'] if self.dd_pedra.value else "N/A",
                 "preco_total": preco_total,
                 "configuracoes_tecnicas": {
