@@ -55,22 +55,23 @@ def BudgetView(page: ft.Page):
         page.update()
 
     def disparar_geracao_pdf(orcamento_data):
-        page.show_snack_bar(ft.SnackBar(ft.Text("Gerando PDF...")))
+        # Feedback visual
+        snack = ft.SnackBar(ft.Text("Gerando PDF..."))
+        page.snack_bar = snack
+        snack.open = True
+        page.update()
         
-        # 1. Gera o arquivo no servidor (Render)
-        caminho_local = gerar_pdf_orcamento(orcamento_data)
+        # 1. Gera o PDF em Base64
+        pdf_b64 = gerar_pdf_orcamento(orcamento_data)
         
-        if caminho_local and os.path.exists(caminho_local):
-            # No Flet Web, para acessar um arquivo local do servidor,
-            # o ideal é mover para a pasta assets ou usar um servidor de arquivos.
-            # Como solução imediata para teste:
-            try:
-                # Tentativa de abrir diretamente (funciona em alguns ambientes web)
-                page.launch_url(f"/{caminho_local}") 
-            except Exception as e:
-                page.show_snack_bar(ft.SnackBar(ft.Text("Erro ao abrir PDF no navegador."), bgcolor="red"))
+        if pdf_b64:
+            # 2. Comando que abre o PDF direto no navegador do iPhone
+            url = f"data:application/pdf;base64,{pdf_b64}"
+            page.launch_url(url)
         else:
-            page.show_snack_bar(ft.SnackBar(ft.Text("Erro ao criar arquivo local."), bgcolor="red"))
+            snack.content = ft.Text("Erro ao gerar dados do PDF.")
+            snack.bgcolor = ft.colors.RED
+            page.update()
 
     def criar_card_cliente(o):
         status = o.get("status", "Em aberto")

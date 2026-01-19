@@ -3,6 +3,7 @@ from fpdf import FPDF
 import os
 import platform
 import webbrowser
+import base64  # <--- ADICIONE ESTA LINHA AQUI
 from src.config import COLOR_PRIMARY, COLOR_SECONDARY, COLOR_TEXT
 
 class PDF(FPDF):
@@ -10,9 +11,9 @@ class PDF(FPDF):
         super().__init__(orientation='P', unit='pt', format='A4')
         self.set_auto_page_break(auto=True, margin=50)
 
-def gerar_pdf_orcamento(orcamento: dict) -> bool:
+def gerar_pdf_orcamento(orcamento: dict):
     cliente_nome = orcamento.get('cliente_nome', 'Cliente')
-    filename = f"Orcamento_{cliente_nome.replace(' ', '_')}.pdf"
+    # Removido filename pois não salvaremos arquivo físico
 
     def hex_to_rgb(hex_str):
         hex_str = hex_str.lstrip('#')
@@ -21,8 +22,7 @@ def gerar_pdf_orcamento(orcamento: dict) -> bool:
     RGB_VINHO = hex_to_rgb(COLOR_PRIMARY)
     pdf = PDF()
     pdf.add_page()
-    width, height = 595.28, 841.89
-
+    
     # Cabeçalho
     pdf.set_font("Helvetica", "B", 20)
     pdf.set_text_color(*RGB_VINHO)
@@ -65,14 +65,11 @@ def gerar_pdf_orcamento(orcamento: dict) -> bool:
     pdf.cell(0, 30, f"TOTAL GERAL: R$ {total:,.2f}", align="R", ln=True)
 
     try:
-        # Tenta salvar na pasta 'assets' se ela existir, para que fique acessível via URL
-        if os.path.exists("assets"):
-            caminho_final = os.path.join("assets", filename)
-        else:
-            caminho_final = filename
-            
-        pdf.output(caminho_final)
-        return caminho_final 
+        # Em vez de salvar em arquivo, pegamos os dados em string/bytes
+        pdf_output = pdf.output(dest='S')
+        # Transforma em Base64 para o navegador entender
+        pdf_b64 = base64.b64encode(pdf_output).decode('utf-8')
+        return pdf_b64
     except Exception as e:
-        print(f"Erro ao salvar PDF: {e}")
+        print(f"Erro ao gerar PDF string: {e}")
         return None
