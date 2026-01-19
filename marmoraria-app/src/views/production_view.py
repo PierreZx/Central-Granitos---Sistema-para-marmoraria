@@ -11,47 +11,55 @@ def ProductionView(page: ft.Page):
     conteudo_dinamico = ft.Container(expand=True, animate_opacity=300)
 
     def desenhar_explosao(cv_obj, item):
-        """Desenha o esboço técnico da peça no Canvas"""
+        """Desenha o conjunto técnico (P1, P2, P3) no visualizador de produção"""
         cv_obj.shapes.clear()
-        if not isinstance(item, dict): return
+        pecas = item.get('pecas', {})
+        if not pecas: return
 
-        # Dimensões do Canvas
-        W = 300
-        H = 150
+        # 1. Pegar medidas e calcular escala total
+        w1 = float(pecas.get('p1', {}).get('l', 0))
+        h1 = float(pecas.get('p1', {}).get('p', 0))
         
-        def _f(val):
-            try: return float(str(val).replace(',', '.'))
-            except: return 0.0
+        # Calcular largura total para escala
+        w2 = float(pecas.get('p2', {}).get('l', 0)) if 'p2' in pecas else 0
+        w3 = float(pecas.get('p3', {}).get('l', 0)) if 'p3' in pecas else 0
+        total_w = w1 + w2 + w3
+        max_h = max(h1, 
+                    float(pecas.get('p2', {}).get('p', 0)) if 'p2' in pecas else 0,
+                    float(pecas.get('p3', {}).get('p', 0)) if 'p3' in pecas else 0)
 
-        larg = _f(item.get('largura', 0))
-        prof = _f(item.get('profundidade', 0))
+        W_CANVAS, H_CANVAS = 300, 150
+        scale = min((W_CANVAS - 60) / max(0.1, total_w), (H_CANVAS - 40) / max(0.1, max_h))
 
-        if larg == 0 or prof == 0: return
-
-        # Proporção para o desenho caber no canvas
-        escala = min((W - 40) / larg, (H - 40) / prof)
-        w_desenho = larg * escala
-        h_desenho = prof * escala
+        # 2. Posição inicial da P1 (centralizada horizontalmente no conjunto)
+        p1_x = (W_CANVAS / 2) - (w1 * scale / 2)
+        # Ajustar se houver peças na esquerda para não fugir do canvas
+        if 'p2' in pecas and pecas['p2'].get('lado') == 'esquerda': p1_x += (w2 * scale / 2)
+        if 'p3' in pecas and pecas['p3'].get('lado') == 'esquerda': p1_x += (w3 * scale / 2)
         
-        # Centralização
-        x0 = (W - w_desenho) / 2
-        y0 = (H - h_desenho) / 2
+        p1_y = (H_CANVAS / 2) - (h1 * scale / 2)
 
-        # Desenho do retângulo da pedra
-        cv_obj.shapes.append(
-            ft.canvas.Rect(
-                x0, y0, w_desenho, h_desenho, 
-                border_radius=2,
-                paint=ft.Paint(color=COLOR_PRIMARY, style=ft.PaintingStyle.STROKE, stroke_width=2)
-            )
-        )
-        # Preenchimento leve
-        cv_obj.shapes.append(
-            ft.canvas.Rect(
-                x0, y0, w_desenho, h_desenho,
-                paint=ft.Paint(color=f"{COLOR_PRIMARY}10", style=ft.PaintingStyle.FILL)
-            )
-        )
+        def draw_rect(w, h, x, y, nome):
+            wp, hp = w * scale, h * scale
+            # Desenha a pedra
+            cv_obj.shapes.append(ft.canvas.Rect(x, y, wp, hp, border_radius=2,
+                paint=ft.Paint(color=COLOR_PRIMARY, style=ft.PaintingStyle.STROKE, stroke_width=2)))
+            cv_obj.shapes.append(ft.canvas.Rect(x, y, wp, hp,
+                paint=ft.Paint(color=f"{COLOR_PRIMARY}10", style=ft.PaintingStyle.FILL)))
+            # Texto da medida
+            cv_obj.shapes.append(ft.canvas.Text(x + 5, y + 5, f"{nome}: {w}x{h}", 
+                style=ft.TextStyle(size=10, weight="bold", color=COLOR_PRIMARY)))
+
+        # Desenhar P1
+        draw_rect(w1, h1, p1_x, p1_y, "P1")
+
+        # Desenhar P2 e P3
+        for p_key in ['p2', 'p3']:
+            if p_key in pecas:
+                p_data = pecas[p_key]
+                lp, pp = float(p_data.get('l')), float(p_data.get('p'))
+                pos_x = (p1_x + w1 * scale) if p_data.get('lado') == 'direita' else (p1_x - lp * scale)
+                draw_rect(lp, pp, pos_x, p1_y, p_key.upper())
 
     def abrir_visualizador(orc):
         """Abre a Ordem de Serviço detalhada"""
