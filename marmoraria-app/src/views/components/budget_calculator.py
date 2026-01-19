@@ -34,14 +34,12 @@ class BudgetCalculator(ft.UserControl):
             self.calcular()
 
         # --- CAMPOS DE ENTRADA ---
-        self.txt_ambiente = ft.TextField(label="Ambiente", value="Cozinha", height=45)
-        # NOVO CAMPO: Quantidade de peças iguais
-        self.txt_qtd = ft.TextField(label="Qtd", value="1", width=80, height=45, on_change=on_num_change, keyboard_type=ft.KeyboardType.NUMBER)
-        
-        self.dd_pedra = ft.Dropdown(label="Material", options=opcoes_pedras, height=45, on_change=self.calcular, expand=True)
+        self.txt_ambiente = ft.TextField(label="Ambiente", value="Cozinha", height=48)
+        self.txt_qtd = ft.TextField(label="Quantidade", value="1", width=100, height=48, on_change=on_num_change, keyboard_type=ft.KeyboardType.NUMBER)
+        self.dd_pedra = ft.Dropdown(label="Material", options=opcoes_pedras, height=48, on_change=self.calcular, expand=True)
         self.txt_acab_preco = ft.TextField(label="Mão de Obra (R$/ML)", value="130.00", on_change=on_num_change)
-        self.h_rodo = ft.TextField(label="Alt. Rodo (m)", value="0.10", width=100, on_change=on_num_change)
-        self.h_saia = ft.TextField(label="Alt. Saia (m)", value="0.04", width=100, on_change=on_num_change)
+        self.h_rodo = ft.TextField(label="Alt. Rodo (m)", value="0.10", width=110, on_change=on_num_change)
+        self.h_saia = ft.TextField(label="Alt. Saia (m)", value="0.04", width=110, on_change=on_num_change)
 
         def criar_inputs_peca(nome, visivel=True):
             return {
@@ -82,7 +80,7 @@ class BudgetCalculator(ft.UserControl):
         if self.item_para_editar:
             item = self.item_para_editar
             self.txt_ambiente.value = item.get("ambiente", "Cozinha")
-            self.txt_qtd.value = str(item.get("quantidade", "1")) # Carrega Qtd
+            self.txt_qtd.value = str(item.get("quantidade", "1"))
             
             for k, v in self.mapa_precos.items():
                 if v['nome'] == item.get("material"):
@@ -122,19 +120,9 @@ class BudgetCalculator(ft.UserControl):
             p["l"].visible = p["p"].visible = p["lado"].visible = v
             self.calcular()
 
-        def layout_acabamentos(titulo_peca, dict_rodo, dict_saia):
-            return ft.Column([
-                ft.Text(f"--- {titulo_peca} ---", weight="bold", size=14),
-                ft.Text("Rodobanca (Vermelho)", size=12, color="red"),
-                ft.Row([*dict_rodo.values()], wrap=True, spacing=0),
-                ft.Text("Saia (Azul)", size=12, color="blue"),
-                ft.Row([*dict_saia.values()], wrap=True, spacing=0),
-                ft.Divider()
-            ], spacing=5)
-
         tabs = ft.Tabs(selected_index=0, tabs=[
             ft.Tab(text="Medidas", content=ft.Column([
-                ft.Row([self.txt_ambiente, self.txt_qtd], spacing=10), # Ambiente e Qtd lado a lado
+                ft.Row([self.txt_ambiente, self.txt_qtd], spacing=10),
                 self.dd_pedra, 
                 ft.Row([self.p1["l"], self.p1["p"]]),
                 ft.Row([ft.ElevatedButton("+ P2", on_click=lambda e: toggle_p(e, 2)), ft.ElevatedButton("+ P3", on_click=lambda e: toggle_p(e, 3))]),
@@ -144,9 +132,14 @@ class BudgetCalculator(ft.UserControl):
             ], scroll=ft.ScrollMode.ALWAYS)),
             ft.Tab(text="Acabam.", content=ft.Column([
                 ft.Row([self.h_rodo, self.h_saia]),
-                layout_acabamentos("PEÇA 1", self.p1_rodo, self.p1_saia),
-                layout_acabamentos("PEÇA 2", self.p2_rodo, self.p2_saia),
-                layout_acabamentos("PEÇA 3", self.p3_rodo, self.p3_saia),
+                ft.Text("P1 - Rodo / Saia", weight="bold"),
+                ft.Row([*self.p1_rodo.values()], wrap=True), ft.Row([*self.p1_saia.values()], wrap=True),
+                ft.Divider(),
+                ft.Text("P2 - Rodo / Saia", weight="bold"),
+                ft.Row([*self.p2_rodo.values()], wrap=True), ft.Row([*self.p2_saia.values()], wrap=True),
+                ft.Divider(),
+                ft.Text("P3 - Rodo / Saia", weight="bold"),
+                ft.Row([*self.p3_rodo.values()], wrap=True), ft.Row([*self.p3_saia.values()], wrap=True),
             ], scroll=ft.ScrollMode.ALWAYS)),
             ft.Tab(text="Furos", content=ft.Column([
                 ft.Row([self.f_bojo["sw"], self.f_bojo["peca"]]),
@@ -168,7 +161,7 @@ class BudgetCalculator(ft.UserControl):
             if not self.dd_pedra.value: return
             p_m2 = self.mapa_precos[self.dd_pedra.value]['preco']
             v_ml = self.to_f(self.txt_acab_preco.value)
-            qtd = max(1, int(self.to_f(self.txt_qtd.value))) # Quantidade mínima é 1
+            qtd = max(1, int(self.to_f(self.txt_qtd.value)))
             
             lados_ocupados = []
             if self.tem_p2: lados_ocupados.append(self.p2["lado"].value)
@@ -208,7 +201,6 @@ class BudgetCalculator(ft.UserControl):
             if self.f_bojo["sw"].value: total_ml += (self.to_f(self.f_bojo["w"].value) + self.to_f(self.f_bojo["h"].value)) * 2
             if self.f_cook["sw"].value: total_ml += (self.to_f(self.f_cook["w"].value) + self.to_f(self.f_cook["h"].value)) * 2
 
-            # VALOR TOTAL MULTIPLICADO PELA QUANTIDADE
             v_final = ((total_m2 * p_m2) + (total_ml * v_ml)) * qtd
             self.lbl_total.value = f"R$ {v_final:,.2f}"
             self.desenhar()
@@ -270,17 +262,20 @@ class BudgetCalculator(ft.UserControl):
 
     def salvar(self, e):
         try:
-            preco_raw = self.lbl_total.value.replace("R$ ", "").strip()
-            if "." in preco_raw and "," in preco_raw:
-                preco_raw = preco_raw.replace(".", "").replace(",", ".")
-            elif "," in preco_raw:
-                preco_raw = preco_raw.replace(",", ".")
+            # LÓGICA DE LIMPEZA ROBUSTA PARA EVITAR MULTIPLICAÇÃO INDEVIDA
+            valor_texto = self.lbl_total.value.replace("R$ ", "").strip()
+            # Se tiver ponto e vírgula (ex: 1.370,00), remove ponto e troca vírgula por ponto
+            if "." in valor_texto and "," in valor_texto:
+                valor_texto = valor_texto.replace(".", "").replace(",", ".")
+            # Se tiver só vírgula (ex: 1370,00), troca por ponto
+            elif "," in valor_texto:
+                valor_texto = valor_texto.replace(",", ".")
             
-            preco_total = float(preco_raw)
+            preco_total = float(valor_texto)
 
             dados_orcamento = {
                 "ambiente": self.txt_ambiente.value,
-                "quantidade": int(self.to_f(self.txt_qtd.value)), # SALVA A QUANTIDADE
+                "quantidade": int(self.to_f(self.txt_qtd.value)),
                 "material": self.mapa_precos[self.dd_pedra.value]['nome'] if self.dd_pedra.value else "N/A",
                 "preco_total": preco_total,
                 "configuracoes_tecnicas": {
