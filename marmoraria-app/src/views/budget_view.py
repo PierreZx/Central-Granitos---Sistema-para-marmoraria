@@ -144,6 +144,17 @@ def BudgetView(page: ft.Page):
         page.update()
 
     def view_detalhes_orcamento(o):
+
+        def enviar_para_producao(e):
+            o["status"] = "PENDENTE" 
+            o["data_producao"] = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+            
+            if firebase_service.update_document("orcamentos", o["id"], o):
+                page.snack_bar = ft.SnackBar(ft.Text("Orçamento enviado para a produção!"), bgcolor=COLOR_SUCCESS)
+                page.snack_bar.open = True
+                carregar_lista_orcamentos() # Volta para a lista principal
+            page.update()
+
         def salvar_e_recalcular():
             soma_total = sum(float(item.get("preco_total", 0)) for item in o.get("itens", []))
             o["total_geral"] = soma_total
@@ -212,7 +223,16 @@ def BudgetView(page: ft.Page):
             ft.Divider(),
             ft.Row([
                 ft.Text(f"Total: R$ {float(o.get('total_geral', 0)):,.2f}", weight="bold", size=26, color=COLOR_PRIMARY),
-                ft.ElevatedButton("Adicionar Peça", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=adicionar_nova_pedra)
+                ft.Row([
+                    ft.ElevatedButton(
+                        "Enviar Produção", 
+                        icon=ft.icons.SEND_ROUNDED,
+                        bgcolor=ft.colors.ORANGE_800, 
+                        color=COLOR_WHITE, 
+                        on_click=enviar_para_producao
+                    ),
+                    ft.ElevatedButton("Adicionar Peça", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=adicionar_nova_pedra)
+                ], spacing=10)
             ], alignment="spaceBetween")
         ], scroll=ft.ScrollMode.AUTO)
 

@@ -11,18 +11,17 @@ def ProductionView(page: ft.Page):
     conteudo_dinamico = ft.Container(expand=True, animate_opacity=300)
 
     def desenhar_explosao(cv_obj, item):
-        """Desenha o conjunto técnico (P1, P2, P3) no visualizador de produção"""
         cv_obj.shapes.clear()
         pecas = item.get('pecas', {})
+        furos = item.get('furos', {}) # Pegando os furos salvos
         if not pecas: return
 
-        # 1. Pegar medidas e calcular escala total
+        # 1. Medidas e Escala
         w1 = float(pecas.get('p1', {}).get('l', 0))
         h1 = float(pecas.get('p1', {}).get('p', 0))
-        
-        # Calcular largura total para escala
         w2 = float(pecas.get('p2', {}).get('l', 0)) if 'p2' in pecas else 0
         w3 = float(pecas.get('p3', {}).get('l', 0)) if 'p3' in pecas else 0
+        
         total_w = w1 + w2 + w3
         max_h = max(h1, 
                     float(pecas.get('p2', {}).get('p', 0)) if 'p2' in pecas else 0,
@@ -31,35 +30,51 @@ def ProductionView(page: ft.Page):
         W_CANVAS, H_CANVAS = 300, 150
         scale = min((W_CANVAS - 60) / max(0.1, total_w), (H_CANVAS - 40) / max(0.1, max_h))
 
-        # 2. Posição inicial da P1 (centralizada horizontalmente no conjunto)
-        p1_x = (W_CANVAS / 2) - (w1 * scale / 2)
-        # Ajustar se houver peças na esquerda para não fugir do canvas
-        if 'p2' in pecas and pecas['p2'].get('lado') == 'esquerda': p1_x += (w2 * scale / 2)
-        if 'p3' in pecas and pecas['p3'].get('lado') == 'esquerda': p1_x += (w3 * scale / 2)
-        
-        p1_y = (H_CANVAS / 2) - (h1 * scale / 2)
+        # Centralização base
+        start_x = (W_CANVAS - (total_w * scale)) / 2
+        p1_y = (H_CANVAS - (h1 * scale)) / 2
 
-        def draw_rect(w, h, x, y, nome):
+        def draw_rect(w, h, x, y, nome, is_p1=False):
             wp, hp = w * scale, h * scale
             # Desenha a pedra
             cv_obj.shapes.append(ft.canvas.Rect(x, y, wp, hp, border_radius=2,
                 paint=ft.Paint(color=COLOR_PRIMARY, style=ft.PaintingStyle.STROKE, stroke_width=2)))
-            cv_obj.shapes.append(ft.canvas.Rect(x, y, wp, hp,
-                paint=ft.Paint(color=f"{COLOR_PRIMARY}10", style=ft.PaintingStyle.FILL)))
+            
+            # Se for P1 e tiver furos, desenha os furos dentro dela
+            if is_p1:
+                if furos.get('bojo', {}).get('check'):
+                    # Desenha um círculo/retalho simbólico do bojo centralizado na P1
+                    cv_obj.shapes.append(ft.canvas.Rect(x + (wp*0.3), y + (hp*0.2), wp*0.4, hp*0.6, border_radius=10,
+                        paint=ft.Paint(color=ft.colors.RED_400, style=ft.PaintingStyle.STROKE, stroke_width=1)))
+                    cv_obj.shapes.append(ft.canvas.Text(x + (wp*0.35), y + (hp*0.4), "BOJO", style=ft.TextStyle(size=8, color=ft.colors.RED_400)))
+                
+                if furos.get('cooktop', {}).get('check'):
+                    # Desenha um retângulo do cooktop
+                    cv_obj.shapes.append(ft.canvas.Rect(x + (wp*0.6), y + (hp*0.2), wp*0.3, hp*0.5,
+                        paint=ft.Paint(color=ft.colors.BLUE_400, style=ft.PaintingStyle.STROKE, stroke_width=1)))
+                    cv_obj.shapes.append(ft.canvas.Text(x + (wp*0.62), y + (hp*0.4), "COOK", style=ft.TextStyle(size=7, color=ft.colors.BLUE_400)))
+
             # Texto da medida
-            cv_obj.shapes.append(ft.canvas.Text(x + 5, y + 5, f"{nome}: {w}x{h}", 
-                style=ft.TextStyle(size=10, weight="bold", color=COLOR_PRIMARY)))
+            cv_obj.shapes.append(ft.canvas.Text(x + 2, y - 15, f"{nome}: {w}x{h}", 
+                style=ft.TextStyle(size=9, weight="bold", color=COLOR_TEXT)))
 
-        # Desenhar P1
-        draw_rect(w1, h1, p1_x, p1_y, "P1")
+        # Lógica de empilhamento horizontal (P2 esquerda -> P1 -> P3 direita)
+        curr_x = start_x
+        # P2 (se for esquerda)
+        if 'p2' in pecas and pecas['p2'].get('lado') == 'esquerda':
+            draw_rect(w2, float(pecas['p2']['p']), curr_x, p1_y, "P2")
+            curr_x += w2 * scale
+        
+        # P1 (Sempre no meio ou início)
+        p1_x = curr_x
+        draw_rect(w1, h1, p1_x, p1_y, "P1", is_p1=True)
+        curr_x += w1 * scale
 
-        # Desenhar P2 e P3
+        # P2 ou P3 (se forem direita)
         for p_key in ['p2', 'p3']:
-            if p_key in pecas:
-                p_data = pecas[p_key]
-                lp, pp = float(p_data.get('l')), float(p_data.get('p'))
-                pos_x = (p1_x + w1 * scale) if p_data.get('lado') == 'direita' else (p1_x - lp * scale)
-                draw_rect(lp, pp, pos_x, p1_y, p_key.upper())
+            if p_key in pecas and pecas[p_key].get('lado') == 'direita':
+                draw_rect(float(pecas[p_key]['l']), float(pecas[p_key]['p']), curr_x, p1_y, p_key.upper())
+                curr_x += float(pecas[p_key]['l']) * scale
 
     def abrir_visualizador(orc):
         """Abre a Ordem de Serviço detalhada"""
