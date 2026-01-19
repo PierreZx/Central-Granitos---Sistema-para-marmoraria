@@ -82,24 +82,29 @@ class BudgetCalculator(ft.UserControl):
             self.txt_ambiente.value = item.get("ambiente", "Cozinha")
             self.txt_qtd.value = str(item.get("quantidade", "1"))
             
+            # Seleção automática do material
             for k, v in self.mapa_precos.items():
                 if v['nome'] == item.get("material"):
                     self.dd_pedra.value = k
             
+            # Configurações técnicas
             config = item.get("configuracoes_tecnicas", {})
             self.txt_acab_preco.value = str(config.get("valor_mao_de_obra_ml", "130.00"))
             self.h_rodo.value = str(config.get("altura_rodobanca", "0.10"))
             self.h_saia.value = str(config.get("altura_saia", "0.04"))
 
+            # Carregar P1
             pecas = item.get("pecas", {})
             if "p1" in pecas:
-                self.p1["l"].value = str(pecas["p1"].get("l", "1.00"))
-                self.p1["p"].value = str(pecas["p1"].get("p", "0.60"))
-                for lado, val in pecas["p1"].get("acabamentos", {}).get("rodo", {}).items():
+                p1_data = pecas["p1"]
+                self.p1["l"].value = str(p1_data.get("l", "1.00"))
+                self.p1["p"].value = str(p1_data.get("p", "0.60"))
+                for lado, val in p1_data.get("acabamentos", {}).get("rodo", {}).items():
                     if lado in self.p1_rodo: self.p1_rodo[lado].value = val
-                for lado, val in pecas["p1"].get("acabamentos", {}).get("saia", {}).items():
+                for lado, val in p1_data.get("acabamentos", {}).get("saia", {}).items():
                     if lado in self.p1_saia: self.p1_saia[lado].value = val
 
+            # Carregar P2
             if "p2" in pecas:
                 self.tem_p2 = True
                 self.p2["l"].visible = self.p2["p"].visible = self.p2["lado"].visible = True
@@ -107,12 +112,19 @@ class BudgetCalculator(ft.UserControl):
                 self.p2["p"].value = str(pecas["p2"].get("p", "0.60"))
                 self.p2["lado"].value = pecas["p2"].get("lado", "direita")
 
+            # Carregar P3
             if "p3" in pecas:
                 self.tem_p3 = True
                 self.p3["l"].visible = self.p3["p"].visible = self.p3["lado"].visible = True
                 self.p3["l"].value = str(pecas["p3"].get("l", "1.00"))
                 self.p3["p"].value = str(pecas["p3"].get("p", "0.60"))
                 self.p3["lado"].value = pecas["p3"].get("lado", "esquerda")
+
+            # Carregar Furos
+            furos_data = item.get("furos_incluidos_no_ml", {})
+            self.f_bojo["sw"].value = furos_data.get("bojo", False)
+            self.f_cook["sw"].value = furos_data.get("cooktop", False)
+            self.calcular()
 
         def toggle_p(e, n):
             if n == 2: self.tem_p2 = not self.tem_p2; p, v = self.p2, self.tem_p2
