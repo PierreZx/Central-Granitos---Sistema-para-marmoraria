@@ -65,8 +65,14 @@ def gerar_pdf_orcamento(orcamento: dict) -> bool:
     pdf.cell(0, 30, f"TOTAL GERAL: R$ {total:,.2f}", align="R", ln=True)
 
     try:
-        pdf.output(filename)
-        return filename # Retorna o nome para o View saber qual arquivo subir
+        # Tenta salvar na pasta 'assets' se ela existir, para que fique acessível via URL
+        if os.path.exists("assets"):
+            caminho_final = os.path.join("assets", filename)
+        else:
+            caminho_final = filename
+            
+        pdf.output(caminho_final)
+        return caminho_final 
     except Exception as e:
         print(f"Erro ao salvar PDF: {e}")
         return None

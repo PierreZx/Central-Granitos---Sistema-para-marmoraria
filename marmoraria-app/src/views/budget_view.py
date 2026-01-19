@@ -55,25 +55,20 @@ def BudgetView(page: ft.Page):
         page.update()
 
     def disparar_geracao_pdf(orcamento_data):
-        page.show_snack_bar(ft.SnackBar(ft.Text("Gerando e enviando PDF...")))
+        page.show_snack_bar(ft.SnackBar(ft.Text("Gerando PDF...")))
         
         # 1. Gera o arquivo no servidor (Render)
-        # Importante: a função gerar_pdf_orcamento deve retornar o CAMINHO do arquivo
         caminho_local = gerar_pdf_orcamento(orcamento_data)
         
         if caminho_local and os.path.exists(caminho_local):
-            filename = os.path.basename(caminho_local)
-            
-            # 2. Faz o upload para o Firebase
-            url_final = firebase_service.upload_pdf_to_storage(caminho_local, filename)
-            
-            if url_final:
-                # 3. Abre no iPhone/Navegador
-                page.launch_url(url_final)
-                # 4. Limpa o servidor
-                os.remove(caminho_local)
-            else:
-                page.show_snack_bar(ft.SnackBar(ft.Text("Erro ao subir para nuvem."), bgcolor="red"))
+            # No Flet Web, para acessar um arquivo local do servidor,
+            # o ideal é mover para a pasta assets ou usar um servidor de arquivos.
+            # Como solução imediata para teste:
+            try:
+                # Tentativa de abrir diretamente (funciona em alguns ambientes web)
+                page.launch_url(f"/{caminho_local}") 
+            except Exception as e:
+                page.show_snack_bar(ft.SnackBar(ft.Text("Erro ao abrir PDF no navegador."), bgcolor="red"))
         else:
             page.show_snack_bar(ft.SnackBar(ft.Text("Erro ao criar arquivo local."), bgcolor="red"))
 
