@@ -66,8 +66,7 @@ def gerar_pdf_orcamento(orcamento: dict) -> bool:
 
     try:
         pdf.output(filename)
-        webbrowser.open(filename)
-        return True
+        return filename # Retorna o nome para o View saber qual arquivo subir
     except Exception as e:
-        print(f"Erro PDF: {e}")
-        return False
+        print(f"Erro ao salvar PDF: {e}")
+        return None

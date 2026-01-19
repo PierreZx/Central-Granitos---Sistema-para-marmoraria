@@ -1,6 +1,7 @@
 # src/views/budget_view.py
 
 import flet as ft
+import os
 from src.views.layout_base import LayoutBase
 # A calculadora agora é um componente único e completo
 from src.views.components.budget_calculator import BudgetCalculator
@@ -53,6 +54,29 @@ def BudgetView(page: ft.Page):
         ], scroll=ft.ScrollMode.AUTO)
         page.update()
 
+    def disparar_geracao_pdf(orcamento_data):
+        page.show_snack_bar(ft.SnackBar(ft.Text("Gerando e enviando PDF...")))
+        
+        # 1. Gera o arquivo no servidor (Render)
+        # Importante: a função gerar_pdf_orcamento deve retornar o CAMINHO do arquivo
+        caminho_local = gerar_pdf_orcamento(orcamento_data)
+        
+        if caminho_local and os.path.exists(caminho_local):
+            filename = os.path.basename(caminho_local)
+            
+            # 2. Faz o upload para o Firebase
+            url_final = firebase_service.upload_pdf_to_storage(caminho_local, filename)
+            
+            if url_final:
+                # 3. Abre no iPhone/Navegador
+                page.launch_url(url_final)
+                # 4. Limpa o servidor
+                os.remove(caminho_local)
+            else:
+                page.show_snack_bar(ft.SnackBar(ft.Text("Erro ao subir para nuvem."), bgcolor="red"))
+        else:
+            page.show_snack_bar(ft.SnackBar(ft.Text("Erro ao criar arquivo local."), bgcolor="red"))
+
     def criar_card_cliente(o):
         status = o.get("status", "Em aberto")
         cor_status = COLOR_WARNING if status == "Em aberto" else COLOR_SUCCESS
@@ -79,7 +103,10 @@ def BudgetView(page: ft.Page):
                 ft.Divider(height=20),
                 ft.Row([
                     ft.IconButton(ft.icons.EDIT_NOTE_ROUNDED, on_click=lambda _: gerenciar_itens_orcamento(o)),
-                    ft.IconButton(ft.icons.PICTURE_AS_PDF_ROUNDED, on_click=lambda _: gerar_pdf_orcamento(o)),
+                    ft.IconButton(
+                        ft.icons.PICTURE_AS_PDF_ROUNDED, 
+                        on_click=lambda _: disparar_geracao_pdf(o) # Agora chama a lógica completa
+                    ),
                     ft.IconButton(ft.icons.DELETE_FOREVER_ROUNDED, icon_color=COLOR_ERROR, on_click=lambda _: confirmar_exclusao(o))
                 ], alignment="end")
             ])

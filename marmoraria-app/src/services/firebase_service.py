@@ -4,6 +4,34 @@ import os
 import datetime
 import socket
 
+def upload_pdf_to_storage(local_path, filename):
+    """Faz upload do PDF usando a API REST do Firebase Storage"""
+    try:
+        # 1. Lê o arquivo binário
+        with open(local_path, "rb") as f:
+            pdf_data = f.read()
+
+        # 2. Prepara a URL de upload (usando o seu PROJECT_ID definido no arquivo)
+        # Substitua manualmente abaixo se o PROJECT_ID for diferente
+        bucket_name = f"{PROJECT_ID}.firebasestorage.app"
+        upload_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket_name}/o?name=orcamentos_pdfs/{filename}"
+
+        # 3. Faz o POST para o Storage
+        headers = {"Content-Type": "application/pdf"}
+        res = requests.post(upload_url, data=pdf_data, headers=headers)
+
+        if res.status_code == 200:
+            # Retorna a URL pública com o token de visualização
+            token = res.json().get("downloadTokens")
+            # Constrói a URL final para abrir no navegador
+            return f"{upload_url}&alt=media&token={token}"
+        
+        print(f"Erro Status Upload: {res.status_code}")
+        return None
+    except Exception as e:
+        print(f"Erro no upload para Firebase REST: {e}")
+        return None
+
 # --- CONFIGURAÇÕES ---
 PROJECT_ID = "marmoraria-app"
 BASE_URL = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents"
