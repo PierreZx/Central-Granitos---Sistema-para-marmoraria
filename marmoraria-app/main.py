@@ -14,75 +14,63 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = COLOR_BACKGROUND
     
-    # Configuração de fontes e estilo global
+    # Configuração de estilo global
     page.theme = ft.Theme(
         color_scheme_seed=COLOR_PRIMARY,
         visual_density=ft.VisualDensity.COMFORTABLE,
     )
 
-    # --- INICIALIZAÇÃO APK (OFFLINE/SYNC) ---
+    # --- AJUSTE APK: Sincronização em segundo plano ---
     def inicializar_sincronizacao():
-        """Tenta sincronizar os dados assim que o app abre"""
-        if firebase_service.verificar_conexao():
-            # Mostra um aviso discreto que está sincronizando
-            page.snack_bar = ft.SnackBar(
-                ft.Text("Sincronizando dados com a nuvem..."),
-                bgcolor=ft.colors.BLUE_700,
-                duration=2000
-            )
-            page.snack_bar.open = True
-            page.update()
-            
-            # Chama a função de sincronização bidirecional do serviço
-            firebase_service.sync_offline_data()
-            
-            # Atualiza as coleções principais para o cache local
-            # Isso garante que o app não fique "feio" ou vazio
-            firebase_service.get_collection("estoque")
-            firebase_service.get_collection("orcamentos")
-            firebase_service.get_collection("financeiro")
-            
-    # Executa a sincronização inicial
-    inicializar_sincronizacao()
+        """Sincroniza sem travar a abertura do app"""
+        try:
+            if firebase_service.verificar_conexao():
+                # Sincroniza em background
+                firebase_service.sync_offline_data()
+                # Faz o cache sem bloquear a UI
+                firebase_service.get_collection("estoque")
+        except Exception as e:
+            print(f"Erro silencioso na sincronização inicial: {e}")
 
     def route_change(e):
         page.views.clear()
         rota_atual = page.route
 
-        # Sempre que mudar de tela, tenta empurrar mudanças pendentes se houver net
-        if firebase_service.verificar_conexao():
-            firebase_service.sync_offline_data()
-
         # 1. VERIFICAÇÃO DE SEGURANÇA
         user_role = page.session.get("user_role")
+        
+        # Se não houver sessão, força Login exceto se já estiver indo para lá
         if not user_role and rota_atual not in ["/login", "/", ""]:
             page.go("/login")
             return
 
-        # 2. FUNÇÃO PARA CONSTRUIR AS VIEWS
+        # 2. CONSTRUÇÃO DE VIEWS COM TRATAMENTO DE ERRO
         def construir_view(view_func, route_name):
             try:
-                conteudo_layout = view_func(page)
+                # O segredo: Pegar as propriedades especiais de LayoutBase que injetamos
+                layout_result = view_func(page)
                 
-                # Se a view retornar um LayoutBase, o Flet precisa do .content
-                # (Ajuste caso suas views retornem o objeto LayoutBase diretamente)
+                # Se o layout_result for um Container com metadados do AppBar/Drawer
+                appbar = None
+                drawer = None
+                
+                if hasattr(layout_result, "data") and isinstance(layout_result.data, dict):
+                    appbar = layout_result.data.get("appbar")
+                    drawer = layout_result.data.get("drawer")
+
                 page.views.append(
                     ft.View(
                         route_name,
-                        [conteudo_layout],
+                        [layout_result],
+                        appbar=appbar, # Injeta nativamente no APK
+                        drawer=drawer, # Injeta nativamente no APK
                         padding=0,
                         bgcolor=COLOR_BACKGROUND
                     )
                 )
-            except Exception as e:
-                print(f"Erro ao construir view {route_name}: {e}")
-                traceback.print_exc()
+            except Exception as ex:
                 page.views.append(
-                    ft.View(
-                        "/erro",
-                        [ft.Text(f"Erro Crítico na Rota {route_name}:\n{e}", color="red")],
-                        padding=20
-                    )
+                    ft.View("/erro", [ft.Text(f"Erro na tela {route_name}:\n{ex}", color="red")])
                 )
 
         # --- MAPEAMENTO DE ROTAS ---
@@ -117,14 +105,12 @@ def main(page: ft.Page):
     # Configuração de eventos
     page.on_route_change = route_change
     
-    # Inicialização do App
-    if page.route in ["/", ""]:
-        page.go("/login")
-    else:
-        # Força o trigger da rota atual caso o app seja reiniciado em uma tela específica
-        page.go(page.route)
+    # Inicialização do App: Sempre abre no Login primeiro para garantir a sessão
+    page.go("/login")
+    
+    # Roda a sincronização APÓS o app já estar aberto e visível
+    inicializar_sincronizacao()
 
 if __name__ == "__main__":
-    # Para o APK, usamos o flet.app normal
-    # O parâmetro assets_dir é importante se você tiver imagens locais
+    # assets_dir="assets" é vital para o ícone e imagens locais
     ft.app(target=main, assets_dir="assets")
