@@ -3,35 +3,67 @@ import json
 import os
 import datetime
 import socket
+import sqlite3
 
-# --- CONFIGURAÇÕES ---
+# --- CONFIGURAÇÕES FIREBASE ---
 PROJECT_ID = "marmoraria-app"
 BASE_URL = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents"
 
-# --- CONVERSORES ---
+# --- CONFIGURAÇÕES SQLITE (LOCAL) ---
+DB_NAME = "marmoraria_local.db"
+
+def init_local_db():
+    """Cria as tabelas locais caso não existam"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # Tabelas principais espelhando as coleções do Firebase
+    # A coluna 'dados_json' guarda o conteúdo completo do documento
+    # A coluna 'pendente' indica se precisa ser enviado ao Firebase (0=Não, 1=Sim)
+    tabelas = ["estoque", "financeiro", "orcamentos", "users", "movimentacoes"]
+    for tabela in tabelas:
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS {tabela} (
+                id TEXT PRIMARY KEY,
+                dados_json TEXT,
+                pendente INTEGER DEFAULT 0
+            )
+        ''')
+    conn.commit()
+    conn.close()
+
+# Inicializa o banco assim que o serviço é importado
+init_local_db()
+
+# =========================================================
+# =================== LÓGICA DE CONEXÃO ===================
+# =========================================================
+
+def verificar_conexao():
+    try:
+        socket.create_connection(("8.8.8.8", 53), timeout=2)
+        return True
+    except:
+        return False
+
+# =========================================================
+# ================= CONVERSORES FIRESTORE =================
+# =========================================================
+
 def _converter_para_firestore(dados):
     fields = {}
     for k, v in dados.items():
-        if v is None:
-            fields[k] = {"nullValue": None}
-        elif isinstance(v, bool):
-            fields[k] = {"booleanValue": v}
-        elif isinstance(v, int):
-            fields[k] = {"integerValue": str(v)}
-        elif isinstance(v, float):
-            fields[k] = {"doubleValue": v}
+        if v is None: fields[k] = {"nullValue": None}
+        elif isinstance(v, bool): fields[k] = {"booleanValue": v}
+        elif isinstance(v, int): fields[k] = {"integerValue": str(v)}
+        elif isinstance(v, float): fields[k] = {"doubleValue": v}
         elif isinstance(v, list):
             vals = []
             for item in v:
-                if isinstance(item, dict):
-                    vals.append({"mapValue": _converter_para_firestore(item)})
-                else:
-                    vals.append({"stringValue": str(item)})
+                if isinstance(item, dict): vals.append({"mapValue": _converter_para_firestore(item)})
+                else: vals.append({"stringValue": str(item)})
             fields[k] = {"arrayValue": {"values": vals}}
-        elif isinstance(v, dict):
-            fields[k] = {"mapValue": _converter_para_firestore(v)}
-        else:
-            fields[k] = {"stringValue": str(v)}
+        elif isinstance(v, dict): fields[k] = {"mapValue": _converter_para_firestore(v)}
+        else: fields[k] = {"stringValue": str(v)}
     return {"fields": fields}
 
 def _extrair_valor(v):
@@ -40,181 +72,142 @@ def _extrair_valor(v):
     if 'doubleValue' in v: return float(v['doubleValue'])
     if 'booleanValue' in v: return v['booleanValue']
     if 'nullValue' in v: return None
-    if 'arrayValue' in v:
-        return [_extrair_valor(x) for x in v['arrayValue'].get('values', [])]
     if 'mapValue' in v:
         res = {}
-        for k, v2 in v['mapValue'].get('fields', {}).items():
-            res[k] = _extrair_valor(v2)
+        for k2, v2 in v['mapValue'].get('fields', {}).items():
+            res[k2] = _extrair_valor(v2)
         return res
-    return None
+    if 'arrayValue' in v:
+        return [_extrair_valor(item) for item in v['arrayValue'].get('values', [])]
+    return str(v)
 
-def _converter_de_firestore(doc):
-    name = doc.get("name", "")
-    obj = {"id": name.split("/")[-1]}
-    for k, v in doc.get("fields", {}).items():
-        obj[k] = _extrair_valor(v)
-    return obj
+# =========================================================
+# ================= NÚCLEO DE DADOS (CACHE) ===============
+# =========================================================
 
-def get_document(collection, doc_id):
-    if not verificar_conexao():
-        return None
-    try:
-        res = requests.get(f"{BASE_URL}/{collection}/{doc_id}")
-        if res.status_code == 200:
-            return _converter_de_firestore(res.json())
-        return None
-    except Exception as e:
-        print(f"Erro ao buscar documento {collection}/{doc_id}: {e}")
-        return None
+def save_local(collection, doc_id, dados, pendente=0):
+    """Salva ou atualiza um documento no SQLite local"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    dados_str = json.dumps(dados)
+    cursor.execute(f"INSERT OR REPLACE INTO {collection} (id, dados_json, pendente) VALUES (?, ?, ?)",
+                   (doc_id, dados_str, pendente))
+    conn.commit()
+    conn.close()
 
-# --- CONEXÃO ---
-def verificar_conexao():
-    try:
-        socket.create_connection(("8.8.8.8", 53), timeout=2)
-        return True
-    except:
-        return False
+def get_local(collection):
+    """Busca todos os itens de uma coleção no SQLite"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT dados_json FROM {collection}")
+    rows = cursor.fetchall()
+    conn.close()
+    return [json.loads(r[0]) for r in rows]
 
-# --- BASE CRUD ---
+# =========================================================
+# ================= CRUD PRINCIPAL (HÍBRIDO) ==============
+# =========================================================
+
 def get_collection(collection):
-    if not verificar_conexao(): return []
-    try:
-        res = requests.get(f"{BASE_URL}/{collection}?pageSize=300")
-        if res.status_code == 200 and "documents" in res.json():
-            return [_converter_de_firestore(d) for d in res.json()["documents"]]
-        return []
-    except:
-        return []
-
-def add_document(collection, dados):
-    try:
-        res = requests.post(f"{BASE_URL}/{collection}", json=_converter_para_firestore(dados))
-        return res.status_code == 200
-    except:
-        return False
-
-def update_document(collection, doc_id, dados):
-    try:
-        corpo = _converter_para_firestore(dados)
-        mask = "&".join([f"updateMask.fieldPaths={k}" for k in dados.keys()])
-        url = f"{BASE_URL}/{collection}/{doc_id}?{mask}"
-        res = requests.patch(url, json=corpo)
-        return res.status_code == 200
-    except:
-        return False
-
-def delete_document(collection, doc_id):
-    try:
-        res = requests.delete(f"{BASE_URL}/{collection}/{doc_id}")
-        return res.status_code == 200
-    except:
-        return False
-
-# =========================================================
-# ====================== FINANCEIRO =======================
-# =========================================================
-
-def get_saldo_caixa():
-    movs = get_collection("financeiro")
-    saldo = 0.0
-    for m in movs:
+    """Tenta buscar do Firebase e atualiza o Cache. Se falhar, usa o Cache."""
+    if verificar_conexao():
         try:
-            v = float(str(m.get("valor", 0)).replace(",", "."))
-            tipo = str(m.get("tipo", "")).upper()
-            if tipo in ["ENTRADA", "RECEITA"]:
-                saldo += v
-            elif tipo in ["SAIDA", "DESPESA"]:
-                saldo -= v
+            res = requests.get(f"{BASE_URL}/{collection}", timeout=5)
+            if res.status_code == 200:
+                documentos = []
+                data = res.json()
+                if 'documents' in data:
+                    for doc in data['documents']:
+                        obj = {}
+                        obj['id'] = doc['name'].split('/')[-1]
+                        for k, v in doc.get('fields', {}).items():
+                            obj[k] = _extrair_valor(v)
+                        documentos.append(obj)
+                        # Atualiza o cache local para cada documento vindo da nuvem
+                        save_local(collection, obj['id'], obj, pendente=0)
+                return documentos
         except:
             pass
-    return saldo
+    # Se estiver offline ou o request der erro, retorna o que tem no celular
+    return get_local(collection)
 
-def get_dividas_pendentes():
-    dados = get_collection("financeiro")
-    return [
-        d for d in dados
-        if str(d.get("tipo", "")).upper() in ["SAIDA", "DESPESA"]
-        and d.get("status") != "Pago"
-    ]
+def add_document(collection, dados):
+    """Salva no Firebase se houver net. Se não, salva localmente como pendente."""
+    doc_id = dados.get("id") or f"local_{int(datetime.datetime.now().timestamp())}"
+    dados["id"] = doc_id
+    
+    sucesso_nuvem = False
+    if verificar_conexao():
+        try:
+            payload = _converter_para_firestore(dados)
+            res = requests.patch(f"{BASE_URL}/{collection}/{doc_id}", json=payload, timeout=5)
+            if res.status_code == 200:
+                sucesso_nuvem = True
+        except:
+            pass
 
-def get_extrato_lista():
-    dados = get_collection("financeiro")
-    return sorted(dados, key=lambda x: x.get("data", ""), reverse=True)
+    # Salva sempre no local. Se enviou pra nuvem, pendente=0. Se não, pendente=1.
+    save_local(collection, doc_id, dados, pendente=0 if sucesso_nuvem else 1)
+    return True
 
-def add_divida_fixa(dados):
-    dados["tipo"] = "Saida"
-    if "status" not in dados:
-        dados["status"] = "Pendente"
-    return add_document("financeiro", dados)
+def update_document(collection, doc_id, dados):
+    return add_document(collection, dados) # Patch no Firebase trata ambos
 
-def pagar_divida_fixa(item):
-    item["status"] = "Pago"
-    item["data_pagamento"] = datetime.datetime.now().isoformat()
-    return update_document("financeiro", item["id"], item)
-
-def delete_divida_fixa(id_doc):
-    return delete_document("financeiro", id_doc)
-
-# ✅ NOVO: editar dívida
-def update_divida_fixa(id_doc, dados):
-    return update_document("financeiro", id_doc, dados)
-
-def add_movimentacao(tipo, valor, descricao, origem="Manual"):
-    dados = {
-        "tipo": tipo,
-        "valor": float(str(valor).replace(",", ".")),
-        "descricao": descricao,
-        "origem": origem,
-        "data": datetime.datetime.now().isoformat(),
-        "status": "Pago" if tipo == "Saida" else "Recebido"
-    }
-    return add_document("financeiro", dados)
-
-# ✅ NOVO: editar extrato
-def update_movimentacao(id_doc, dados):
-    return update_document("financeiro", id_doc, dados)
-
-# ✅ NOVO: apagar extrato
-def delete_movimentacao(id_doc):
-    return delete_document("financeiro", id_doc)
+def delete_document(collection, doc_id):
+    if verificar_conexao():
+        try:
+            requests.delete(f"{BASE_URL}/{collection}/{doc_id}", timeout=5)
+        except:
+            pass
+    # Remove do local também
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute(f"DELETE FROM {collection} WHERE id = ?", (doc_id,))
+    conn.commit()
+    conn.close()
+    return True
 
 # =========================================================
-# ===================== ORÇAMENTOS ========================
+# ================= FUNÇÕES ESPECÍFICAS ===================
 # =========================================================
 
 def get_orcamentos_lista():
-    return get_collection("orcamentos")
+    # Ordena por data (o SQLite traz na ordem de inserção por padrão)
+    lista = get_collection("orcamentos")
+    return sorted(lista, key=lambda x: x.get('data', ''), reverse=True)
 
-def get_orcamentos_finalizados_nao_pagos():
-    todos = get_collection("orcamentos")
-    return [o for o in todos if o.get("status") == "Finalizado" and not o.get("pago")]
-
-def receber_orcamento(item):
-    item["pago"] = True
-    item["status_pagamento"] = "Pago"
-    item["status"] = "Finalizado" # Garante que o status mude no card
-    update_document("orcamentos", item["id"], item)
+def sync_offline_data():
+    """Varre o banco local e envia o que foi feito offline para o Firebase"""
+    if not verificar_conexao(): return
     
-    # O valor deve vir do total_geral calculado na nova calculadora
-    valor_total = float(str(item.get("total_geral", 0)).replace(",", "."))
+    tabelas = ["estoque", "financeiro", "orcamentos", "movimentacoes"]
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
     
-    return add_movimentacao(
-        "Entrada",
-        valor_total,
-        f"Receb. Orç: {item.get('cliente_nome')}",
-        "Vendas"
-    )
+    for tab in tabelas:
+        cursor.execute(f"SELECT id, dados_json FROM {tab} WHERE pendente = 1")
+        pendentes = cursor.fetchall()
+        for p_id, p_json in pendentes:
+            dados = json.loads(p_json)
+            # Tenta enviar
+            try:
+                payload = _converter_para_firestore(dados)
+                res = requests.patch(f"{BASE_URL}/{tab}/{p_id}", json=payload, timeout=5)
+                if res.status_code == 200:
+                    cursor.execute(f"UPDATE {tab} SET pendente = 0 WHERE id = ?", (p_id,))
+            except:
+                continue
+    conn.commit()
+    conn.close()
 
-# =========================================================
-# =================== USUÁRIOS / LOGIN ====================
-# =========================================================
+# Re-implementando as funções que o Dashboard e Financeiro usam
+def get_collection_count(collection):
+    return len(get_collection(collection))
 
 def get_user_doc_by_email(email):
     users = get_collection("users")
     for u in users:
-        if u.get("email") == email:
-            return u
+        if u.get("email") == email: return u
     return None
 
 def verify_user_password(email, password):
@@ -224,16 +217,13 @@ def verify_user_password(email, password):
         return senha_db == str(password)
     return False
 
-def initialize_firebase():
-    return True
-
-def get_collection_count(collection):
-    try:
-        return len(get_collection(collection))
-    except:
-        return 0
-
-def get_orcamentos_by_status(status):
-    """Filtra orçamentos pelo status para a tela de produção"""
-    todos = get_collection("orcamentos") # Busca todos via API REST
-    return [o for o in todos if o.get("status") == status]
+# Mantendo compatibilidade com as funções financeiras
+def add_movimentacao(tipo, valor, descricao, categoria):
+    nova = {
+        "tipo": tipo,
+        "valor": valor,
+        "descricao": descricao,
+        "categoria": categoria,
+        "data": datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    }
+    return add_document("movimentacoes", nova)

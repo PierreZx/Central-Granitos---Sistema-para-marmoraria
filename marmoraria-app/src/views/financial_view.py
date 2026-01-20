@@ -1,3 +1,4 @@
+# src/views/financial_view.py
 import flet as ft
 from datetime import datetime, date
 from src.views.layout_base import LayoutBase
@@ -8,15 +9,20 @@ from src.config import (
 )
 from src.services import firebase_service
 
-# ===================== UTIL =====================
+# ===================== UTILITÁRIOS DE APOIO =====================
 
-def parse_date_br(data):
+def parse_date_flexivel(data_str):
+    """Garante que o app não trave ao ler datas em diferentes formatos (ISO ou BR)."""
+    if not data_str: return None
     try:
-        return datetime.strptime(data, "%d/%m/%Y").date()
+        if "T" in data_str:
+            return datetime.fromisoformat(data_str.split('.')[0]).date()
+        return datetime.strptime(data_str.split(' ')[0], "%d/%m/%Y").date()
     except:
         return None
 
-def formatar_data_seguro(e):
+def formatar_data_input(e):
+    """Máscara visual para o usuário digitar a data corretamente no celular."""
     nums = "".join(filter(str.isdigit, e.control.value))[:8]
     if len(nums) >= 5:
         e.control.value = f"{nums[:2]}/{nums[2:4]}/{nums[4:]}"
@@ -26,291 +32,267 @@ def formatar_data_seguro(e):
         e.control.value = nums
     e.control.update()
 
-# ===================== VIEW =====================
+# ===================== VIEW FINANCEIRA =====================
 
 def FinancialView(page: ft.Page):
+    # Container que receberá todo o conteúdo dinâmico
+    conteudo_scrollable = ft.Column(expand=True, spacing=20, scroll=ft.ScrollMode.AUTO)
 
-    conteudo = ft.Column(expand=True, spacing=20, scroll=ft.ScrollMode.AUTO)
-
-    # ===================== CAMPOS =====================
-    txt_nome = ft.TextField(label="Nome", filled=True)
-    txt_valor = ft.TextField(
-        label="Valor",
-        prefix_text="R$ ",
-        keyboard_type=ft.KeyboardType.TEXT,
-        input_filter=ft.InputFilter(regex_string=r"[0-9,.]"),
-        filled=True
-    )
-    txt_data = ft.TextField(
-        label="Vencimento",
-        hint_text="DD/MM/AAAA",
-        on_change=formatar_data_seguro,
-        filled=True
-    )
-    txt_parcelas = ft.TextField(
-        label="Parcelas",
-        value="1",
-        keyboard_type=ft.KeyboardType.NUMBER,
-        filled=True
-    )
-    chk_fixa = ft.Checkbox(label="Conta fixa mensal")
-
-    txt_pesquisa = ft.TextField(
-        label="Pesquisar (nome, data ou valor)",
-        prefix_icon=ft.icons.SEARCH,
-        on_change=lambda e: carregar()
-    )
-
-    divida_editando = None
-    extrato_editando = None
-
-    # ===================== LÓGICA =====================
-
-    def alternar_fixa(e=None):
-        if chk_fixa.value:
-            txt_parcelas.disabled = True
-            txt_data.label = "Dia do vencimento mensal (1 a 28)"
-            txt_data.value = ""
-        else:
-            txt_parcelas.disabled = False
-            txt_data.label = "Vencimento"
-            txt_data.value = ""
-        page.update()
-
-    chk_fixa.on_change = alternar_fixa
-
-    # ===================== SALVAR =====================
-
-    def salvar_divida(e):
-        nonlocal divida_editando
-
-        dados = {
-            "nome": txt_nome.value,
-            "valor": txt_valor.value.replace(",", "."),
-            "permanente": chk_fixa.value,
-            "parcelas_totais": 1 if chk_fixa.value else int(txt_parcelas.value or 1),
-            "status": "Pendente"
-        }
-
-        if chk_fixa.value:
-            dados["dia_vencimento"] = int(txt_data.value)
-            dados["data_vencimento"] = txt_data.value
-        else:
-            dados["data_vencimento"] = txt_data.value
-
-        if divida_editando:
-            firebase_service.update_divida_fixa(divida_editando["id"], dados)
-        else:
-            firebase_service.add_divida_fixa(dados)
-
-        fechar_dialogo()
-        carregar()
-
-    # ===================== MODAIS =====================
-
-    def abrir_modal_divida(div=None):
-        nonlocal divida_editando
-        divida_editando = div
-
-        txt_nome.value = div.get("nome", "") if div else ""
-        txt_valor.value = str(div.get("valor", "")) if div else ""
-        txt_data.value = div.get("data_vencimento", "") if div else ""
-        txt_parcelas.value = str(div.get("parcelas_totais", 1)) if div else "1"
-        chk_fixa.value = div.get("permanente", False) if div else False
-
-        alternar_fixa()
-
-        page.dialog = ft.AlertDialog(
-            title=ft.Text("Editar Conta" if div else "Nova Conta"),
-            content=ft.Column(
-                [txt_nome, txt_valor, txt_data, txt_parcelas, chk_fixa],
-                tight=True
-            ),
-            actions=[
-                ft.TextButton("Cancelar", on_click=lambda e: fechar_dialogo()),
-                ft.ElevatedButton("Salvar", on_click=salvar_divida)
-            ]
-        )
-        page.dialog.open = True
-        page.update()
-
-    def abrir_confirmacao(texto, acao):
-        page.dialog = ft.AlertDialog(
-            title=ft.Text("Confirmação"),
-            content=ft.Text(texto),
-            actions=[
-                ft.TextButton("Não", on_click=lambda e: fechar_dialogo()),
-                ft.ElevatedButton("Sim", on_click=lambda e: (acao(), fechar_dialogo(), carregar()))
-            ]
-        )
-        page.dialog.open = True
-        page.update()
-
-    def fechar_dialogo():
-        page.dialog.open = False
-        page.update()
-
-    # ===================== ITENS =====================
-
-    def criar_item_divida(div):
-        venc = parse_date_br(div.get("data_vencimento", ""))
-        vencida = venc and venc < date.today() and div.get("status") == "Pendente"
-
-        return ft.Container(
-            padding=10,
-            bgcolor=COLOR_WHITE,
-            border_radius=10,
-            shadow=SHADOW_MD,
-            content=ft.Row([
-                ft.Icon(ft.icons.CIRCLE, size=10, color=COLOR_ERROR if vencida else COLOR_SUCCESS),
-                ft.Column([
-                    ft.Text(div.get("nome"), weight="bold"),
-                    ft.Text(div.get("data_vencimento", ""), size=12)
-                ], expand=True),
-                ft.Checkbox(
-                    label="Já pagou?",
-                    visible=vencida,
-                    on_change=lambda e: firebase_service.pagar_divida_fixa(div)
-                ),
-                ft.IconButton(ft.icons.EDIT, on_click=lambda e: abrir_modal_divida(div)),
-                ft.IconButton(
-                    ft.icons.DELETE,
-                    on_click=lambda e: abrir_confirmacao(
-                        "Deseja excluir esta dívida?",
-                        lambda: firebase_service.delete_divida_fixa(div["id"])
-                    )
+    def carregar_dados_financeiros():
+        conteudo_scrollable.controls.clear()
+        
+        try:
+            # Puxa os dados que o firebase_service já sincronizou ou buscou no local
+            dividas = firebase_service.get_collection("financeiro")
+            extrato = firebase_service.get_collection("movimentacoes")
+            orcamentos = firebase_service.get_collection("orcamentos")
+        except Exception as e:
+            conteudo_scrollable.controls.append(
+                ft.Container(
+                    content=ft.Text(f"Erro de Sincronização: {e}", color=COLOR_ERROR),
+                    padding=20, bgcolor=f"{COLOR_ERROR}10", border_radius=10
                 )
+            )
+            page.update()
+            return
+
+        hoje = date.today()
+        
+        # Filtragem de Recebíveis: Orçamentos com status PENDENTE (Produção)
+        receber = [o for o in orcamentos if o.get("status") == "PENDENTE"]
+        
+        # Cálculos Matemáticos dos KPIs
+        total_pagar = sum(float(d.get("valor", 0)) for d in dividas if not d.get("pago", False))
+        total_receber = sum(float(r.get("total_geral", 0)) for r in receber)
+        
+        saldo_mes = 0.0
+        for m in extrato:
+            dt_mov = parse_date_flexivel(m.get("data"))
+            if dt_mov and dt_mov.month == hoje.month and dt_mov.year == hoje.year:
+                valor = float(m.get("valor", 0))
+                if m.get("tipo") == "Entrada":
+                    saldo_mes += valor
+                else:
+                    saldo_mes -= valor
+
+        # --- SEÇÃO 1: CARDS DE RESUMO (KPIs) ---
+        conteudo_scrollable.controls.append(
+            ft.ResponsiveRow([
+                ft.Container(
+                    col={"xs": 12, "md": 4},
+                    padding=20, bgcolor=COLOR_WHITE, border_radius=BORDER_RADIUS_LG, shadow=SHADOW_MD,
+                    content=ft.Row([
+                        ft.Icon(ft.icons.MONEY_OFF_ROUNDED, color=COLOR_ERROR, size=30),
+                        ft.Column([
+                            ft.Text("A PAGAR", color="grey", size=12, weight="bold"),
+                            ft.Text(f"R$ {total_pagar:,.2f}", size=20, weight="bold", color=COLOR_ERROR)
+                        ], spacing=2)
+                    ])
+                ),
+                ft.Container(
+                    col={"xs": 12, "md": 4},
+                    padding=20, bgcolor=COLOR_WHITE, border_radius=BORDER_RADIUS_LG, shadow=SHADOW_MD,
+                    content=ft.Row([
+                        ft.Icon(ft.icons.MONEY_ROUNDED, color=COLOR_SUCCESS, size=30),
+                        ft.Column([
+                            ft.Text("A RECEBER", color="grey", size=12, weight="bold"),
+                            ft.Text(f"R$ {total_receber:,.2f}", size=20, weight="bold", color=COLOR_SUCCESS)
+                        ], spacing=2)
+                    ])
+                ),
+                ft.Container(
+                    col={"xs": 12, "md": 4},
+                    padding=20, bgcolor=COLOR_WHITE, border_radius=BORDER_RADIUS_LG, shadow=SHADOW_MD,
+                    content=ft.Row([
+                        ft.Icon(ft.icons.ACCOUNT_BALANCE_WALLET_ROUNDED, color=COLOR_PRIMARY, size=30),
+                        ft.Column([
+                            ft.Text("SALDO MÊS", color="grey", size=12, weight="bold"),
+                            ft.Text(f"R$ {saldo_mes:,.2f}", size=20, weight="bold", color=COLOR_PRIMARY)
+                        ], spacing=2)
+                    ])
+                ),
+            ], spacing=20)
+        )
+
+        # --- SEÇÃO 2: ABAS DE GESTÃO DETALHADA ---
+        tabs_financeiras = ft.Tabs(
+            selected_index=0,
+            animation_duration=300,
+            tabs=[
+                # ABA: CONTAS A PAGAR
+                ft.Tab(
+                    text="PAGAR",
+                    icon=ft.icons.PAYMENT_ROUNDED,
+                    content=ft.Column([
+                        ft.Container(height=10),
+                        ft.ElevatedButton(
+                            "Cadastrar Nova Conta", 
+                            icon=ft.icons.ADD_ROUNDED, 
+                            bgcolor=COLOR_PRIMARY, 
+                            color=COLOR_WHITE,
+                            height=50,
+                            on_click=lambda _: abrir_modal_cadastro_conta()
+                        ),
+                        ft.Divider(height=20),
+                        ft.Column([
+                            criar_item_divida(d) for d in dividas if not d.get("pago", False)
+                        ], spacing=10)
+                    ], scroll=ft.ScrollMode.AUTO, padding=10)
+                ),
+                # ABA: VALORES A RECEBER (ORÇAMENTOS)
+                ft.Tab(
+                    text="RECEBER",
+                    icon=ft.icons.INCOMING_MAIL_ROUNDED,
+                    content=ft.Column([
+                        ft.Container(height=10),
+                        ft.Text("Valores vinculados a orçamentos em produção", size=12, color="grey", italic=True),
+                        ft.Column([
+                            criar_item_receber(r) for r in receber
+                        ], spacing=10)
+                    ], scroll=ft.ScrollMode.AUTO, padding=10)
+                ),
+                # ABA: HISTÓRICO / EXTRATO
+                ft.Tab(
+                    text="EXTRATO",
+                    icon=ft.icons.RECEIPT_LONG_ROUNDED,
+                    content=ft.Column([
+                        ft.Container(height=10),
+                        ft.Column([
+                            criar_item_extrato(m) for m in sorted(extrato, key=lambda x: x.get('data',''), reverse=True)
+                        ], spacing=5)
+                    ], scroll=ft.ScrollMode.AUTO, padding=10)
+                )
+            ],
+            expand=True
+        )
+        conteudo_scrollable.controls.append(tabs_financeiras)
+        page.update()
+
+    # ===================== COMPONENTES DE LINHA (CARDS) =====================
+
+    def criar_item_divida(d):
+        return ft.Container(
+            padding=15, bgcolor=COLOR_WHITE, border_radius=10, border=ft.border.all(1, "grey100"),
+            content=ft.Row([
+                ft.Column([
+                    ft.Text(d.get("descricao", "Conta"), weight="bold", color=COLOR_TEXT, size=15),
+                    ft.Text(f"Vencimento: {d.get('vencimento', 'N/A')}", size=12, color="grey"),
+                ], expand=True),
+                ft.Column([
+                    ft.Text(f"R$ {float(d.get('valor', 0)):,.2f}", color=COLOR_ERROR, weight="bold", size=15),
+                    ft.TextButton(
+                        "BAIXAR", 
+                        icon=ft.icons.CHECK_CIRCLE_OUTLINE, 
+                        font_color=COLOR_SUCCESS,
+                        on_click=lambda _: confirmar_baixa(d)
+                    )
+                ], horizontal_alignment="end")
+            ])
+        )
+
+    def criar_item_receber(r):
+        return ft.Container(
+            padding=15, bgcolor=COLOR_WHITE, border_radius=10, border=ft.border.all(1, "grey100"),
+            on_click=lambda _: page.go("/orcamentos"),
+            content=ft.Row([
+                ft.Column([
+                    ft.Text(r.get("cliente_nome", "Cliente"), weight="bold", color=COLOR_TEXT),
+                    ft.Text(f"ID: {r.get('id', '')[-8:]}", size=11, color="grey"),
+                ], expand=True),
+                ft.Text(f"R$ {float(r.get('total_geral', 0)):,.2f}", color=COLOR_SUCCESS, weight="bold", size=15),
+                ft.Icon(ft.icons.ARROW_FORWARD_IOS_ROUNDED, size=14, color="grey400")
             ])
         )
 
     def criar_item_extrato(m):
+        is_entrada = m.get("tipo") == "Entrada"
         return ft.Container(
-            padding=10,
-            border=ft.border.only(bottom=ft.border.BorderSide(1, "#eee")),
+            padding=12, border=ft.border.only(bottom=ft.BorderSide(1, "grey50")),
             content=ft.Row([
-                ft.Icon(
-                    ft.icons.CIRCLE,
-                    size=10,
-                    color=COLOR_SUCCESS if m.get("tipo") == "Entrada" else COLOR_ERROR
+                ft.Container(
+                    width=35, height=35, border_radius=20,
+                    bgcolor=f"{COLOR_SUCCESS if is_entrada else COLOR_ERROR}15",
+                    content=ft.Icon(
+                        ft.icons.ADD_ROUNDED if is_entrada else ft.icons.REMOVE_ROUNDED, 
+                        color=COLOR_SUCCESS if is_entrada else COLOR_ERROR, size=20
+                    )
                 ),
                 ft.Column([
-                    ft.Text(m.get("descricao", ""), weight="bold"),
-                    ft.Text(m.get("data", "")[:10], size=12)
+                    ft.Text(m.get("descricao", "Movimentação"), size=14, weight="w500", color=COLOR_TEXT),
+                    ft.Text(m.get("data", "")[:10], size=11, color="grey"),
                 ], expand=True),
-                ft.Text(f"R$ {float(m.get('valor',0)):.2f}"),
-                ft.IconButton(
-                    ft.icons.EDIT,
-                    on_click=lambda e: editar_extrato(m)
-                ),
-                ft.IconButton(
-                    ft.icons.DELETE,
-                    on_click=lambda e: abrir_confirmacao(
-                        "Excluir movimentação?",
-                        lambda: firebase_service.delete_movimentacao(m["id"])
-                    )
+                ft.Text(
+                    f"{'+' if is_entrada else '-'} R$ {float(m.get('valor', 0)):,.2f}", 
+                    color=COLOR_SUCCESS if is_entrada else COLOR_ERROR, weight="bold"
                 )
             ])
         )
 
-    # ===================== EXTRATO =====================
+    # ===================== MODAIS E LÓGICA DE AÇÃO =====================
 
-    def editar_extrato(m):
-        nonlocal extrato_editando
-        extrato_editando = m
-
-        txt_valor.value = str(m.get("valor"))
-        txt_nome.value = m.get("descricao", "")
-
-        def salvar(e):
-            firebase_service.update_movimentacao(
-                m["id"],
-                {"valor": txt_valor.value, "descricao": txt_nome.value}
+    def confirmar_baixa(d):
+        def realizar_baixa(e):
+            d["pago"] = True
+            # Salva no banco local/nuvem
+            firebase_service.update_document("financeiro", d["id"], d)
+            # Gera o registro no extrato automaticamente
+            firebase_service.add_movimentacao(
+                tipo="Saída",
+                valor=float(d.get("valor", 0)),
+                descricao=f"PAGTO EFETUADO: {d.get('descricao')}",
+                categoria="Despesas"
             )
-            fechar_dialogo()
-            carregar()
+            page.dialog.open = False
+            carregar_dados_financeiros()
 
         page.dialog = ft.AlertDialog(
-            title=ft.Text("Editar Movimentação"),
-            content=ft.Column([txt_valor, txt_nome], tight=True),
-            actions=[ft.ElevatedButton("Salvar", on_click=salvar)]
+            title=ft.Text("Confirmar Pagamento?"),
+            content=ft.Text(f"Deseja marcar '{d.get('descricao')}' como paga?"),
+            actions=[
+                ft.TextButton("Não", on_click=lambda _: setattr(page.dialog, "open", False) or page.update()),
+                ft.ElevatedButton("Sim, Baixar", bgcolor=COLOR_SUCCESS, color=COLOR_WHITE, on_click=realizar_baixa)
+            ]
         )
         page.dialog.open = True
         page.update()
 
-    # ===================== CARREGAR =====================
-
-    def carregar():
-        conteudo.controls.clear()
-
-        saldo = firebase_service.get_saldo_caixa()
-        dividas = firebase_service.get_dividas_pendentes()
-        receber = firebase_service.get_orcamentos_finalizados_nao_pagos()
-        extrato = firebase_service.get_extrato_lista()
-
-        termo = txt_pesquisa.value.lower() if txt_pesquisa.value else ""
-
-        def filtrar(lista):
-            if not termo:
-                return lista
-            return [
-                i for i in lista
-                if termo in str(i).lower()
-            ]
-
-        # KPIs
-        conteudo.controls.append(
-            ft.ResponsiveRow([
-                criar_kpi("Saldo", saldo, COLOR_PRIMARY),
-                criar_kpi("A Pagar", sum(float(d.get("valor",0)) for d in dividas), COLOR_ERROR),
-                criar_kpi("A Receber", sum(float(r.get("total_geral",0)) for r in receber), COLOR_SUCCESS)
-            ])
+    def abrir_modal_cadastro_conta():
+        desc_input = ft.TextField(label="Descrição da Conta", border_radius=10, prefix_icon=ft.icons.DESCRIPTION)
+        valor_input = ft.TextField(label="Valor (R$)", border_radius=10, prefix_icon=ft.icons.ATTACH_MONEY, keyboard_type=ft.KeyboardType.NUMBER)
+        venc_input = ft.TextField(
+            label="Vencimento (DD/MM/AAAA)", 
+            border_radius=10, 
+            prefix_icon=ft.icons.CALENDAR_MONTH,
+            on_change=formatar_data_input
         )
 
-        tabs = ft.Tabs(
-            expand=True,
-            tabs=[
-                ft.Tab(
-                    text="PAGAR",
-                    content=ft.Column([
-                        txt_pesquisa,
-                        ft.ElevatedButton("Nova Conta", on_click=lambda e: abrir_modal_divida()),
-                        *[criar_item_divida(d) for d in sorted(filtrar(dividas), key=lambda x: not x.get("permanente", False))]
-                    ], scroll=ft.ScrollMode.AUTO)
-                ),
-                ft.Tab(
-                    text="RECEBER",
-                    content=ft.Column([
-                        *[
-                            ft.Text(f"{r.get('cliente_nome')} - R$ {r.get('total_geral')}")
-                            for r in filtrar(receber)
-                        ]
-                    ], scroll=ft.ScrollMode.AUTO)
-                ),
-                ft.Tab(
-                    text="EXTRATO",
-                    content=ft.Column(
-                        [criar_item_extrato(m) for m in filtrar(extrato)],
-                        scroll=ft.ScrollMode.AUTO
-                    )
-                )
+        def salvar_conta(e):
+            if not desc_input.value or not valor_input.value:
+                return
+            
+            nova_conta = {
+                "descricao": desc_input.value.upper(),
+                "valor": float(valor_input.value.replace(",", ".")),
+                "vencimento": venc_input.value,
+                "pago": False,
+                "data_criacao": datetime.now().isoformat()
+            }
+            firebase_service.add_document("financeiro", nova_conta)
+            page.dialog.open = False
+            carregar_dados_financeiros()
+
+        page.dialog = ft.AlertDialog(
+            title=ft.Text("Nova Conta a Pagar"),
+            content=ft.Column([desc_input, valor_input, venc_input], tight=True, spacing=15),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda _: setattr(page.dialog, "open", False) or page.update()),
+                ft.ElevatedButton("Salvar Conta", bgcolor=COLOR_PRIMARY, color=COLOR_WHITE, on_click=salvar_conta)
             ]
         )
-
-        conteudo.controls.append(tabs)
+        page.dialog.open = True
         page.update()
 
-    def criar_kpi(titulo, valor, cor):
-        return ft.Container(
-            col={"xs":12,"md":4},
-            padding=20,
-            bgcolor=COLOR_WHITE,
-            border_radius=BORDER_RADIUS_LG,
-            shadow=SHADOW_MD,
-            content=ft.Column([
-                ft.Text(titulo, color="grey"),
-                ft.Text(f"R$ {valor:,.2f}", size=22, weight="bold", color=cor)
-            ])
-        )
+    # Inicialização da View
+    carregar_dados_financeiros()
 
-    carregar()
-    return LayoutBase(page, conteudo, titulo="Financeiro")
+    return LayoutBase(page, conteudo_scrollable, titulo="Financeiro Central")

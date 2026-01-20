@@ -3,7 +3,6 @@
 import flet as ft
 import os
 from src.views.layout_base import LayoutBase
-# A calculadora agora é um componente único e completo
 from src.views.components.budget_calculator import BudgetCalculator
 from src.config import (
     COLOR_PRIMARY, COLOR_WHITE, COLOR_TEXT,
@@ -24,6 +23,7 @@ def BudgetView(page: ft.Page):
 
     def carregar_lista_orcamentos():
         grid.controls.clear()
+        # Busca a lista que agora vem do SQLite local ou Firebase
         lista = firebase_service.get_orcamentos_lista()
 
         grid.controls.append(
@@ -55,23 +55,32 @@ def BudgetView(page: ft.Page):
         page.update()
 
     def disparar_geracao_pdf(orcamento_data):
-        # Feedback visual
-        snack = ft.SnackBar(ft.Text("Gerando PDF..."))
-        page.snack_bar = snack
-        snack.open = True
+        # Feedback visual para o usuário no celular
+        page.snack_bar = ft.SnackBar(
+            content=ft.Row([
+                ft.ProgressRing(size=20, stroke_width=2, color=COLOR_WHITE),
+                ft.Text(" Gerando PDF profissional...")
+            ]),
+            bgcolor=COLOR_PRIMARY
+        )
+        page.snack_bar.open = True
         page.update()
         
-        # 1. Gera o PDF em Base64
+        # 1. Gera o PDF em Base64 (sem salvar arquivo no disco do Android)
         pdf_b64 = gerar_pdf_orcamento(orcamento_data)
         
         if pdf_b64:
-            # 2. Comando que abre o PDF direto no navegador do iPhone
+            # 2. Abre o PDF usando o Data URI. No Android/APK, isso dispara o visualizador padrão.
             url = f"data:application/pdf;base64,{pdf_b64}"
             page.launch_url(url)
+            
+            page.snack_bar.open = False # Fecha o aviso de "gerando"
         else:
-            snack.content = ft.Text("Erro ao gerar dados do PDF.")
-            snack.bgcolor = ft.colors.RED
-            page.update()
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text("Erro ao gerar PDF. Verifique os dados."),
+                bgcolor=COLOR_ERROR
+            )
+        page.update()
 
     def criar_card_cliente(o):
         status = o.get("status", "Em aberto")
@@ -98,10 +107,12 @@ def BudgetView(page: ft.Page):
                 ft.Text(f"Data: {o.get('data','')[:10]}", size=11, color="grey"),
                 ft.Divider(height=20),
                 ft.Row([
-                    ft.IconButton(ft.icons.EDIT_NOTE_ROUNDED, on_click=lambda _: gerenciar_itens_orcamento(o)),
+                    ft.IconButton(ft.icons.EDIT_NOTE_ROUNDED, tooltip="Editar Itens", on_click=lambda _: gerenciar_itens_orcamento(o)),
                     ft.IconButton(
                         ft.icons.PICTURE_AS_PDF_ROUNDED, 
-                        on_click=lambda _: disparar_geracao_pdf(o) # Agora chama a lógica completa
+                        tooltip="Gerar PDF",
+                        icon_color=ft.colors.RED_700,
+                        on_click=lambda _: disparar_geracao_pdf(o) # Chamada corrigida
                     ),
                     ft.IconButton(ft.icons.DELETE_FOREVER_ROUNDED, icon_color=COLOR_ERROR, on_click=lambda _: confirmar_exclusao(o))
                 ], alignment="end")
@@ -124,6 +135,7 @@ def BudgetView(page: ft.Page):
                 "total_geral": 0.0,
                 "data": datetime.datetime.now().isoformat()
             }
+            # Agora salva usando a lógica híbrida SQLite/Firebase
             firebase_service.add_document("orcamentos", novo)
             fechar_dialogo()
             carregar_lista_orcamentos()
@@ -149,10 +161,11 @@ def BudgetView(page: ft.Page):
             o["status"] = "PENDENTE" 
             o["data_producao"] = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
             
+            # Atualiza no cache local e tenta subir para o Firebase
             if firebase_service.update_document("orcamentos", o["id"], o):
                 page.snack_bar = ft.SnackBar(ft.Text("Orçamento enviado para a produção!"), bgcolor=COLOR_SUCCESS)
                 page.snack_bar.open = True
-                carregar_lista_orcamentos() # Volta para a lista principal
+                carregar_lista_orcamentos()
             page.update()
 
         def salvar_e_recalcular():
@@ -166,7 +179,6 @@ def BudgetView(page: ft.Page):
                 salvar_e_recalcular()
                 gerenciar_itens_orcamento(o)
 
-            # ✅ CORREÇÃO: Passa a página e as funções de retorno corretamente
             main_container.content = BudgetCalculator(
                 page=page,
                 on_save_item=callback_salvar,
@@ -181,7 +193,6 @@ def BudgetView(page: ft.Page):
                 salvar_e_recalcular()
                 gerenciar_itens_orcamento(o)
 
-            # ✅ CORREÇÃO: Passa o 'item' para edição
             main_container.content = BudgetCalculator(
                 page=page,
                 item=item,
@@ -195,24 +206,29 @@ def BudgetView(page: ft.Page):
             salvar_e_recalcular()
             gerenciar_itens_orcamento(o)
 
-        cards = [
-            ft.Container(
-                padding=15, bgcolor=COLOR_WHITE, border_radius=BORDER_RADIUS_LG,
-                border=ft.border.all(1, "grey200"),
-                content=ft.Row([
-                    ft.Column([
-                        ft.Text(f"{i.get('material')} - {i.get('ambiente')}", weight="bold"),
-                        # ✅ CORREÇÃO: Acessa os dados da P1 para mostrar na lista
-                        ft.Text(f"Qtd: {i.get('quantidade', 1)} | Peça Principal: {i.get('pecas', {}).get('p1', {}).get('l')}m x {i.get('pecas', {}).get('p1', {}).get('p')}m"),
-                        ft.Text(f"R$ {float(i.get('preco_total', 0)):,.2f}", color=COLOR_PRIMARY, weight="bold")
-                    ], expand=True),
-                    ft.Row([
-                        ft.IconButton(ft.icons.EDIT, on_click=lambda e, it=i: editar_pedra_existente(it)),
-                        ft.IconButton(ft.icons.DELETE, icon_color=COLOR_ERROR, on_click=lambda e, it=i: remover_pedra(it))
+        cards = []
+        for i in o.get("itens", []):
+            pecas_info = i.get('pecas', {})
+            # Pega a primeira peça disponível para mostrar no resumo
+            p1 = pecas_info.get('p1', {}) or next(iter(pecas_info.values()), {}) if pecas_info else {}
+            
+            cards.append(
+                ft.Container(
+                    padding=15, bgcolor=COLOR_WHITE, border_radius=BORDER_RADIUS_LG,
+                    border=ft.border.all(1, "grey200"),
+                    content=ft.Row([
+                        ft.Column([
+                            ft.Text(f"{i.get('material')} - {i.get('ambiente')}", weight="bold"),
+                            ft.Text(f"Qtd: {i.get('quantidade', 1)} | Medida: {p1.get('l','0')}m x {p1.get('p','0')}m"),
+                            ft.Text(f"R$ {float(i.get('preco_total', 0)):,.2f}", color=COLOR_PRIMARY, weight="bold")
+                        ], expand=True),
+                        ft.Row([
+                            ft.IconButton(ft.icons.EDIT, on_click=lambda e, it=i: editar_pedra_existente(it)),
+                            ft.IconButton(ft.icons.DELETE, icon_color=COLOR_ERROR, on_click=lambda e, it=i: remover_pedra(it))
+                        ])
                     ])
-                ])
-            ) for i in o.get("itens", [])
-        ]
+                )
+            )
 
         return ft.Column([
             ft.Row([

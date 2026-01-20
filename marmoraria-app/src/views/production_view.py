@@ -1,3 +1,4 @@
+# src/views/production_view.py
 import flet as ft
 from src.views.layout_base import LayoutBase
 from src.config import (
@@ -7,208 +8,125 @@ from src.config import (
 from src.services import firebase_service
 
 def ProductionView(page: ft.Page):
-    # Container principal que será atualizado pelas Tabs
+    # Container dinâmico com animação para troca de abas
     conteudo_dinamico = ft.Container(expand=True, animate_opacity=300)
 
     def desenhar_explosao(cv_obj, item):
+        """Renderiza o desenho técnico adaptado para a largura do telemóvel."""
         cv_obj.shapes.clear()
         pecas = item.get('pecas', {})
-        furos = item.get('furos', {}) # Pegando os furos salvos
         if not pecas: return
 
-        # 1. Medidas e Escala
+        # Cálculo de Escala para Mobile
+        largura_disponivel = page.width - 100 # Margem de segurança
         w1 = float(pecas.get('p1', {}).get('l', 0))
-        h1 = float(pecas.get('p1', {}).get('p', 0))
         w2 = float(pecas.get('p2', {}).get('l', 0)) if 'p2' in pecas else 0
         w3 = float(pecas.get('p3', {}).get('l', 0)) if 'p3' in pecas else 0
+        total_real = w1 + w2 + w3
         
-        total_w = w1 + w2 + w3
-        max_h = max(h1, 
-                    float(pecas.get('p2', {}).get('p', 0)) if 'p2' in pecas else 0,
-                    float(pecas.get('p3', {}).get('p', 0)) if 'p3' in pecas else 0)
+        # Define a escala baseada na largura da tela
+        escala = (largura_disponivel / total_real) if total_real > 0 else 1
+        if escala > 100: escala = 80 # Limite para peças pequenas não ficarem gigantes
 
-        W_CANVAS, H_CANVAS = 300, 150
-        scale = min((W_CANVAS - 60) / max(0.1, total_w), (H_CANVAS - 40) / max(0.1, max_h))
-
-        # Centralização base
-        start_x = (W_CANVAS - (total_w * scale)) / 2
-        p1_y = (H_CANVAS - (h1 * scale)) / 2
-
-        def draw_rect(w, h, x, y, nome, is_p1=False):
-            wp, hp = w * scale, h * scale
+        def draw_rect(x, y, w, h, label):
             # Desenha a pedra
-            cv_obj.shapes.append(ft.canvas.Rect(x, y, wp, hp, border_radius=2,
-                paint=ft.Paint(color=COLOR_PRIMARY, style=ft.PaintingStyle.STROKE, stroke_width=2)))
-            
-            # Se for P1 e tiver furos, desenha os furos dentro dela
-            if is_p1:
-                if furos.get('bojo', {}).get('check'):
-                    # Desenha um círculo/retalho simbólico do bojo centralizado na P1
-                    cv_obj.shapes.append(ft.canvas.Rect(x + (wp*0.3), y + (hp*0.2), wp*0.4, hp*0.6, border_radius=10,
-                        paint=ft.Paint(color=ft.colors.RED_400, style=ft.PaintingStyle.STROKE, stroke_width=1)))
-                    cv_obj.shapes.append(ft.canvas.Text(x + (wp*0.35), y + (hp*0.4), "BOJO", style=ft.TextStyle(size=8, color=ft.colors.RED_400)))
-                
-                if furos.get('cooktop', {}).get('check'):
-                    # Desenha um retângulo do cooktop
-                    cv_obj.shapes.append(ft.canvas.Rect(x + (wp*0.6), y + (hp*0.2), wp*0.3, hp*0.5,
-                        paint=ft.Paint(color=ft.colors.BLUE_400, style=ft.PaintingStyle.STROKE, stroke_width=1)))
-                    cv_obj.shapes.append(ft.canvas.Text(x + (wp*0.62), y + (hp*0.4), "COOK", style=ft.TextStyle(size=7, color=ft.colors.BLUE_400)))
-
+            cv_obj.shapes.append(ft.cv.Rect(x, y, w * escala, h * escala, 5, 
+                paint=ft.Paint(style=ft.PaintingStyle.STROKE, color=COLOR_PRIMARY, stroke_width=2)))
             # Texto da medida
-            cv_obj.shapes.append(ft.canvas.Text(x + 2, y - 15, f"{nome}: {w}x{h}", 
-                style=ft.TextStyle(size=9, weight="bold", color=COLOR_TEXT)))
+            cv_obj.shapes.append(ft.cv.Text(x + 5, y + 15, f"{label} ({w}x{h})", 
+                ft.TextStyle(size=10, color=COLOR_TEXT, weight="bold")))
 
-        # Lógica de empilhamento horizontal (P2 esquerda -> P1 -> P3 direita)
-        curr_x = start_x
-        # P2 (se for esquerda)
-        if 'p2' in pecas and pecas['p2'].get('lado') == 'esquerda':
-            draw_rect(w2, float(pecas['p2']['p']), curr_x, p1_y, "P2")
-            curr_x += w2 * scale
-        
-        # P1 (Sempre no meio ou início)
-        p1_x = curr_x
-        draw_rect(w1, h1, p1_x, p1_y, "P1", is_p1=True)
-        curr_x += w1 * scale
+        # Renderização sequencial das peças
+        curr_x = 10
+        for p_key in ['p1', 'p2', 'p3']:
+            if p_key in pecas:
+                p = pecas[p_key]
+                draw_rect(curr_x, 30, float(p['l']), float(p['p']), p_key.upper())
+                curr_x += float(p['l']) * escala + 10
 
-        # P2 ou P3 (se forem direita)
-        for p_key in ['p2', 'p3']:
-            if p_key in pecas and pecas[p_key].get('lado') == 'direita':
-                draw_rect(float(pecas[p_key]['l']), float(pecas[p_key]['p']), curr_x, p1_y, p_key.upper())
-                curr_x += float(pecas[p_key]['l']) * scale
+    def atualizar_status(item, novo_status):
+        item["status"] = novo_status
+        firebase_service.update_document("orcamentos", item["id"], item)
+        # Recarrega a aba atual
+        status_atual = "PENDENTE" if novo_status == "PRODUZINDO" else "PRODUZINDO"
+        # Simplificação para o APK: recarrega a vista
+        page.go("/producao")
 
-    def abrir_visualizador(orc):
-        """Abre a Ordem de Serviço detalhada"""
-        itens = orc.get('itens', [])
-        if not isinstance(itens, list): itens = []
+    def render_coluna(titulo, status_filtro, cor_tema):
+        orcamentos = firebase_service.get_collection("orcamentos")
+        # Filtra pela coleção local
+        itens_producao = []
+        for o in orcamentos:
+            if o.get("status") == status_filtro:
+                for idx, item in enumerate(o.get("itens", [])):
+                    item_copy = item.copy()
+                    item_copy["id"] = o["id"] # Vincula ao ID do orçamento para update
+                    item_copy["cliente"] = o.get("cliente_nome", "Cliente")
+                    itens_producao.append(item_copy)
 
-        lista_pecas = ft.Column(spacing=15, scroll=ft.ScrollMode.AUTO, expand=True)
-        
-        for item in itens:
-            if not isinstance(item, dict): continue
+        if not itens_producao:
+            return ft.Column([
+                ft.Container(height=50),
+                ft.Icon(ft.icons.FACT_CHECK_OUTLINED, size=50, color="grey300"),
+                ft.Text(f"Sem itens em {titulo.lower()}", color="grey400")
+            ], horizontal_alignment="center", width=float("inf"))
 
-            cv_peca = ft.canvas.Canvas(width=300, height=150)
+        grid = ft.Column(spacing=15, scroll=ft.ScrollMode.AUTO)
+        for item in itens_producao:
+            canvas = ft.cv.Canvas(height=150, expand=True)
+            desenhar_explosao(canvas, item)
             
-            lista_pecas.controls.append(
-                ft.Container(
-                    padding=15, 
-                    bgcolor=ft.colors.GREY_50, 
-                    border_radius=10,
-                    border=ft.border.all(1, ft.colors.GREY_200),
-                    content=ft.Column([
-                        ft.Row([
-                            ft.Text(item.get('nome', 'Peça'), weight="bold", size=16),
-                            ft.Container(
-                                content=ft.Text(f"{item.get('largura')}x{item.get('profundidade')} cm", size=12, weight="bold"),
-                                bgcolor=f"{COLOR_PRIMARY}20", padding=ft.padding.symmetric(6, 10), border_radius=5
-                            )
-                        ], alignment="spaceBetween"),
-                        ft.Container(cv_peca, alignment=ft.alignment.center, padding=10),
-                        ft.Row([
-                            ft.Icon(ft.icons.ARCHITECTURE, size=16, color=ft.colors.GREY_500),
-                            ft.Text(f"Acabamento: {item.get('acabamento', 'Padrão')}", size=13, color=ft.colors.GREY_700),
-                        ], spacing=5)
-                    ])
-                )
-            )
-            # Chama o desenho após um pequeno delay ou garantir que o objeto existe
-            desenhar_explosao(cv_peca, item)
-
-        dlg = ft.AlertDialog(
-            title=ft.Row([
-                ft.Icon(ft.icons.ASSIGNMENT_SHARP, color=COLOR_PRIMARY),
-                ft.Text(f"O.S. - {orc.get('cliente_nome', 'Cliente')}")
-            ], spacing=10),
-            content=ft.Container(content=lista_pecas, width=450, height=600),
-            actions=[ft.ElevatedButton("Fechar", on_click=lambda e: page.close_dialog(), bgcolor=COLOR_PRIMARY, color=COLOR_WHITE)],
-            actions_alignment="end",
-            shape=ft.RoundedRectangleBorder(radius=15)
-        )
-        page.dialog = dlg
-        dlg.open = True
-        page.update()
-
-    def render_coluna(status_firebase, titulo_coluna, cor_status):
-        """Gera o grid de pedidos para cada status"""
-        orcamentos = firebase_service.get_orcamentos_by_status(status_firebase)
-        grid = ft.ResponsiveRow(spacing=20, run_spacing=20)
-        
-        if not orcamentos:
-            return ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.icons.INBOX_ROUNDED, size=50, color=ft.colors.GREY_300),
-                    ft.Text("Nenhum pedido nesta fase", color=ft.colors.GREY_500)
-                ], horizontal_alignment="center"),
-                padding=50, alignment=ft.alignment.center
+            # Botão de ação baseado no status
+            btn_acao = ft.ElevatedButton(
+                "Iniciar" if status_filtro == "PENDENTE" else "Finalizar",
+                bgcolor=cor_tema, color=COLOR_WHITE,
+                on_click=lambda _, i=item: atualizar_status(i, "PRODUZINDO" if status_filtro == "PENDENTE" else "PRONTO")
             )
 
-        for orc in orcamentos:
             grid.controls.append(
                 ft.Container(
-                    col={"xs": 12, "sm": 6, "md": 4, "xl": 3},
-                    padding=20, 
-                    bgcolor=COLOR_WHITE, 
-                    border_radius=15,
-                    shadow=ft.BoxShadow(blur_radius=15, color="#00000008", offset=ft.Offset(0, 5)),
+                    padding=15, bgcolor=COLOR_WHITE, border_radius=12, shadow=ft.BoxShadow(blur_radius=5, color="grey200"),
                     content=ft.Column([
                         ft.Row([
-                            ft.Container(
-                                content=ft.Text(titulo_coluna.upper(), size=10, weight="bold", color=COLOR_WHITE),
-                                bgcolor=cor_status, padding=ft.padding.symmetric(4, 8), border_radius=5
-                            ),
-                            ft.Text(f"#{orc.get('id', '')[:5]}", size=10, color=ft.colors.GREY_400)
-                        ], alignment="spaceBetween"),
-                        ft.Text(orc.get('cliente_nome', 'Cliente'), weight="bold", size=18, max_lines=1, overflow="ellipsis"),
-                        ft.Row([
-                            ft.Icon(ft.icons.LAYERS_OUTLINED, size=16, color=ft.colors.GREY_500),
-                            ft.Text(f"{len(orc.get('itens', []))} peças para produzir", size=13, color=ft.colors.GREY_600),
+                            ft.Icon(ft.icons.PERSON, size=16, color=COLOR_PRIMARY),
+                            ft.Text(item['cliente'], weight="bold", size=14),
+                            ft.Container(expand=True),
+                            ft.Text(item.get('ambiente', 'Geral').upper(), size=11, weight="bold", color="grey600")
                         ]),
-                        ft.Divider(height=20, color=ft.colors.GREY_100),
-                        ft.ElevatedButton(
-                            "VER DETALHES / O.S.", 
-                            icon=ft.icons.REORDER_ROUNDED, 
-                            bgcolor=COLOR_SECONDARY, 
-                            color=COLOR_WHITE, 
-                            width=float("inf"),
-                            height=45,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
-                            on_click=lambda e, o=orc: abrir_visualizador(o)
-                        )
-                    ], spacing=10)
+                        ft.Text(f"Material: {item.get('material', 'Granito')}", size=13),
+                        ft.Divider(height=10, color="transparent"),
+                        ft.Container(content=canvas, padding=5, border=ft.border.all(1, "grey100"), border_radius=8),
+                        ft.Row([btn_acao], alignment="end")
+                    ])
                 )
             )
         return grid
 
     def mudar_aba(e):
         idx = e.control.selected_index
-        status_map = [
-            ("Produção", "PENDENTE", ft.colors.ORANGE_700),
-            ("Em Andamento", "PRODUZINDO", ft.colors.BLUE_700),
-            ("Finalizado", "PRONTO", ft.colors.GREEN_700)
-        ]
-        label, tit, cor = status_map[idx]
-        conteudo_dinamico.content = render_coluna(label, tit, cor)
+        if idx == 0:
+            conteudo_dinamico.content = render_coluna("Fila de Espera", "PENDENTE", ft.colors.ORANGE_800)
+        elif idx == 1:
+            conteudo_dinamico.content = render_coluna("Na Bancada", "PRODUZINDO", ft.colors.BLUE_800)
+        else:
+            conteudo_dinamico.content = render_coluna("Finalizado", "PRONTO", ft.colors.GREEN_800)
         page.update()
 
-    # Inicialização da primeira aba
-    conteudo_dinamico.content = render_coluna("Produção", "PENDENTE", ft.colors.ORANGE_700)
+    # Inicializa na primeira aba
+    conteudo_dinamico.content = render_coluna("Fila de Espera", "PENDENTE", ft.colors.ORANGE_800)
 
-    # Layout Principal com Tabs Modernas
-    layout_producao = ft.Column([
+    layout_final = ft.Column([
         ft.Tabs(
             selected_index=0,
-            label_color=COLOR_PRIMARY,
-            unselected_label_color=ft.colors.GREY_500,
-            indicator_color=COLOR_PRIMARY,
-            indicator_border_radius=5,
             on_change=mudar_aba,
             tabs=[
-                ft.Tab(text="Fila de Espera", icon=ft.icons.TIMER_OUTLINED),
-                ft.Tab(text="Na Bancada", icon=ft.icons.PRECISION_MANUFACTURING),
-                ft.Tab(text="Concluídos", icon=ft.icons.CHECK_CIRCLE_OUTLINE),
+                ft.Tab(text="FILA", icon=ft.icons.STAIRS_OUTLINED),
+                ft.Tab(text="BANCADA", icon=ft.icons.PRECISION_MANUFACTURING),
+                ft.Tab(text="PRONTO", icon=ft.icons.DONE_ALL),
             ],
         ),
-        ft.Container(height=10),
+        ft.Divider(height=1, color="grey200"),
         conteudo_dinamico
-    ], expand=True, spacing=10)
+    ], expand=True)
 
-    return LayoutBase(page, layout_producao, titulo="Área de Produção", subtitulo="Gestão de Ordens de Serviço")
+    return LayoutBase(page, layout_final, titulo="Produção Ativa")

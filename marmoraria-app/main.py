@@ -3,8 +3,9 @@ import os
 import sys
 import traceback
 from src.config import COLOR_BACKGROUND, COLOR_PRIMARY
+from src.services import firebase_service
 
-# Garante que o Python encontre a pasta 'src' em qualquer ambiente (Local ou Render)
+# Garante que o Python encontre a pasta 'src'
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 def main(page: ft.Page):
@@ -13,18 +14,46 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = COLOR_BACKGROUND
     
-    # Configuração de fontes e estilo global (opcional)
+    # Configuração de fontes e estilo global
     page.theme = ft.Theme(
         color_scheme_seed=COLOR_PRIMARY,
         visual_density=ft.VisualDensity.COMFORTABLE,
     )
 
+    # --- INICIALIZAÇÃO APK (OFFLINE/SYNC) ---
+    def inicializar_sincronizacao():
+        """Tenta sincronizar os dados assim que o app abre"""
+        if firebase_service.verificar_conexao():
+            # Mostra um aviso discreto que está sincronizando
+            page.snack_bar = ft.SnackBar(
+                ft.Text("Sincronizando dados com a nuvem..."),
+                bgcolor=ft.colors.BLUE_700,
+                duration=2000
+            )
+            page.snack_bar.open = True
+            page.update()
+            
+            # Chama a função de sincronização bidirecional do serviço
+            firebase_service.sync_offline_data()
+            
+            # Atualiza as coleções principais para o cache local
+            # Isso garante que o app não fique "feio" ou vazio
+            firebase_service.get_collection("estoque")
+            firebase_service.get_collection("orcamentos")
+            firebase_service.get_collection("financeiro")
+            
+    # Executa a sincronização inicial
+    inicializar_sincronizacao()
+
     def route_change(e):
         page.views.clear()
         rota_atual = page.route
 
+        # Sempre que mudar de tela, tenta empurrar mudanças pendentes se houver net
+        if firebase_service.verificar_conexao():
+            firebase_service.sync_offline_data()
+
         # 1. VERIFICAÇÃO DE SEGURANÇA
-        # Se não houver role na sessão e não for login, manda pro login
         user_role = page.session.get("user_role")
         if not user_role and rota_atual not in ["/login", "/", ""]:
             page.go("/login")
@@ -33,39 +62,30 @@ def main(page: ft.Page):
         # 2. FUNÇÃO PARA CONSTRUIR AS VIEWS
         def construir_view(view_func, route_name):
             try:
-                # Carrega o conteúdo da View
                 conteudo_layout = view_func(page)
                 
-                # Extração automática dos metadados do LayoutBase
-                res_appbar = None
-                res_drawer = None
-                
-                if hasattr(conteudo_layout, 'data') and isinstance(conteudo_layout.data, dict):
-                    res_appbar = conteudo_layout.data.get("appbar")
-                    res_drawer = conteudo_layout.data.get("drawer")
-
+                # Se a view retornar um LayoutBase, o Flet precisa do .content
+                # (Ajuste caso suas views retornem o objeto LayoutBase diretamente)
                 page.views.append(
                     ft.View(
-                        route=route_name,
-                        controls=[conteudo_layout],
-                        appbar=res_appbar,
-                        drawer=res_drawer,
+                        route_name,
+                        [conteudo_layout],
                         padding=0,
                         bgcolor=COLOR_BACKGROUND
                     )
                 )
-            except Exception as err:
-                print(f"Erro Crítico na Rota {route_name}:")
+            except Exception as e:
+                print(f"Erro ao construir view {route_name}: {e}")
                 traceback.print_exc()
-                # View de Erro Amigável
                 page.views.append(
                     ft.View(
-                        "/erro", 
-                        [ft.SafeArea(ft.Text(f"Ops! Algo deu errado ao carregar esta tela.\n{err}", color="red"))]
+                        "/erro",
+                        [ft.Text(f"Erro Crítico na Rota {route_name}:\n{e}", color="red")],
+                        padding=20
                     )
                 )
 
-        # 3. MAPEAMENTO DE ROTAS (Lazy Loading)
+        # --- MAPEAMENTO DE ROTAS ---
         if rota_atual in ["/login", "/", ""]:
             from src.views.login_view import LoginView
             page.views.append(
@@ -101,15 +121,10 @@ def main(page: ft.Page):
     if page.route in ["/", ""]:
         page.go("/login")
     else:
-        page.update()
+        # Força o trigger da rota atual caso o app seja reiniciado em uma tela específica
+        page.go(page.route)
 
 if __name__ == "__main__":
-    # Configuração específica para o RENDER.com (Porta Dinâmica)
-    port = int(os.getenv("PORT", 10000))
-    ft.app(
-        target=main,
-        view=ft.AppView.WEB_BROWSER,
-        host="0.0.0.0",
-        port=port,
-        assets_dir="assets"
-    )
+    # Para o APK, usamos o flet.app normal
+    # O parâmetro assets_dir é importante se você tiver imagens locais
+    ft.app(target=main, assets_dir="assets")
