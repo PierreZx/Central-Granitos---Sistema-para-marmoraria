@@ -46,3 +46,8 @@ app.*.map.json
 
 # Flutter generated macOS files
 macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Ignore Flutter desktop platforms (not used now)
+linux/
+macos/
+windows/
