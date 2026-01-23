@@ -81,7 +81,7 @@ class _LoginPageState extends State<LoginPage> {
             boxShadow: [
               BoxShadow(
                 blurRadius: 30,
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.05),
                 offset: const Offset(0, 10),
               )
             ],
@@ -93,7 +93,7 @@ class _LoginPageState extends State<LoginPage> {
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: COLOR_PRIMARY.withOpacity(0.15),
+                  color: COLOR_PRIMARY.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: const Icon(
@@ -106,8 +106,8 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 20),
 
               // 🏷️ Título
-              Column(
-                children: const [
+              const Column(
+                children: [
                   Text(
                     'CENTRAL GRANITOS',
                     style: TextStyle(

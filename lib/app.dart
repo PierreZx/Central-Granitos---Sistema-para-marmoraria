@@ -21,33 +21,30 @@ class _CentralGranitosAppState extends State<CentralGranitosApp> {
   String? userRole;
 
   /// 🔁 Controle de rotas (equivalente ao route_change)
-  Route<dynamic> _onGenerateRoute(RouteSettings settings) {
+Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     final rotaAtual = settings.name ?? '/login';
 
-    // 1️⃣ VERIFICAÇÃO DE SEGURANÇA
     if (userRole == null && rotaAtual != '/login') {
       return _buildRoute(const LoginPage(), '/login');
     }
 
-    // 2️⃣ MAPEAMENTO DE ROTAS (Lazy Loading)
     switch (rotaAtual) {
       case '/login':
-        return _buildRoute(
-          const LoginPage(),
-          '/login',
-          center: true,
-        );
+        return _buildRoute(const LoginPage(), '/login', center: true);
 
       case '/dashboard':
-        return _buildRoute(const DashboardPage(), '/dashboard');
+        // Alterado de DashboardPage para DashboardView
+        return _buildRoute(const DashboardView(), '/dashboard'); 
 
       case '/estoque':
         return _buildRoute(const InventoryPage(), '/estoque');
 
       case '/orcamentos':
-        return _buildRoute(const BudgetPage(), '/orcamentos');
+        // Alterado de BudgetPage para BudgetView
+        return _buildRoute(const BudgetView(), '/orcamentos');
 
       case '/financeiro':
+        // Verifique se no seu financial_page.dart a classe é FinancialPage ou FinancialView
         return _buildRoute(const FinancialPage(), '/financeiro');
 
       case '/producao':
