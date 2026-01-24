@@ -14,42 +14,34 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # --- GERÊNCIA DE ESTADO E NAVEGAÇÃO ---
-  # Ideal para a estrutura de "Controllers" que você criou
   get: ^4.6.6
 
   # --- BACKEND (FIREBASE) ---
-  # Essencial para os arquivos que vi em services/
   firebase_core: ^2.24.2
   cloud_firestore: ^4.14.0
   firebase_auth: ^4.16.0
   firebase_storage: ^11.5.6
 
   # --- FUNCIONAMENTO OFFLINE E ARMAZENAMENTO LOCAL ---
-  # Para salvar os dados quando não houver internet
   sqflite: ^2.3.0
-  path_provider: ^2.1.1
   shared_preferences: ^2.2.2
 
   # --- UTILITÁRIOS E PDF ---
-  # Para o seu pdf_service.dart e formatação de moedas
+  path_provider: ^2.1.2  # ✅ Mantive apenas a versão mais recente
+  open_filex: ^4.4.0     # ✅ Essencial para abrir o PDF que corrigimos
   pdf: ^3.10.7
   printing: ^5.11.0
   intl: ^0.18.1
   connectivity_plus: ^5.0.2
 
   # --- UI E GRÁFICOS ---
-  # Útil para o dashboard_page.dart
   fl_chart: ^0.66.0
   font_awesome_flutter: ^10.6.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0 # Versão estável para seu SDK
+  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true
-
-  # Se for usar imagens/ícones próprios, lembre-se de declarar aqui:
-  # assets:
-  #   - assets/images/

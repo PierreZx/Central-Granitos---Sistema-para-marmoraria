@@ -5,6 +5,7 @@ import 'package:central_granitos_sistema/widgets/layout_base.dart';
 import 'package:central_granitos_sistema/core/utils/constants.dart';
 import 'package:central_granitos_sistema/core/services/firebase_service.dart';
 import 'package:central_granitos_sistema/core/services/pdf_service.dart';
+import 'budget_form_page.dart';
 
 class BudgetView extends StatefulWidget {
   const BudgetView({super.key});
@@ -165,12 +166,20 @@ class _BudgetViewState extends State<BudgetView> {
     );
   }
 
-  void abrirDetalhes(Map<String, dynamic> o) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tela de detalhes em desenvolvimento...')),
-    );
-  }
+  void abrirDetalhes(Map<String, dynamic> o) async {
+  // Navega para a nova tela enviando os dados do orçamento selecionado
+  final bool? atualizado = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => BudgetFormPage(orcamentoExistente: o),
+    ),
+  );
 
+  // Se voltou com sucesso, recarrega a lista
+  if (atualizado == true) {
+    carregarListaOrcamentos();
+  }
+}
   void confirmarExclusao(Map<String, dynamic> o) {
     showDialog(
       context: context,

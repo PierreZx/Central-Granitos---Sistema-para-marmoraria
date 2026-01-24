@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:central_granitos_sistema/widgets/layout_base.dart';
-import 'package:central_granitos_sistema/core/controllers/production_controller.dart';
 import 'package:central_granitos_sistema/core/utils/constants.dart';
+import 'package:central_granitos_sistema/core/services/firebase_service.dart';
 
 class ProductionPage extends StatefulWidget {
   const ProductionPage({super.key});
@@ -10,163 +10,141 @@ class ProductionPage extends StatefulWidget {
   State<ProductionPage> createState() => _ProductionPageState();
 }
 
-class _ProductionPageState extends State<ProductionPage>
-    with SingleTickerProviderStateMixin {
+class _ProductionPageState extends State<ProductionPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // O seu controlador usa ChangeNotifier, então vamos escutar as mudanças
-  final ProductionController _controller = ProductionController();
+  bool carregando = true;
+  List<Map<String, dynamic>> todasOrdens = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    // CORREÇÃO: O método correto no seu controller é loadProducao()
-    _controller.loadProducao(); 
+    carregarDados();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _controller,
-      builder: (context, _) {
-        return LayoutBase(
-          titulo: 'Área de Produção', // CORREÇÃO: parâmetro é 'titulo'
-          subtitulo: 'Gestão de Ordens de Serviço', // CORREÇÃO: parâmetro é 'subtitulo'
-          child: Column(
-            children: [
-              TabBar(
-                controller: _tabController,
-                labelColor: COLOR_PRIMARY,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: COLOR_PRIMARY,
-                tabs: const [
-                  Tab(icon: Icon(Icons.timer_outlined), text: 'Fila de Espera'),
-                  Tab(icon: Icon(Icons.precision_manufacturing), text: 'Na Bancada'),
-                  Tab(icon: Icon(Icons.check_circle_outline), text: 'Concluídos'),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _controller.isLoading 
-                  ? const Center(child: CircularProgressIndicator(color: COLOR_PRIMARY))
-                  : TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildColumn('Pendente', Colors.orange),
-                        _buildColumn('Em Produção', Colors.blue),
-                        _buildColumn('Finalizado', Colors.green),
-                      ],
-                    ),
-              ),
-            ],
-          ),
-        );
-      }
-    );
-  }
-
-  Widget _buildColumn(String status, Color statusColor) {
-    // CORREÇÃO: Seu controller não tem getByStatus, filtramos a lista 'pedidos' diretamente
-    final orders = _controller.pedidos.where((p) => p['status'] == status).toList();
-
-    if (orders.isEmpty) {
-      return const Center( // Adicionado const para performance
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inbox_rounded, size: 64, color: Colors.grey),
-            SizedBox(height: 12),
-            Text('Nenhum pedido nesta fase',
-                style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      );
+  Future<void> carregarDados() async {
+    setState(() => carregando = true);
+    final dados = await FirebaseService.getCollection('producao');
+    if (mounted) {
+      setState(() {
+        todasOrdens = dados;
+        carregando = false;
+      });
     }
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 1.1,
-      ),
-      itemCount: orders.length,
-      itemBuilder: (context, index) {
-        final order = orders[index];
-        return _OrderCard(
-          order: order,
-          statusColor: statusColor,
-          onOpen: () => _openOrderDetails(order),
-        );
-      },
-    );
   }
 
-  void _openOrderDetails(Map<String, dynamic> order) {
+  List<Map<String, dynamic>> filtrarPorStatus(String status) {
+    return todasOrdens.where((o) => 
+      o['status']?.toString().toLowerCase() == status.toLowerCase()
+    ).toList();
+  }
+
+  void mudarStatus(Map<String, dynamic> ordem, String novoStatus) async {
+    await FirebaseService.updateDocument('producao', ordem['id'], {'status': novoStatus});
+    carregarDados();
+  }
+
+  void confirmarExclusao(String id) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.assignment, color: COLOR_PRIMARY), // Adicionado const
-            const SizedBox(width: 8),
-            Text('O.S. - ${order['cliente'] ?? 'Cliente'}'), // Corrigido chave para 'cliente'
-          ],
-        ),
-        content: SizedBox(
-          width: 450,
-          height: 300,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Data: ${order['data']}'),
-              const Divider(),
-              const Text('Peças e Detalhes:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              const Center(child: Text('Detalhes da composição disponíveis no orçamento.')),
-            ],
-          ),
-        ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir O.S.?'),
+        content: const Text('Esta ação não pode ser desfeita.'),
         actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: COLOR_PRIMARY),
-            child: const Text('Fechar', style: TextStyle(color: Colors.white)),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () async {
+              await FirebaseService.deleteDocument('producao', id);
+              
+              // ✅ Correção: Verifica se o contexto do modal ainda é válido antes de fechar
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              carregarDados();
+            },
+            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBase(
+      titulo: 'Área de Produção',
+      child: Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            labelColor: COLOR_PRIMARY,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: COLOR_PRIMARY,
+            tabs: const [
+              Tab(text: 'Pendentes', icon: Icon(Icons.hourglass_empty)),
+              Tab(text: 'Em Produção', icon: Icon(Icons.build_circle_outlined)),
+              Tab(text: 'Finalizados', icon: Icon(Icons.check_circle_outline)),
+            ],
+          ),
+          Expanded(
+            child: carregando 
+              ? const Center(child: CircularProgressIndicator())
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildListaProducao(filtrarPorStatus('Pendente')),
+                    _buildListaProducao(filtrarPorStatus('Em Produção')),
+                    _buildListaProducao(filtrarPorStatus('Finalizado')),
+                  ],
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListaProducao(List<Map<String, dynamic>> ordens) {
+    if (ordens.isEmpty) {
+      return const Center(child: Text('Nenhuma ordem encontrada neste status.'));
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: (MediaQuery.of(context).size.width / 200).floor().clamp(1, 3),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        mainAxisExtent: 180,
+      ),
+      itemCount: ordens.length,
+      itemBuilder: (context, index) => _CardProducao(
+        order: ordens[index],
+        onDelete: () => confirmarExclusao(ordens[index]['id']),
+        onUpdate: (status) => mudarStatus(ordens[index], status),
+      ),
+    );
+  }
 }
 
-class _OrderCard extends StatelessWidget {
+class _CardProducao extends StatelessWidget {
   final Map<String, dynamic> order;
-  final Color statusColor;
-  final VoidCallback onOpen;
+  final VoidCallback onDelete;
+  final Function(String) onUpdate;
 
-  const _OrderCard({
-    required this.order,
-    required this.statusColor,
-    required this.onOpen,
-  });
+  const _CardProducao({required this.order, required this.onDelete, required this.onUpdate});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: COLOR_WHITE,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(blurRadius: 12, color: Color(0x11000000), offset: Offset(0, 4)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            // ✅ Correção: Usando withValues em vez de withOpacity
+            color: Colors.black.withValues(alpha: 0.05), 
+            blurRadius: 5
+          )
         ],
       ),
       child: Column(
@@ -175,39 +153,48 @@ class _OrderCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(6)),
+              Expanded(
                 child: Text(
-                  order['status'] ?? '',
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  order['cliente'] ?? 'Sem Nome',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(
-                '#${order['id'] ?? ''}',
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
-              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                onPressed: onDelete,
+                visualDensity: VisualDensity.compact,
+              )
             ],
           ),
-          const SizedBox(height: 12),
+          const Divider(),
           Text(
-            order['cliente'] ?? 'Cliente', // Chave corrigida para 'cliente'
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            "Material: ${order['material'] ?? 'Não informado'}",
+            style: const TextStyle(fontSize: 12),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.reorder, color: Colors.white),
-              label: const Text('VER O.S.', style: TextStyle(color: Colors.white)),
-              onPressed: onOpen,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: COLOR_SECONDARY,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (order['status'] == 'Pendente')
+                ElevatedButton(
+                  onPressed: () => onUpdate('Em Produção'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                  child: const Text('Iniciar', style: TextStyle(fontSize: 10, color: Colors.white)),
+                ),
+              if (order['status'] == 'Em Produção')
+                ElevatedButton(
+                  onPressed: () => onUpdate('Finalizado'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                  child: const Text('Finalizar', style: TextStyle(fontSize: 10, color: Colors.white)),
+                ),
+               Text(
+                "#${order['id']?.toString().substring(0, 4) ?? ''}",
+                style: const TextStyle(fontSize: 10, color: Colors.grey),
               ),
-            ),
+            ],
           ),
         ],
       ),

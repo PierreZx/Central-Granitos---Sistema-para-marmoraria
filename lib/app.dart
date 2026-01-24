@@ -5,6 +5,7 @@ import 'features/auth/login_page.dart';
 import 'features/dashboard/dashboard_page.dart';
 import 'features/inventory/inventory_page.dart';
 import 'features/budget/budget_page.dart';
+import 'features/budget/budget_form_page.dart'; // ✅ 1. Importe a nova página aqui
 import 'features/financial/financial_page.dart';
 import 'features/production/production_page.dart';
 
@@ -16,75 +17,60 @@ class CentralGranitosApp extends StatefulWidget {
 }
 
 class _CentralGranitosAppState extends State<CentralGranitosApp> {
-  /// 🔐 Simula o page.session do Flet
-  /// depois você troca por Provider / Riverpod / GetX
   String? userRole;
 
-  /// 🔁 Controle de rotas (equivalente ao route_change)
-Route<dynamic> _onGenerateRoute(RouteSettings settings) {
+  void _setRole(String role) {
+    setState(() {
+      userRole = role;
+    });
+  }
+
+  Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     final rotaAtual = settings.name ?? '/login';
 
     if (userRole == null && rotaAtual != '/login') {
-      return _buildRoute(const LoginPage(), '/login');
+      return _buildRoute(LoginPage(onLoginSuccess: _setRole), '/login', center: true);
     }
 
     switch (rotaAtual) {
       case '/login':
-        return _buildRoute(const LoginPage(), '/login', center: true);
-
+        return _buildRoute(LoginPage(onLoginSuccess: _setRole), '/login', center: true);
       case '/dashboard':
-        // Alterado de DashboardPage para DashboardView
-        return _buildRoute(const DashboardView(), '/dashboard'); 
-
+        return _buildRoute(const DashboardView(), '/dashboard');
       case '/estoque':
         return _buildRoute(const InventoryPage(), '/estoque');
-
       case '/orcamentos':
-        // Alterado de BudgetPage para BudgetView
         return _buildRoute(const BudgetView(), '/orcamentos');
+      
+      // ✅ 2. Adicione a rota para o formulário de orçamento
+      case '/orcamento_form':
+        // Recebe os dados do orçamento se houver (para edição)
+        final args = settings.arguments as Map<String, dynamic>?;
+        return _buildRoute(BudgetFormPage(orcamentoExistente: args), '/orcamento_form');
 
       case '/financeiro':
-        // Verifique se no seu financial_page.dart a classe é FinancialPage ou FinancialView
         return _buildRoute(const FinancialPage(), '/financeiro');
-
       case '/producao':
         return _buildRoute(const ProductionPage(), '/producao');
-
       default:
-        return _errorRoute('Rota não encontrada');
+        return _errorRoute('Rota não encontrada: $rotaAtual');
     }
   }
 
-  /// 🧱 Builder padrão de páginas
-  Route _buildRoute(
-    Widget page,
-    String routeName, {
-    bool center = false,
-  }) {
+  Route _buildRoute(Widget page, String routeName, {bool center = false}) {
     return MaterialPageRoute(
       settings: RouteSettings(name: routeName),
       builder: (_) => Scaffold(
         backgroundColor: COLOR_BACKGROUND,
-        body: center
-            ? Center(child: page)
-            : page,
+        body: center ? Center(child: page) : page,
       ),
     );
   }
 
-  /// ❌ View de erro amigável (igual você fez no try/except)
   Route _errorRoute(String message) {
     return MaterialPageRoute(
       builder: (_) => Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: Text(
-              'Ops! Algo deu errado.\n$message',
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
+        body: Center(child: Text(message, style: const TextStyle(color: Colors.red))),
       ),
     );
   }
@@ -94,15 +80,10 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     return MaterialApp(
       title: 'Marmoraria Central',
       debugShowCheckedModeBanner: false,
-
-      // 🎨 Tema global (equivalente ao page.theme)
       theme: ThemeData(
         colorSchemeSeed: COLOR_PRIMARY,
-        brightness: Brightness.light,
-        visualDensity: VisualDensity.comfortable,
-        scaffoldBackgroundColor: COLOR_BACKGROUND,
+        useMaterial3: true,
       ),
-
       initialRoute: '/login',
       onGenerateRoute: _onGenerateRoute,
     );
