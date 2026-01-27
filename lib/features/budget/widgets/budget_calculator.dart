@@ -1,182 +1,255 @@
-import 'dart:math';
+import 'package:flutter/material.dart';
+import '../../../core/models/budget_composition.dart';
+import '../widgets/bancada_preview.dart';
 
-/// ===============================
-/// MODELOS AUXILIARES
-/// ===============================
+class BudgetCalculator extends StatefulWidget {
+  final Function(BancadaComposition) onConfirm;
 
-class Peca {
-  final double largura;
-  final double profundidade;
+  const BudgetCalculator({super.key, required this.onConfirm});
 
-  Peca({
-    required this.largura,
-    required this.profundidade,
-  });
-
-  double get area => largura * profundidade;
+  @override
+  State<BudgetCalculator> createState() => _BudgetCalculatorState();
 }
 
-class ItemOrcamento {
-  final String ambiente;
-  final String material;
-  final int quantidade;
-  final double valorMetroQuadrado;
-  final Map<String, Peca> pecas;
+class _BudgetCalculatorState extends State<BudgetCalculator>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  late BancadaComposition composition;
 
-  ItemOrcamento({
-    required this.ambiente,
-    required this.material,
-    required this.quantidade,
-    required this.valorMetroQuadrado,
-    required this.pecas,
-  });
+  @override
+  void initState() {
+    super.initState();
 
-  double get areaTotal {
-    double total = 0;
-    for (final p in pecas.values) {
-      total += p.area;
-    }
-    return total * quantidade;
+    composition = BancadaComposition(
+      tipo: BancadaTipo.reta,
+      pecas: [BancadaPiece(nome: 'P1', comprimento: 1.0, largura: 0.6)],
+    );
+
+    _tabController = TabController(length: 3, vsync: this);
   }
 
-  double get precoTotal => areaTotal * valorMetroQuadrado;
-}
-
-/// ===============================
-/// CALCULADORA DE ORÇAMENTO
-/// ===============================
-
-class BudgetCalculator {
-  final List<ItemOrcamento> _itens = [];
-
-  /// Percentuais e adicionais
-  double _percentualPerda = 0.1; // 10%
-  double _percentualLucro = 0.0;
-  double _valorFrete = 0.0;
-  double _valorInstalacao = 0.0;
-  double _desconto = 0.0;
-
-  /// ===============================
-  /// CONFIGURAÇÕES
-  /// ===============================
-
-  void setPercentualPerda(double value) {
-    _percentualPerda = max(0, value);
+  void _recalcularTipo() {
+    setState(() {
+      composition.tipo = composition.pecas.length == 1
+          ? BancadaTipo.reta
+          : composition.pecas.length == 2
+          ? BancadaTipo.l
+          : BancadaTipo.u;
+    });
   }
 
-  void setPercentualLucro(double value) {
-    _percentualLucro = max(0, value);
+  void confirmar() {
+    widget.onConfirm(composition);
+    Navigator.pop(context);
   }
 
-  void setFrete(double value) {
-    _valorFrete = max(0, value);
+  Widget _campoDouble(String label, double valor, Function(double) onChanged) {
+    return TextFormField(
+      initialValue: valor.toString(),
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(labelText: label),
+      onChanged: (v) => onChanged(double.tryParse(v) ?? 0),
+    );
   }
 
-  void setInstalacao(double value) {
-    _valorInstalacao = max(0, value);
+  // =========================
+  // ABA 1 — PEDRAS
+  // =========================
+  Widget _abaPedras() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: BancadaPreview(composition: composition),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              ...composition.pecas.map((p) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p.nome,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        _campoDouble(
+                          'Comprimento (m)',
+                          p.comprimento,
+                          (v) => setState(() => p.comprimento = v),
+                        ),
+                        _campoDouble(
+                          'Largura (m)',
+                          p.largura,
+                          (v) => setState(() => p.largura = v),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              if (composition.pecas.length == 1)
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      composition.pecas.add(
+                        BancadaPiece(
+                          nome: 'P2',
+                          comprimento: 1,
+                          largura: 0.6,
+                          ladoEncaixe: Side.direita,
+                        ),
+                      );
+                      _recalcularTipo();
+                    });
+                  },
+                  child: const Text('+ Bancada em L'),
+                ),
+              if (composition.pecas.length == 2)
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      composition.pecas.add(
+                        BancadaPiece(
+                          nome: 'P3',
+                          comprimento: 1,
+                          largura: 0.6,
+                          ladoEncaixe: Side.esquerda,
+                        ),
+                      );
+                      _recalcularTipo();
+                    });
+                  },
+                  child: const Text('+ Bancada em U'),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
-  void setDesconto(double value) {
-    _desconto = max(0, value);
-  }
-
-  /// ===============================
-  /// ITENS
-  /// ===============================
-
-  void adicionarItem(ItemOrcamento item) {
-    _itens.add(item);
-  }
-
-  void removerItem(int index) {
-    if (index >= 0 && index < _itens.length) {
-      _itens.removeAt(index);
-    }
-  }
-
-  void limparItens() {
-    _itens.clear();
-  }
-
-  List<ItemOrcamento> get itens => List.unmodifiable(_itens);
-
-  /// ===============================
-  /// CÁLCULOS
-  /// ===============================
-
-  double get areaTotal {
-    double total = 0;
-    for (final item in _itens) {
-      total += item.areaTotal;
-    }
-    return total;
-  }
-
-  double get areaComPerda {
-    return areaTotal * (1 + _percentualPerda);
-  }
-
-  double get subtotalMateriais {
-    double total = 0;
-    for (final item in _itens) {
-      total += item.precoTotal;
-    }
-    return total;
-  }
-
-  double get subtotalComPerda {
-    return subtotalMateriais * (1 + _percentualPerda);
-  }
-
-  double get valorLucro {
-    return subtotalComPerda * _percentualLucro;
-  }
-
-  double get totalAntesDesconto {
-    return subtotalComPerda +
-        valorLucro +
-        _valorFrete +
-        _valorInstalacao;
-  }
-
-  double get totalGeral {
-    return max(0, totalAntesDesconto - _desconto);
-  }
-
-  /// ===============================
-  /// EXPORTAÇÃO (MAP / FIREBASE)
-  /// ===============================
-
-  Map<String, dynamic> toMap() {
-    return {
-      "area_total": areaTotal,
-      "area_com_perda": areaComPerda,
-      "subtotal_materiais": subtotalMateriais,
-      "subtotal_com_perda": subtotalComPerda,
-      "percentual_perda": _percentualPerda,
-      "percentual_lucro": _percentualLucro,
-      "valor_lucro": valorLucro,
-      "frete": _valorFrete,
-      "instalacao": _valorInstalacao,
-      "desconto": _desconto,
-      "total_geral": totalGeral,
-      "itens": _itens.map((item) {
-        return {
-          "ambiente": item.ambiente,
-          "material": item.material,
-          "quantidade": item.quantidade,
-          "valor_m2": item.valorMetroQuadrado,
-          "area_total": item.areaTotal,
-          "preco_total": item.precoTotal,
-          "pecas": item.pecas.map((k, p) {
-            return MapEntry(k, {
-              "l": p.largura,
-              "p": p.profundidade,
-              "area": p.area,
-            });
-          }),
-        };
+  // =========================
+  // ABA 2 — ACABAMENTOS
+  // =========================
+  Widget _abaAcabamentos() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: composition.pecas.map((p) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Acabamentos – ${p.nome}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...Side.values.map(
+                  (side) => CheckboxListTile(
+                    dense: true,
+                    title: Text('Rodobanca ${side.name}'),
+                    value: p.rodobanca[side],
+                    onChanged: p.ladoEncaixe == side
+                        ? null
+                        : (v) => setState(() => p.rodobanca[side] = v ?? false),
+                  ),
+                ),
+                const Divider(),
+                ...Side.values.map(
+                  (side) => CheckboxListTile(
+                    dense: true,
+                    title: Text('Saia ${side.name}'),
+                    value: p.saia[side],
+                    onChanged: p.ladoEncaixe == side
+                        ? null
+                        : (v) => setState(() => p.saia[side] = v ?? false),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       }).toList(),
-    };
+    );
+  }
+
+  // =========================
+  // ABA 3 — BOJO / COOKTOP
+  // =========================
+  Widget _abaAberturas() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: composition.pecas.map((p) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Aberturas – ${p.nome}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                SwitchListTile(
+                  title: const Text('Possui Bojo'),
+                  value: p.temBojo,
+                  onChanged: (v) => setState(() => p.temBojo = v),
+                ),
+                SwitchListTile(
+                  title: const Text('Possui Cooktop'),
+                  value: p.temCooktop,
+                  onChanged: (v) => setState(() => p.temCooktop = v),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Calculadora de Bancada'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Pedras'),
+            Tab(text: 'Acabamentos'),
+            Tab(text: 'Bojo / Cooktop'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [_abaPedras(), _abaAcabamentos(), _abaAberturas()],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: confirmar,
+        icon: const Icon(Icons.check),
+        label: const Text('Confirmar'),
+      ),
+    );
   }
 }

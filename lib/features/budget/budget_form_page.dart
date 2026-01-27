@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:central_granitos_sistema/core/utils/constants.dart';
-import 'package:central_granitos_sistema/core/services/firebase_service.dart';
-// ✅ Import corrigido para o local onde a calculadora está:
-import 'package:central_granitos_sistema/features/budget/widgets/budget_calculator.dart'; 
+import '../../../core/models/budget_composition.dart';
+import 'widgets/budget_calculator.dart';
 
 class BudgetFormPage extends StatefulWidget {
   final Map<String, dynamic>? orcamentoExistente;
@@ -14,151 +12,180 @@ class BudgetFormPage extends StatefulWidget {
 }
 
 class _BudgetFormPageState extends State<BudgetFormPage> {
-  final _calc = BudgetCalculator();
-  final _nomeCtrl = TextEditingController();
-  final _contatoCtrl = TextEditingController();
-  final _enderecoCtrl = TextEditingController();
-  
-  bool _salvando = false;
+  final _clienteCtrl = TextEditingController();
+  final _ambienteCtrl = TextEditingController(text: 'Cozinha');
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.orcamentoExistente != null) {
-      _nomeCtrl.text = widget.orcamentoExistente!['cliente_nome'] ?? '';
-      _contatoCtrl.text = widget.orcamentoExistente!['cliente_contato'] ?? '';
-      _enderecoCtrl.text = widget.orcamentoExistente!['cliente_endereco'] ?? '';
-    }
+  double precoM2 = 0;
+  double precoMLRodobanca = 0;
+  double precoMLSaia = 0;
+  double precoBojo = 0;
+  double precoCooktop = 0;
+
+  BancadaComposition? _composition;
+
+  double get total {
+    if (_composition == null) return 0;
+    return _composition!.calcularTotal(
+      precoM2: precoM2,
+      precoMLRodobanca: precoMLRodobanca,
+      precoMLSaia: precoMLSaia,
+      precoBojo: precoBojo,
+      precoCooktop: precoCooktop,
+    );
   }
 
-  void _adicionarItemRapido() {
-    setState(() {
-      _calc.adicionarItem(ItemOrcamento(
-        ambiente: "Cozinha",
-        material: "Preto São Gabriel",
-        quantidade: 1,
-        valorMetroQuadrado: 550.0,
-        pecas: {"Bancada": Peca(largura: 2.10, profundidade: 0.65)},
-      ));
-    });
-  }
-
-  Future<void> _salvarOrcamento() async {
-    if (_nomeCtrl.text.isEmpty) return;
-
-    setState(() => _salvando = true);
-
-    final dados = {
-      'cliente_nome': _nomeCtrl.text,
-      'cliente_contato': _contatoCtrl.text,
-      'cliente_endereco': _enderecoCtrl.text,
-      'status': widget.orcamentoExistente?['status'] ?? 'Em aberto',
-      'data': widget.orcamentoExistente?['data'] ?? DateTime.now().toIso8601String(),
-      'total_geral': _calc.totalGeral,
-      'itens': _calc.toMap()['itens'], 
-    };
-
-    bool ok;
-    if (widget.orcamentoExistente?['id'] != null) {
-      ok = await FirebaseService.updateDocument('orcamentos', widget.orcamentoExistente!['id'], dados);
-    } else {
-      ok = await FirebaseService.addDocument('orcamentos', dados);
-    }
-
-    if (mounted) {
-      setState(() => _salvando = false);
-      if (ok) Navigator.pop(context, true);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.orcamentoExistente == null ? 'Novo Orçamento' : 'Editar Orçamento'),
-        backgroundColor: COLOR_PRIMARY,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(controller: _nomeCtrl, decoration: const InputDecoration(labelText: 'Nome do Cliente')),
-            TextField(controller: _contatoCtrl, decoration: const InputDecoration(labelText: 'Contato')),
-            TextField(controller: _enderecoCtrl, decoration: const InputDecoration(labelText: 'Endereço')),
-            const SizedBox(height: 30),
-            
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Itens do Orçamento", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ElevatedButton.icon(
-                  onPressed: _adicionarItemRapido,
-                  icon: const Icon(Icons.add),
-                  label: const Text("Adicionar Item"),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            // Exibição dos itens calculados
-            ...List.generate(_calc.itens.length, (index) {
-              final item = _calc.itens[index];
-              return Card(
-                child: ListTile(
-                  leading: const Icon(Icons.architecture_rounded, color: COLOR_PRIMARY),
-                  title: Text(item.ambiente),
-                  subtitle: Text("${item.material} | ${item.areaTotal.toStringAsFixed(2)} m²"),
-                  trailing: Text("R\$ ${item.precoTotal.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              );
-            }),
-
-            const Divider(height: 40),
-            
-            // Resumo Financeiro
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                children: [
-                  _rowTotal("Área Total:", "${_calc.areaTotal.toStringAsFixed(2)} m²"),
-                  _rowTotal("Subtotal Materiais:", "R\$ ${_calc.subtotalMateriais.toStringAsFixed(2)}"),
-                  const Divider(),
-                  _rowTotal("TOTAL GERAL:", "R\$ ${_calc.totalGeral.toStringAsFixed(2)}", isBold: true),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: COLOR_PRIMARY),
-                onPressed: _salvando ? null : _salvarOrcamento,
-                child: _salvando 
-                  ? const CircularProgressIndicator(color: Colors.white) 
-                  : const Text("SALVAR NO SISTEMA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            )
-          ],
+  void abrirCalculadora() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BudgetCalculator(
+          onConfirm: (composition) {
+            setState(() => _composition = composition);
+          },
         ),
       ),
     );
   }
 
-  Widget _rowTotal(String label, String valor, {bool isBold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  void salvarOrcamento() {
+    if (_composition == null) return;
+
+    final data = {
+      'cliente': _clienteCtrl.text,
+      'ambiente': _ambienteCtrl.text,
+      'preco_m2': precoM2,
+      'preco_ml_rodobanca': precoMLRodobanca,
+      'preco_ml_saia': precoMLSaia,
+      'total': total,
+      'composicao': _composition!.toMap(
+        precoM2: precoM2,
+        precoMLRodobanca: precoMLRodobanca,
+        precoMLSaia: precoMLSaia,
+        precoBojo: precoBojo,
+        precoCooktop: precoCooktop,
+      ),
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    Navigator.pop(context, data);
+  }
+
+  Widget _campoDouble(String label, double valor, Function(double) onChanged) {
+    return TextFormField(
+      initialValue: valor == 0 ? '' : valor.toStringAsFixed(2),
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(labelText: label),
+      onChanged: (v) => onChanged(double.tryParse(v) ?? 0),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Novo Orçamento')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: isBold ? 18 : 14)),
-          Text(valor, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: isBold ? 18 : 14)),
+          TextField(
+            controller: _clienteCtrl,
+            decoration: const InputDecoration(labelText: 'Cliente'),
+          ),
+          const SizedBox(height: 10),
+
+          TextField(
+            controller: _ambienteCtrl,
+            decoration: const InputDecoration(labelText: 'Ambiente'),
+          ),
+
+          const Divider(height: 30),
+
+          _campoDouble(
+            'Preço do m² (R\$)',
+            precoM2,
+            (v) => setState(() => precoM2 = v),
+          ),
+
+          _campoDouble(
+            'Preço ML Rodobanca (R\$)',
+            precoMLRodobanca,
+            (v) => setState(() => precoMLRodobanca = v),
+          ),
+
+          _campoDouble(
+            'Preço ML Saia (R\$)',
+            precoMLSaia,
+            (v) => setState(() => precoMLSaia = v),
+          ),
+
+          const Divider(height: 30),
+
+          ElevatedButton.icon(
+            onPressed: abrirCalculadora,
+            icon: const Icon(Icons.calculate),
+            label: Text(
+              _composition == null ? 'Adicionar Bancada' : 'Editar Bancada',
+            ),
+          ),
+
+          if (_composition != null) ...[
+            const SizedBox(height: 20),
+            _ResumoBancada(composition: _composition!),
+          ],
+
+          const SizedBox(height: 30),
+
+          Text(
+            'Total: R\$ ${total.toStringAsFixed(2)}',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 20),
+
+          ElevatedButton(
+            onPressed: salvarOrcamento,
+            child: const Text('SALVAR ORÇAMENTO'),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _ResumoBancada extends StatelessWidget {
+  final BancadaComposition composition;
+
+  const _ResumoBancada({required this.composition});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bancada ${composition.tipo.name.toUpperCase()}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+
+            ...composition.pecas.map(
+              (p) => Text(
+                '- ${p.nome}: '
+                '${p.quantidade}x '
+                '${p.comprimento} x ${p.largura} m '
+                '| Área total ${p.areaTotal.toStringAsFixed(2)} m²',
+              ),
+            ),
+
+            const SizedBox(height: 10),
+            Text(
+              'Rodobanca: ${composition.mlRodobancaTotal.toStringAsFixed(2)} m',
+            ),
+            Text('Saia: ${composition.mlSaiaTotal.toStringAsFixed(2)} m'),
+          ],
+        ),
       ),
     );
   }
