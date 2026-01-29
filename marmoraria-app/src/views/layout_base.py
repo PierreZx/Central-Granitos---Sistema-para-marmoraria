@@ -1,97 +1,158 @@
 import flet as ft
 from src.views.components.sidebar import Sidebar
 from src.config import (
-    COLOR_PRIMARY, COLOR_SECONDARY, COLOR_BACKGROUND, 
-    COLOR_WHITE, COLOR_WARNING, COLOR_TEXT
+    COLOR_PRIMARY,
+    COLOR_SECONDARY,
+    COLOR_BACKGROUND,
+    COLOR_WHITE,
+    COLOR_WARNING,
+    COLOR_TEXT
 )
 from src.services import firebase_service
 
-def LayoutBase(page: ft.Page, conteudo_principal, titulo="Central Granitos", subtitulo=None):
+
+def LayoutBase(
+    page: ft.Page,
+    conteudo_principal,
+    titulo="Central Granitos",
+    subtitulo=None
+):
     """
-    Layout base unificado. 
-    Retorna um Container (Mobile) com metadados ou uma Row (Desktop).
+    Layout base unificado
+    Totalmente compatível com Flet 0.23.2
     """
+
+    # ------------------------------------------------------
+    # ---------------- STATUS DE CONEXÃO -------------------
+    # ------------------------------------------------------
+
     conectado = firebase_service.verificar_conexao()
 
-    # --- CONFIGURAÇÃO MOBILE (DRAWER) ---
-    drawer_mobile = ft.NavigationDrawer(
-        controls=[Sidebar(page, is_mobile=True)],
-        bgcolor=COLOR_WHITE,
-    )
-    
-    def abrir_menu(e):
-        drawer_mobile.open = True
-        page.update()
+    # ------------------------------------------------------
+    # ---------------- DETECÇÃO DE MOBILE ------------------
+    # ------------------------------------------------------
 
     eh_mobile = page.width < 768
 
-    # --- ELEMENTO DE CONTEÚDO COM ANIMAÇÃO ---
-    # Envolvemos o conteúdo em um container para dar um padding padrão e animação
-    view_wrapper = ft.Container(
-        content=conteudo_principal,
-        padding=ft.padding.all(20) if eh_mobile else ft.padding.all(30),
-        expand=True,
-        animate_opacity=300, # Suaviza a troca de telas
+    # ------------------------------------------------------
+    # ---------------- DRAWER (MOBILE) ---------------------
+    # ------------------------------------------------------
+
+    drawer_mobile = ft.Container(
+        content=Sidebar(page, is_mobile=True),
+        width=260,
+        bgcolor=COLOR_WHITE,
+        padding=0
     )
 
+    def abrir_menu(e):
+        page.drawer = drawer_mobile
+        page.drawer.open = True
+        page.update()
+
+    # ------------------------------------------------------
+    # ---------------- CONTEÚDO PRINCIPAL ------------------
+    # ------------------------------------------------------
+
+    view_wrapper = ft.Container(
+        content=conteudo_principal,
+        padding=20 if eh_mobile else 30,
+        expand=True
+    )
+
+    # ======================================================
+    # ======================== MOBILE ======================
+    # ======================================================
+
     if eh_mobile:
-        # AppBar Mobile com estilo moderno
-        app_bar_obj = ft.AppBar(
+
+        app_bar = ft.AppBar(
             leading=ft.IconButton(
-                icon=ft.icons.MENU_ROUNDED, 
-                icon_color=COLOR_WHITE, 
+                icon="menu",
+                icon_color=COLOR_WHITE,
                 on_click=abrir_menu
             ),
-            title=ft.Column([
-                ft.Text(titulo, size=16, weight="bold", color=COLOR_WHITE),
-                ft.Text(subtitulo, size=11, color=COLOR_WHITE) if subtitulo else ft.Container()
-            ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            bgcolor=COLOR_PRIMARY,
+            title=ft.Column(
+                controls=[
+                    ft.Text(
+                        titulo,
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_WHITE
+                    ),
+                    ft.Text(
+                        subtitulo,
+                        size=11,
+                        color=COLOR_WHITE
+                    ) if subtitulo else ft.Container()
+                ],
+                spacing=0,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
             center_title=True,
-            elevation=0,
+            bgcolor=COLOR_PRIMARY,
+            elevation=0
         )
-        
-        # Alerta de Conexão
+
         barra_status = ft.Container()
         if not conectado:
             barra_status = ft.Container(
-                content=ft.Row([
-                    ft.Icon(ft.icons.WIFI_OFF, size=14, color=ft.colors.BLACK87),
-                    ft.Text("TRABALHANDO OFFLINE", size=11, weight="bold", color=ft.colors.BLACK87),
-                ], alignment="center", spacing=5),
-                bgcolor=COLOR_WARNING, 
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(
+                            "wifi_off",
+                            size=14,
+                            color="black87"
+                        ),
+                        ft.Text(
+                            "OFFLINE",
+                            size=11,
+                            weight=ft.FontWeight.BOLD,
+                            color="black87"
+                        )
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=6
+                ),
+                bgcolor=COLOR_WARNING,
                 padding=8,
                 width=float("inf")
             )
 
-        # O segredo para o Main ler o AppBar e o Drawer no Mobile
+        # page.appbar e page.drawer são aplicados no main.py
         return ft.Container(
-            content=ft.Column([
-                barra_status,
-                view_wrapper
-            ], spacing=0),
+            content=ft.Column(
+                controls=[
+                    barra_status,
+                    view_wrapper
+                ],
+                spacing=0
+            ),
             expand=True,
             bgcolor=COLOR_BACKGROUND,
             data={
-                "appbar": app_bar_obj,
+                "appbar": app_bar,
                 "drawer": drawer_mobile
             }
         )
-    
-    else:
-        # --- LAYOUT DESKTOP (SIDEBAR FIXA) ---
-        return ft.Row(
-            [
-                # Sidebar fixa à esquerda
-                Sidebar(page),
-                
-                # Área de conteúdo à direita
-                ft.Column([
-                    # Barra superior opcional para Desktop se desejar (ou apenas o wrapper)
-                    view_wrapper
-                ], expand=True, spacing=0)
+
+    # ======================================================
+    # ======================= DESKTOP ======================
+    # ======================================================
+
+    return ft.Container(
+        content=ft.Row(
+            controls=[
+                Sidebar(page, is_mobile=False),
+                ft.Column(
+                    controls=[view_wrapper],
+                    expand=True,
+                    spacing=0
+                )
             ],
             expand=True,
-            spacing=0,
-            bgcolor=COLOR_BACKGROUND
-        )
+            spacing=0
+        ),
+        expand=True,
+        bgcolor=COLOR_BACKGROUND
+    )

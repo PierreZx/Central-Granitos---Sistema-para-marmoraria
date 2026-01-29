@@ -1,10 +1,15 @@
 import flet as ft
-from datetime import datetime
 from src.views.layout_base import LayoutBase
 from src.config import (
-    COLOR_PRIMARY, COLOR_SECONDARY, COLOR_BACKGROUND, COLOR_WHITE, 
-    COLOR_SUCCESS, COLOR_WARNING, COLOR_INFO, COLOR_TEXT, SHADOW_MD,
-    COLOR_ERROR
+    COLOR_PRIMARY,
+    COLOR_SECONDARY,
+    COLOR_BACKGROUND,
+    COLOR_WHITE,
+    COLOR_SUCCESS,
+    COLOR_WARNING,
+    COLOR_INFO,
+    COLOR_TEXT,
+    COLOR_ERROR,
 )
 from src.services import firebase_service
 
@@ -13,60 +18,75 @@ def DashboardView(page: ft.Page):
 
     container_principal = ft.Container(expand=True)
 
-    # ===================== CARD KPI =====================
+    # ======================================================
+    # ===================== CARD KPI =======================
+    # ======================================================
 
-    def criar_card_indicador(titulo, valor, icone, cor_corpo, cor_texto=COLOR_TEXT):
+    def criar_card_indicador(titulo, valor, icone, cor):
         return ft.Container(
-            content=ft.Row([
-                ft.Container(
-                    width=54,
-                    height=54,
-                    bgcolor=f"{cor_corpo}15",
-                    border_radius=12,
-                    alignment=ft.alignment.center,
-                    content=ft.Icon(icone, color=cor_corpo, size=28),
-                ),
-                ft.Column([
-                    ft.Text(titulo, size=13, color=ft.colors.GREY_600, weight=ft.FontWeight.W_500),
-                    ft.Text(valor, size=22, weight=ft.FontWeight.BOLD, color=cor_texto),
-                ], spacing=2, expand=True)
-            ], spacing=15),
+            content=ft.Row(
+                controls=[
+                    ft.Container(
+                        width=54,
+                        height=54,
+                        bgcolor=f"{cor}15",
+                        border_radius=12,
+                        alignment=ft.alignment.center,
+                        content=ft.Icon(
+                            icone,
+                            color=cor,
+                            size=28
+                        ),
+                    ),
+                    ft.Column(
+                        controls=[
+                            ft.Text(
+                                titulo,
+                                size=13,
+                                color="grey600",
+                                weight="bold",
+                            ),
+                            ft.Text(
+                                valor,
+                                size=22,
+                                weight=ft.FontWeight.BOLD,
+                                color=COLOR_TEXT,
+                            ),
+                        ],
+                        spacing=2,
+                        expand=True,
+                    ),
+                ],
+                spacing=15,
+            ),
             col={"xs": 12, "sm": 6, "lg": 4},
             padding=20,
             bgcolor=COLOR_WHITE,
             border_radius=16,
-            shadow=SHADOW_MD,
+            shadow=ft.BoxShadow(
+                blur_radius=20,
+                spread_radius=-5,
+                color="black12",
+                offset=ft.Offset(0, 8),
+            ),
         )
 
-    # ===================== FATURAMENTO =====================
+    # ======================================================
+    # ================== CARREGAMENTO ======================
+    # ======================================================
 
-    def calcular_faturamento_mes_atual():
-        extrato = firebase_service.get_extrato_lista()
-        hoje = datetime.now()
-        total = 0.0
+    def carregar_dashboard(e=None):
 
-        for mov in extrato:
-            try:
-                if mov.get("tipo") != "Entrada":
-                    continue
-
-                data_mov = datetime.fromisoformat(mov.get("data"))
-                if data_mov.month == hoje.month and data_mov.year == hoje.year:
-                    total += float(mov.get("valor", 0))
-            except:
-                continue
-
-        return total
-
-    # ===================== CARREGAR DASH =====================
-
-    def carregar_dashboard():
         container_principal.content = ft.Row(
-            [
+            controls=[
                 ft.ProgressRing(color=COLOR_PRIMARY),
-                ft.Text(" Sincronizando dados...")
+                ft.Text(
+                    " Sincronizando dados da Central...",
+                    size=16,
+                    weight="bold",
+                ),
             ],
-            alignment=ft.MainAxisAlignment.CENTER
+            alignment=ft.MainAxisAlignment.CENTER,
         )
         page.update()
 
@@ -75,104 +95,149 @@ def DashboardView(page: ft.Page):
 
             qtd_estoque = firebase_service.get_collection_count("estoque")
             qtd_orcamentos = firebase_service.get_collection_count("orcamentos")
-            faturamento = calcular_faturamento_mes_atual()
+
+            try:
+                extrato = firebase_service.get_extrato_lista()
+                faturamento = sum(
+                    float(m.get("valor", 0))
+                    for m in extrato
+                    if m.get("tipo") == "Entrada"
+                )
+            except Exception:
+                faturamento = 0.0
 
             container_principal.content = ft.Column(
-                [
-                    # Header
-                    ft.Column([
-                        ft.Text("Bem-vindo de volta!", size=28, weight="bold", color=COLOR_TEXT),
-                        ft.Text(
-                            "Aqui está o resumo da sua marmoraria hoje.",
-                            size=15,
-                            color=ft.colors.GREY_600
-                        ),
-                    ]),
+                controls=[
+                    # Cabeçalho
+                    ft.Column(
+                        controls=[
+                            ft.Text(
+                                "Bem-vindo de volta!",
+                                size=28,
+                                weight=ft.FontWeight.BOLD,
+                                color=COLOR_TEXT,
+                            ),
+                            ft.Text(
+                                "Resumo da Central Granitos hoje.",
+                                size=15,
+                                color="grey600",
+                            ),
+                        ]
+                    ),
 
                     ft.Divider(height=30, color="transparent"),
 
                     # KPIs
                     ft.ResponsiveRow(
-                        [
+                        controls=[
                             criar_card_indicador(
                                 "Estoque Total",
                                 f"{qtd_estoque} Chapas",
-                                ft.icons.INVENTORY_2_ROUNDED,
-                                COLOR_INFO
+                                "inventory",
+                                COLOR_INFO,
                             ),
                             criar_card_indicador(
                                 "Orçamentos Ativos",
                                 f"{qtd_orcamentos}",
-                                ft.icons.DESCRIPTION_ROUNDED,
-                                COLOR_WARNING
+                                "description",
+                                COLOR_WARNING,
                             ),
                             criar_card_indicador(
-                                "Faturamento do Mês",
+                                "Faturamento",
                                 f"R$ {faturamento:,.2f}",
-                                ft.icons.ATTACH_MONEY_ROUNDED,
+                                "attach_money",
                                 COLOR_SUCCESS,
-                                COLOR_SUCCESS
                             ),
                         ],
-                        spacing=20
+                        spacing=20,
                     ),
 
                     ft.Divider(height=40, color="transparent"),
 
                     # Ações rápidas
-                    ft.Text("Ações Rápidas", size=20, weight="bold", color=COLOR_TEXT),
+                    ft.Text(
+                        "Ações Rápidas",
+                        size=20,
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXT,
+                    ),
 
                     ft.ResponsiveRow(
-                        [
+                        controls=[
                             ft.Container(
                                 col={"xs": 12, "sm": 6, "md": 3},
                                 content=ft.ElevatedButton(
                                     "Novo Orçamento",
-                                    icon=ft.icons.ADD_ROUNDED,
+                                    icon="add",
                                     height=55,
                                     bgcolor=COLOR_PRIMARY,
                                     color=COLOR_WHITE,
                                     style=ft.ButtonStyle(
                                         shape=ft.RoundedRectangleBorder(radius=12)
                                     ),
-                                    on_click=lambda _: page.go("/orcamentos")
-                                )
+                                    on_click=lambda e: page.go("/orcamentos"),
+                                ),
                             ),
                             ft.Container(
                                 col={"xs": 12, "sm": 6, "md": 3},
                                 content=ft.ElevatedButton(
-                                    "Gerenciar Estoque",
-                                    icon=ft.icons.LIST_ALT_ROUNDED,
+                                    "Consultar Estoque",
+                                    icon="list_alt",
                                     height=55,
                                     bgcolor=COLOR_WHITE,
                                     color=COLOR_PRIMARY,
                                     style=ft.ButtonStyle(
-                                        shape=ft.RoundedRectangleBorder(radius=12),
-                                        side={
-                                            ft.ControlState.DEFAULT:
-                                                ft.BorderSide(1, COLOR_PRIMARY)
-                                        }
+                                        shape=ft.RoundedRectangleBorder(radius=12)
                                     ),
-                                    on_click=lambda _: page.go("/estoque")
-                                )
+                                    on_click=lambda e: page.go("/estoque"),
+                                ),
                             ),
                         ],
-                        spacing=15
+                        spacing=15,
                     ),
                 ],
                 expand=True,
+                spacing=10,
                 scroll=ft.ScrollMode.AUTO,
-                spacing=10
             )
 
-        except Exception as e:
-            container_principal.content = ft.Text(
-                f"Erro ao carregar dados: {e}",
-                color=COLOR_ERROR
+        except Exception as err:
+            container_principal.content = ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(
+                            "error_outline",
+                            color=COLOR_ERROR,
+                            size=50
+                        ),
+                        ft.Text(
+                            "Erro ao carregar Dashboard",
+                            color=COLOR_ERROR,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Text(
+                            str(err),
+                            size=12,
+                            color="grey600",
+                        ),
+                        ft.ElevatedButton(
+                            "Tentar novamente",
+                            on_click=carregar_dashboard,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                alignment=ft.alignment.center,
+                expand=True,
             )
 
         page.update()
 
+    # Carregamento inicial
     carregar_dashboard()
 
-    return LayoutBase(page, container_principal, titulo="Dashboard")
+    return LayoutBase(
+        page,
+        container_principal,
+        titulo="Dashboard"
+    )

@@ -1,119 +1,174 @@
 import flet as ft
-from src.config import COLOR_PRIMARY, COLOR_TEXT, COLOR_WHITE, SHADOW_MD
+from src.config import COLOR_PRIMARY, COLOR_TEXT, COLOR_WHITE
+
 
 class Sidebar(ft.Container):
-    def __init__(self, page, is_mobile=False):
+    def __init__(self, page: ft.Page, is_mobile: bool = False):
         super().__init__()
-        self.page = page
-        
-        # Configuração de Estrutura
-        if is_mobile:
-            self.width = None
-            self.expand = True
-            self.bgcolor = COLOR_WHITE
-            padding_bottom = 20
-        else:
+
+        self._page_ref = page
+
+        # =========================
+        # CONFIGURAÇÃO BASE
+        # =========================
+        self.bgcolor = COLOR_WHITE
+        self.padding = 20
+
+        if not is_mobile:
             self.width = 260
-            self.expand = True 
-            self.bgcolor = COLOR_WHITE
-            # Linha sutil de separação à direita
-            self.border = ft.border.only(right=ft.border.BorderSide(1, "#F0F0F0"))
-            padding_bottom = 10
-        
-        self.padding = ft.padding.only(left=15, right=15, top=25, bottom=padding_bottom)
-        user_role = self.page.session.get("user_role")
-        
-        # --- CABEÇALHO ---
+            self.border = ft.Border(
+                right=ft.BorderSide(1, "#F0F0F0")
+            )
+
+        # Papel do usuário
+        user_role = getattr(self._page_ref, "user_role", None)
+
+        # =========================
+        # LOGO / CABEÇALHO
+        # =========================
         logo = ft.Container(
-            content=ft.Row([
-                ft.Container(
-                    width=38, height=38, border_radius=10, bgcolor=COLOR_PRIMARY,
-                    content=ft.Icon(ft.icons.PRECISION_MANUFACTURING_ROUNDED, color=COLOR_WHITE, size=20)
-                ),
-                ft.Text(
-                    "CENTRAL", 
-                    size=20, 
-                    weight="bold", 
-                    color=COLOR_PRIMARY, 
-                    style=ft.TextStyle(letter_spacing=1) # Ajustado para ficar dentro do style
-                )
-            ], spacing=12),
-            margin=ft.margin.only(bottom=30, left=5)
+            content=ft.Row(
+                controls=[
+                    ft.Container(
+                        width=38,
+                        height=38,
+                        border_radius=10,
+                        bgcolor=COLOR_PRIMARY,
+                        alignment=ft.alignment.center,
+                        content=ft.Icon(
+                            "precision_manufacturing",
+                            color=COLOR_WHITE,
+                            size=20,
+                        ),
+                    ),
+                    ft.Text(
+                        "CENTRAL",
+                        size=20,
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_PRIMARY,
+                    ),
+                ],
+                spacing=12,
+            ),
+            margin=ft.margin.only(bottom=30, left=5),
         )
 
-        # --- ITENS DE MENU ---
-        menu_items = []
+        # =========================
+        # ITENS DE MENU
+        # =========================
         if user_role == "admin":
             menu_items = [
-                self.criar_item_menu("Dashboard", ft.icons.GRID_VIEW_ROUNDED, "/dashboard"),
-                self.criar_item_menu("Estoque", ft.icons.INVENTORY_2_OUTLINED, "/estoque"),
-                self.criar_item_menu("Orçamentos", ft.icons.RECEIPT_LONG_ROUNDED, "/orcamentos"),
-                self.criar_item_menu("Financeiro", ft.icons.ACCOUNT_BALANCE_WALLET_ROUNDED, "/financeiro"),
-                self.criar_item_menu("Produção", ft.icons.PRECISION_MANUFACTURING_OUTLINED, "/producao"),
+                self.criar_item_menu("Dashboard", "grid_view", "/dashboard"),
+                self.criar_item_menu("Estoque", "inventory_2", "/estoque"),
+                self.criar_item_menu("Orçamentos", "receipt_long", "/orcamentos"),
+                self.criar_item_menu(
+                    "Financeiro",
+                    "account_balance_wallet",
+                    "/financeiro",
+                ),
+                self.criar_item_menu(
+                    "Produção",
+                    "precision_manufacturing",
+                    "/producao",
+                ),
             ]
         else:
             menu_items = [
-                self.criar_item_menu("Produção", ft.icons.PRECISION_MANUFACTURING_OUTLINED, "/producao"),
+                self.criar_item_menu(
+                    "Produção",
+                    "precision_manufacturing",
+                    "/producao",
+                ),
             ]
 
-        # Botão de Sair destacado no rodapé
+        # =========================
+        # RODAPÉ
+        # =========================
         rodape = ft.Container(
-            content=self.criar_item_menu("Sair do Sistema", ft.icons.LOGOUT_ROUNDED, "/login", estilo="danger"),
-            margin=ft.margin.only(top=10)
+            content=self.criar_item_menu(
+                "Sair",
+                "logout",
+                "/login",
+                estilo="danger",
+            ),
+            margin=ft.margin.only(top=10),
         )
 
-        self.content = ft.Column(
-            [
+        # =========================
+        # CONTEÚDO FINAL
+        # =========================
+        self.content = ft.ListView(
+            controls=[
                 logo,
-                ft.Column(menu_items, spacing=5, expand=True),
+                ft.Column(menu_items, spacing=5),
                 ft.Divider(height=1, color="#F0F0F0"),
-                rodape
-            ], 
-            spacing=0, 
-            expand=True
+                rodape,
+            ],
+            expand=True,
+            spacing=10,
         )
 
+    # ==================================================
+    # NAVEGAÇÃO
+    # ==================================================
     def navegar(self, e):
         rota = e.control.data
-        if self.page.drawer:
-            self.page.drawer.open = False
-        # Se for sair, limpa a sessão
-        if rota == "/login":
-            self.page.session.clear()
-        self.page.go(rota)
 
+        # Fecha drawer no mobile (compatível 0.23.2)
+        try:
+            if self._page_ref.drawer:
+                self._page_ref.close(self._page_ref.drawer)
+        except Exception:
+            pass
+
+        # Logout
+        if rota == "/login":
+            setattr(self._page_ref, "user_role", None)
+
+        self._page_ref.go(rota)
+
+    # ==================================================
+    # ITEM DE MENU
+    # ==================================================
     def criar_item_menu(self, texto, icone, rota, estilo="normal"):
-        esta_ativo = self.page.route == rota
-        
-        # Definição de Cores Baseada no Estado
+        esta_ativo = self._page_ref.route == rota
+
         if estilo == "danger":
-            cor_item = ft.colors.RED_600
-            bg_hover = ft.colors.RED_50
+            cor_item = "red600"
+            bg_item = "red50" if esta_ativo else "transparent"
         else:
-            cor_item = COLOR_PRIMARY if esta_ativo else ft.colors.BLUE_GREY_700
-            bg_hover = f"{COLOR_PRIMARY}10" # Vinho com 10% de opacidade
+            cor_item = COLOR_PRIMARY if esta_ativo else "bluegrey700"
+            bg_item = f"{COLOR_PRIMARY}10" if esta_ativo else "transparent"
 
         return ft.Container(
             data=rota,
             on_click=self.navegar,
-            padding=ft.padding.symmetric(vertical=12, horizontal=15),
+            padding=12,
             border_radius=12,
-            bgcolor=bg_hover if esta_ativo else ft.colors.TRANSPARENT,
-            animate=ft.animation.Animation(200, ft.AnimationCurve.EASE_OUT),
-            content=ft.Row([
-                ft.Icon(
-                    icone, 
-                    size=22, 
-                    color=cor_item,
-                    weight="bold" if esta_ativo else "normal"
-                ),
-                ft.Text(
-                    texto, 
-                    size=14, 
-                    weight="bold" if esta_ativo else "w500",
-                    color=cor_item
-                ),
-            ], spacing=15),
-            # Efeito visual de "selecionado"
-            border=ft.border.only(left=ft.border.BorderSide(3, COLOR_PRIMARY)) if esta_ativo and estilo != "danger" else None
+            bgcolor=bg_item,
+            content=ft.Row(
+                controls=[
+                    ft.Icon(
+                        icone,
+                        size=22,
+                        color=cor_item,
+                    ),
+                    ft.Text(
+                        texto,
+                        size=14,
+                        weight=ft.FontWeight.BOLD
+                        if esta_ativo
+                        else "normal",
+                        color=cor_item,
+                    ),
+                ],
+                spacing=15,
+            ),
+            border=(
+                ft.border.only(
+                    left=ft.BorderSide(3, COLOR_PRIMARY)
+                )
+                if esta_ativo and estilo != "danger"
+                else None
+            ),
         )

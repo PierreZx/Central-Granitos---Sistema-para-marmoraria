@@ -1,0 +1,36 @@
+name: Build Marmoraria APK
+on:
+  push:
+    branches: [ main ] # O build acontece toda vez que você der push para a branch main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: |
+          pip install flet websockets==13.1
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Build APK
+        run: |
+          # O comando entra na pasta e gera o arquivo
+          flet build apk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marmoraria-app-release
+          path: build/apk/*.apk

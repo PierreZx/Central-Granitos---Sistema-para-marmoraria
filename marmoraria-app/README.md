@@ -1,3 +1,9 @@
-# marmoraria-app
+# A marmoraria-app Flet app
 
-Sistema de gestão para marmoraria usando Flet e Firebase.
+An example of a minimal Flet app.
+
+To run the app:
+
+```
+flet run [app_directory]
+```
