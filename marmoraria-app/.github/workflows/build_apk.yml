@@ -1,7 +1,7 @@
 name: Build Marmoraria APK
 on:
   push:
-    branches: [ main ] # O build acontece toda vez que você der push para a branch main
+    branches: [ main ]
 
 jobs:
   build:
@@ -12,25 +12,29 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.11' # Versão que você usa no caminho C:\Users\PierreZx\...
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.38.8' # Exatamente a versão do seu flutter --version
           channel: 'stable'
 
       - name: Install Dependencies
         run: |
-          pip install flet websockets==13.1
+          # Instalando a sua versão do Flet e a websockets estável
+          pip install flet==0.23.2 websockets==13.1
+          cd marmoraria-app
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Build APK
         run: |
-          # O comando entra na pasta e gera o arquivo
+          cd marmoraria-app
+          # Comando de build profissional para gerar o APK
           flet build apk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: marmoraria-app-release
-          path: build/apk/*.apk
+          name: Central-Granitos-APK
+          path: marmoraria-app/build/apk/*.apk
