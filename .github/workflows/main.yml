@@ -17,13 +17,18 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.8' # Sincronizado com seu PC
+          flutter-version: '3.38.8'
           channel: 'stable'
 
-      - name: Install Dependencies
+      # PASSO NOVO: Instalar bibliotecas de imagem no Linux do GitHub
+      - name: Install System Dependencies
         run: |
-          # Instalando sua versão exata do Flet para não dar erro
-          pip install flet==0.23.2 websockets==13.1 
+          sudo apt-get update
+          sudo apt-get install -y libjpeg-dev zlib1g-dev
+
+      - name: Install Python Dependencies
+        run: |
+          pip install flet==0.23.2 websockets==13.1
           cd marmoraria-app
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
