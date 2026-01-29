@@ -17,11 +17,13 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.38.8' # Sincronizado com seu PC
           channel: 'stable'
 
       - name: Install Dependencies
         run: |
-          pip install flet websockets==13.1
+          # Instalando sua versão exata do Flet para não dar erro
+          pip install flet==0.23.2 websockets==13.1 
           cd marmoraria-app
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
@@ -33,5 +35,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: marmoraria-app-release
+          name: Central-Granitos-APK
           path: marmoraria-app/build/apk/*.apk
