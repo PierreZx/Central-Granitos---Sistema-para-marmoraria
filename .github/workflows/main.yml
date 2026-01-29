@@ -17,24 +17,22 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.8'
+          # Versão estável que não briga com o Kotlin
+          flutter-version: '3.24.5' 
           channel: 'stable'
 
-      # PASSO NOVO: Instalar bibliotecas de imagem no Linux do GitHub
-      - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libjpeg-dev zlib1g-dev
-
-      - name: Install Python Dependencies
+      - name: Install Dependencies
         run: |
           pip install flet==0.23.2 websockets==13.1
+          # O SEGREDO: Instalamos o Pillow via binário antes do fpdf2 tentar compilar ele
+          pip install Pillow --only-binary=:all: 
           cd marmoraria-app
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Build APK
         run: |
           cd marmoraria-app
+          # Agora o build vai passar direto porque o Pillow já está lá
           flet build apk
 
       - name: Upload Artifact
