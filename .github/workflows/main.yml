@@ -22,15 +22,17 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          # Instalamos o Flet e a websockets direto no servidor
           pip install flet==0.23.2 websockets==13.1
           cd marmoraria-app
+          # Aqui instalamos o seu requirements (que deve estar sem o Pillow)
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Build APK
         run: |
           cd marmoraria-app
-          # O segredo é o --pip-args: ele força o build do Flet a não compilar nada
-          flet build apk --pip-args "--only-binary=:all:"
+          # Comando simples e direto, sem a flag que deu erro
+          flet build apk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
