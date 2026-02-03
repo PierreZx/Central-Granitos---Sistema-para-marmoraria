@@ -50,6 +50,7 @@ def InventoryView(page: ft.Page):
     # ================= FUNÇÕES =================
     def carregar_dados():
         grid_produtos.controls.clear()
+
         lista = firebase_service.get_collection("estoque")
 
         if not lista:
@@ -75,29 +76,35 @@ def InventoryView(page: ft.Page):
                             offset=ft.Offset(0, 6),
                         ),
                         content=ft.Column(
-                            [
-                                ft.Text(produto["nome"], size=18, weight="bold"),
+                            controls=[
+                                ft.Text(
+                                    produto.get("nome", ""),
+                                    size=18,
+                                    weight=ft.FontWeight.BOLD
+                                ),
                                 ft.Text(
                                     f"R$ {float(produto.get('preco_m2', 0)):,.2f} / m²",
                                     color=COLOR_PRIMARY,
-                                    weight="bold",
+                                    weight=ft.FontWeight.BOLD,
                                 ),
                                 ft.Text(f"{produto.get('metros', 0)} m² disponíveis"),
                                 ft.Text(f"{produto.get('quantidade', 0)} unidades"),
                                 ft.Divider(height=10, color="transparent"),
                                 ft.Row(
-                                    [
+                                    controls=[
                                         ft.IconButton(
-                                            icon=ft.icons.EDIT_NOTE,
+                                            icon="edit",
                                             icon_color=COLOR_PRIMARY,
                                             tooltip="Editar",
                                             on_click=lambda e, p=produto: preparar_edicao(p),
                                         ),
                                         ft.IconButton(
-                                            icon=ft.icons.DELETE_OUTLINE,
+                                            icon="delete_outline",
                                             icon_color=COLOR_ERROR,
                                             tooltip="Excluir",
-                                            on_click=lambda e, p=produto: confirmar_exclusao(p["id"], p["nome"]),
+                                            on_click=lambda e, p=produto: confirmar_exclusao(
+                                                p["id"], p.get("nome", "")
+                                            ),
                                         ),
                                     ],
                                     alignment=ft.MainAxisAlignment.END,
@@ -112,7 +119,7 @@ def InventoryView(page: ft.Page):
 
     # ================= EDITAR =================
     def preparar_edicao(item):
-        txt_nome.value = item["nome"]
+        txt_nome.value = item.get("nome", "")
         txt_preco.value = str(item.get("preco_m2", ""))
         txt_metros.value = str(item.get("metros", ""))
         txt_qtd.value = str(item.get("quantidade", ""))
@@ -129,9 +136,13 @@ def InventoryView(page: ft.Page):
             carregar_dados()
 
         dlg = ft.AlertDialog(
-            title=ft.Text(f"Editar {item['nome']}"),
+            title=ft.Text(f"Editar {item.get('nome', '')}"),
             content=ft.Column(
-                [txt_nome, txt_preco, ft.Row([txt_metros, txt_qtd], spacing=10)],
+                controls=[
+                    txt_nome,
+                    txt_preco,
+                    ft.Row([txt_metros, txt_qtd], spacing=10),
+                ],
                 tight=True,
             ),
             actions=[
@@ -190,7 +201,11 @@ def InventoryView(page: ft.Page):
         dlg = ft.AlertDialog(
             title=ft.Text("Adicionar Nova Pedra"),
             content=ft.Column(
-                [txt_nome, txt_preco, ft.Row([txt_metros, txt_qtd], spacing=10)],
+                controls=[
+                    txt_nome,
+                    txt_preco,
+                    ft.Row([txt_metros, txt_qtd], spacing=10),
+                ],
                 tight=True,
             ),
             actions=[
@@ -208,16 +223,24 @@ def InventoryView(page: ft.Page):
 
     # ================= HEADER =================
     header = ft.Row(
-        [
+        controls=[
             ft.Column(
-                [
-                    ft.Text("Gestão de Estoque", size=28, weight="bold", color=COLOR_TEXT),
-                    ft.Text("Controle de chapas e medidas", color="grey600"),
+                controls=[
+                    ft.Text(
+                        "Gestão de Estoque",
+                        size=28,
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXT
+                    ),
+                    ft.Text(
+                        "Controle de chapas e medidas",
+                        color="grey600"
+                    ),
                 ]
             ),
             ft.ElevatedButton(
                 "Adicionar Pedra",
-                icon=ft.icons.ADD,
+                icon="add",
                 height=50,
                 bgcolor=COLOR_PRIMARY,
                 color=COLOR_WHITE,
@@ -232,7 +255,11 @@ def InventoryView(page: ft.Page):
     return LayoutBase(
         page,
         ft.Column(
-            [header, ft.Divider(height=30, color="transparent"), grid_produtos],
+            controls=[
+                header,
+                ft.Divider(height=30, color="transparent"),
+                grid_produtos,
+            ],
             expand=True,
             scroll=ft.ScrollMode.AUTO,
         ),

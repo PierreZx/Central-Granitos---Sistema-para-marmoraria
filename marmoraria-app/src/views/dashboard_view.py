@@ -16,49 +16,14 @@ from src.services import firebase_service
 
 def DashboardView(page: ft.Page):
 
+    # Container principal que recebe o conteúdo dinâmico
     container_principal = ft.Container(expand=True)
 
     # ======================================================
     # ===================== CARD KPI =======================
     # ======================================================
-
     def criar_card_indicador(titulo, valor, icone, cor):
         return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Container(
-                        width=54,
-                        height=54,
-                        bgcolor=f"{cor}15",
-                        border_radius=12,
-                        alignment=ft.alignment.center,
-                        content=ft.Icon(
-                            icone,
-                            color=cor,
-                            size=28
-                        ),
-                    ),
-                    ft.Column(
-                        controls=[
-                            ft.Text(
-                                titulo,
-                                size=13,
-                                color="grey600",
-                                weight="bold",
-                            ),
-                            ft.Text(
-                                valor,
-                                size=22,
-                                weight=ft.FontWeight.BOLD,
-                                color=COLOR_TEXT,
-                            ),
-                        ],
-                        spacing=2,
-                        expand=True,
-                    ),
-                ],
-                spacing=15,
-            ),
             col={"xs": 12, "sm": 6, "lg": 4},
             padding=20,
             bgcolor=COLOR_WHITE,
@@ -69,28 +34,63 @@ def DashboardView(page: ft.Page):
                 color="black12",
                 offset=ft.Offset(0, 8),
             ),
+            content=ft.Row(
+                spacing=15,
+                controls=[
+                    ft.Container(
+                        width=54,
+                        height=54,
+                        bgcolor=f"{cor}15",
+                        border_radius=12,
+                        alignment=ft.alignment.center,
+                        content=ft.Icon(
+                            name=icone,
+                            color=cor,
+                            size=28,
+                        ),
+                    ),
+                    ft.Column(
+                        expand=True,
+                        spacing=2,
+                        controls=[
+                            ft.Text(
+                                titulo,
+                                size=13,
+                                color="grey600",
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                            ft.Text(
+                                valor,
+                                size=22,
+                                weight=ft.FontWeight.BOLD,
+                                color=COLOR_TEXT,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
         )
 
     # ======================================================
     # ================== CARREGAMENTO ======================
     # ======================================================
-
     def carregar_dashboard(e=None):
-
+        # Estado de loading
         container_principal.content = ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
             controls=[
                 ft.ProgressRing(color=COLOR_PRIMARY),
                 ft.Text(
                     " Sincronizando dados da Central...",
                     size=16,
-                    weight="bold",
+                    weight=ft.FontWeight.BOLD,
                 ),
             ],
-            alignment=ft.MainAxisAlignment.CENTER,
         )
         page.update()
 
         try:
+            # Inicialização Firebase
             firebase_service.initialize_firebase()
 
             qtd_estoque = firebase_service.get_collection_count("estoque")
@@ -99,14 +99,18 @@ def DashboardView(page: ft.Page):
             try:
                 extrato = firebase_service.get_extrato_lista()
                 faturamento = sum(
-                    float(m.get("valor", 0))
-                    for m in extrato
-                    if m.get("tipo") == "Entrada"
+                    float(item.get("valor", 0))
+                    for item in extrato
+                    if item.get("tipo") == "Entrada"
                 )
             except Exception:
                 faturamento = 0.0
 
+            # Conteúdo principal
             container_principal.content = ft.Column(
+                expand=True,
+                spacing=10,
+                scroll=ft.ScrollMode.AUTO,
                 controls=[
                     # Cabeçalho
                     ft.Column(
@@ -122,13 +126,14 @@ def DashboardView(page: ft.Page):
                                 size=15,
                                 color="grey600",
                             ),
-                        ]
+                        ],
                     ),
 
                     ft.Divider(height=30, color="transparent"),
 
                     # KPIs
                     ft.ResponsiveRow(
+                        spacing=20,
                         controls=[
                             criar_card_indicador(
                                 "Estoque Total",
@@ -149,7 +154,6 @@ def DashboardView(page: ft.Page):
                                 COLOR_SUCCESS,
                             ),
                         ],
-                        spacing=20,
                     ),
 
                     ft.Divider(height=40, color="transparent"),
@@ -163,11 +167,12 @@ def DashboardView(page: ft.Page):
                     ),
 
                     ft.ResponsiveRow(
+                        spacing=15,
                         controls=[
                             ft.Container(
                                 col={"xs": 12, "sm": 6, "md": 3},
                                 content=ft.ElevatedButton(
-                                    "Novo Orçamento",
+                                    text="Novo Orçamento",
                                     icon="add",
                                     height=55,
                                     bgcolor=COLOR_PRIMARY,
@@ -181,7 +186,7 @@ def DashboardView(page: ft.Page):
                             ft.Container(
                                 col={"xs": 12, "sm": 6, "md": 3},
                                 content=ft.ElevatedButton(
-                                    "Consultar Estoque",
+                                    text="Consultar Estoque",
                                     icon="list_alt",
                                     height=55,
                                     bgcolor=COLOR_WHITE,
@@ -193,22 +198,22 @@ def DashboardView(page: ft.Page):
                                 ),
                             ),
                         ],
-                        spacing=15,
                     ),
                 ],
-                expand=True,
-                spacing=10,
-                scroll=ft.ScrollMode.AUTO,
             )
 
         except Exception as err:
+            # Tela de erro
             container_principal.content = ft.Container(
+                expand=True,
+                alignment=ft.alignment.center,
                 content=ft.Column(
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
                         ft.Icon(
-                            "error_outline",
+                            name="error_outline",
                             color=COLOR_ERROR,
-                            size=50
+                            size=50,
                         ),
                         ft.Text(
                             "Erro ao carregar Dashboard",
@@ -221,23 +226,25 @@ def DashboardView(page: ft.Page):
                             color="grey600",
                         ),
                         ft.ElevatedButton(
-                            "Tentar novamente",
+                            text="Tentar novamente",
                             on_click=carregar_dashboard,
                         ),
                     ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                alignment=ft.alignment.center,
-                expand=True,
             )
 
         page.update()
 
-    # Carregamento inicial
+    # ======================================================
+    # CARREGAMENTO INICIAL
+    # ======================================================
     carregar_dashboard()
 
+    # ======================================================
+    # RETORNO COM LAYOUT BASE (ASSINATURA ORIGINAL)
+    # ======================================================
     return LayoutBase(
         page,
         container_principal,
-        titulo="Dashboard"
+        titulo="Dashboard",
     )

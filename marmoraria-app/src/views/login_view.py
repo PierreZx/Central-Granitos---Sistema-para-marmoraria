@@ -14,18 +14,16 @@ from src.config import (
 # =========================================================
 
 def LoginView(page: ft.Page):
-
     # -----------------------------------------------------
     # ------------------ FEEDBACK UI ----------------------
     # -----------------------------------------------------
-
     def show_snack(msg: str, success: bool = True):
         snack = ft.SnackBar(
             content=ft.Text(
-                    msg,
-                    color="white",
-                    weight="bold"
-                ),
+                msg,
+                color="white",
+                weight=ft.FontWeight.BOLD,
+            ),
             bgcolor="green600" if success else "red600",
             behavior=ft.SnackBarBehavior.FLOATING,
             margin=20,
@@ -37,7 +35,6 @@ def LoginView(page: ft.Page):
     # -----------------------------------------------------
     # ------------------ RESET BUTTON ---------------------
     # -----------------------------------------------------
-
     def reset_button():
         btn_entrar.disabled = False
         btn_entrar.content = ft.Text(
@@ -50,8 +47,8 @@ def LoginView(page: ft.Page):
     # -----------------------------------------------------
     # ------------------ LOGIN ACTION ---------------------
     # -----------------------------------------------------
-
     def realizar_login(e):
+        # Feedback visual de carregamento
         btn_entrar.disabled = True
         btn_entrar.content = ft.ProgressRing(
             width=20,
@@ -64,15 +61,13 @@ def LoginView(page: ft.Page):
         email = (campo_usuario.value or "").strip()
         senha = (campo_senha.value or "").strip()
 
+        # Validação simples
         if not email or not senha:
             show_snack("Por favor, preencha todos os campos!", success=False)
             reset_button()
             return
 
-        # Define papel do usuário
-        role = "admin" if email == AUTH_EMAIL else "producao"
-        setattr(page, "user_role", role)
-
+        # Credenciais válidas
         acesso_producao = (
             email == "acesso.producao@gmail.com"
             and senha == "MarmorariaC55"
@@ -80,12 +75,19 @@ def LoginView(page: ft.Page):
         acesso_admin = email == AUTH_EMAIL and senha == AUTH_PASSWORD
 
         if acesso_producao or acesso_admin:
+            role = "producao" if acesso_producao else "admin"
+
+            # 🔥 CORREÇÃO AQUI
+            page.user_role = role
+            page.session.set("user_role", role)
+
             show_snack("Acesso autorizado. Bem-vindo!")
 
             if acesso_producao:
                 page.go("/producao")
             else:
                 page.go("/dashboard")
+
         else:
             show_snack("E-mail ou senha inválidos.", success=False)
             reset_button()
@@ -93,7 +95,6 @@ def LoginView(page: ft.Page):
     # -----------------------------------------------------
     # ------------------ COMPONENTES ----------------------
     # -----------------------------------------------------
-
     logo_icon = ft.Container(
         content=ft.Image(src="icon.png", width=80, height=80),
         padding=10,
@@ -119,11 +120,11 @@ def LoginView(page: ft.Page):
 
     campo_usuario = ft.TextField(
         label="E-mail",
-        prefix_icon="email_outlined",   # ✅ Flet 0.23.2
+        prefix_icon="email_outlined",   # Compatível com Flet 0.23.2
         border_radius=12,
         filled=True,
         bgcolor="grey50",
-        value=AUTH_EMAIL,
+        value=AUTH_EMAIL,               # Remova em produção
         on_submit=realizar_login,
         width=400,
     )
@@ -132,7 +133,7 @@ def LoginView(page: ft.Page):
         label="Senha",
         password=True,
         can_reveal_password=True,
-        prefix_icon="lock_outline",     # ✅ Flet 0.23.2
+        prefix_icon="lock_outline",     # Compatível com Flet 0.23.2
         border_radius=12,
         filled=True,
         bgcolor="grey50",
@@ -159,7 +160,6 @@ def LoginView(page: ft.Page):
     # -----------------------------------------------------
     # ------------------ CONTAINER FINAL ------------------
     # -----------------------------------------------------
-
     return ft.Container(
         content=ft.Column(
             controls=[

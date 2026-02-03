@@ -6,7 +6,7 @@ class Sidebar(ft.Container):
     def __init__(self, page: ft.Page, is_mobile: bool = False):
         super().__init__()
 
-        self._page_ref = page
+        self.page = page
 
         # =========================
         # CONFIGURAÇÃO BASE
@@ -16,19 +16,19 @@ class Sidebar(ft.Container):
 
         if not is_mobile:
             self.width = 260
-            self.border = ft.Border(
+            self.border = ft.border.only(
                 right=ft.BorderSide(1, "#F0F0F0")
             )
 
         # Papel do usuário
-        user_role = getattr(self._page_ref, "user_role", None)
+        user_role = getattr(self.page, "user_role", None)
 
         # =========================
         # LOGO / CABEÇALHO
         # =========================
         logo = ft.Container(
             content=ft.Row(
-                controls=[
+                [
                     ft.Container(
                         width=38,
                         height=38,
@@ -36,7 +36,7 @@ class Sidebar(ft.Container):
                         bgcolor=COLOR_PRIMARY,
                         alignment=ft.alignment.center,
                         content=ft.Icon(
-                            "precision_manufacturing",
+                            ft.Icons.PRECISION_MANUFACTURING,
                             color=COLOR_WHITE,
                             size=20,
                         ),
@@ -58,17 +58,17 @@ class Sidebar(ft.Container):
         # =========================
         if user_role == "admin":
             menu_items = [
-                self.criar_item_menu("Dashboard", "grid_view", "/dashboard"),
-                self.criar_item_menu("Estoque", "inventory_2", "/estoque"),
-                self.criar_item_menu("Orçamentos", "receipt_long", "/orcamentos"),
+                self.criar_item_menu("Dashboard", ft.Icons.GRID_VIEW, "/dashboard"),
+                self.criar_item_menu("Estoque", ft.Icons.INVENTORY_2, "/estoque"),
+                self.criar_item_menu("Orçamentos", ft.Icons.RECEIPT_LONG, "/orcamentos"),
                 self.criar_item_menu(
                     "Financeiro",
-                    "account_balance_wallet",
+                    ft.Icons.ACCOUNT_BALANCE_WALLET,
                     "/financeiro",
                 ),
                 self.criar_item_menu(
                     "Produção",
-                    "precision_manufacturing",
+                    ft.Icons.PRECISION_MANUFACTURING,
                     "/producao",
                 ),
             ]
@@ -76,7 +76,7 @@ class Sidebar(ft.Container):
             menu_items = [
                 self.criar_item_menu(
                     "Produção",
-                    "precision_manufacturing",
+                    ft.Icons.PRECISION_MANUFACTURING,
                     "/producao",
                 ),
             ]
@@ -87,7 +87,7 @@ class Sidebar(ft.Container):
         rodape = ft.Container(
             content=self.criar_item_menu(
                 "Sair",
-                "logout",
+                ft.Icons.LOGOUT,
                 "/login",
                 estilo="danger",
             ),
@@ -98,14 +98,14 @@ class Sidebar(ft.Container):
         # CONTEÚDO FINAL
         # =========================
         self.content = ft.ListView(
+            expand=True,
+            spacing=10,
             controls=[
                 logo,
                 ft.Column(menu_items, spacing=5),
                 ft.Divider(height=1, color="#F0F0F0"),
                 rodape,
             ],
-            expand=True,
-            spacing=10,
         )
 
     # ==================================================
@@ -114,30 +114,31 @@ class Sidebar(ft.Container):
     def navegar(self, e):
         rota = e.control.data
 
-        # Fecha drawer no mobile (compatível 0.23.2)
-        try:
-            if self._page_ref.drawer:
-                self._page_ref.close(self._page_ref.drawer)
-        except Exception:
-            pass
+        # Fecha drawer no mobile
+        if self.page.drawer:
+            try:
+                self.page.drawer.open = False
+            except Exception:
+                pass
 
         # Logout
         if rota == "/login":
-            setattr(self._page_ref, "user_role", None)
+            self.page.user_role = None
 
-        self._page_ref.go(rota)
+        self.page.go(rota)
 
     # ==================================================
     # ITEM DE MENU
     # ==================================================
     def criar_item_menu(self, texto, icone, rota, estilo="normal"):
-        esta_ativo = self._page_ref.route == rota
+        rota_atual = self.page.route
+        esta_ativo = rota_atual == rota
 
         if estilo == "danger":
-            cor_item = "red600"
-            bg_item = "red50" if esta_ativo else "transparent"
+            cor_item = ft.Colors.RED_600
+            bg_item = ft.Colors.RED_50 if esta_ativo else "transparent"
         else:
-            cor_item = COLOR_PRIMARY if esta_ativo else "bluegrey700"
+            cor_item = COLOR_PRIMARY if esta_ativo else ft.Colors.BLUE_GREY_700
             bg_item = f"{COLOR_PRIMARY}10" if esta_ativo else "transparent"
 
         return ft.Container(
@@ -146,29 +147,21 @@ class Sidebar(ft.Container):
             padding=12,
             border_radius=12,
             bgcolor=bg_item,
+            border=(
+                ft.border.only(left=ft.BorderSide(3, COLOR_PRIMARY))
+                if esta_ativo and estilo != "danger"
+                else None
+            ),
             content=ft.Row(
-                controls=[
-                    ft.Icon(
-                        icone,
-                        size=22,
-                        color=cor_item,
-                    ),
+                [
+                    ft.Icon(icone, size=22, color=cor_item),
                     ft.Text(
                         texto,
                         size=14,
-                        weight=ft.FontWeight.BOLD
-                        if esta_ativo
-                        else "normal",
+                        weight=ft.FontWeight.BOLD if esta_ativo else ft.FontWeight.NORMAL,
                         color=cor_item,
                     ),
                 ],
                 spacing=15,
-            ),
-            border=(
-                ft.border.only(
-                    left=ft.BorderSide(3, COLOR_PRIMARY)
-                )
-                if esta_ativo and estilo != "danger"
-                else None
             ),
         )
