@@ -17,38 +17,60 @@
                 <Setter Property="Shell.BackgroundColor" Value="#8B1A1A" />
                 <Setter Property="Shell.ForegroundColor" Value="White" />
                 <Setter Property="Shell.TitleColor" Value="White" />
-                <Setter Property="Shell.UnselectedColor" Value="#757575" />
+                <Setter Property="Shell.UnselectedColor" Value="#444444" />
+            </Style>
+
+            <Style TargetType="Grid" x:Key="FlyoutItemLayoutStyle">
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup x:Name="CommonStates">
+                            <VisualState x:Name="Normal" />
+                            <VisualState x:Name="Selected">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="#F2F2F7" />
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Shell.Resources>
 
     <Shell.FlyoutHeader>
         <VerticalStackLayout Padding="20" BackgroundColor="#F8F8F8">
-            <Image Source="logo_central.png" HeightRequest="80" HorizontalOptions="Center" />
-            <Label Text="Central Granitos" TextColor="#333" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,10,0,0"/>
+            <Image Source="logo_central.png" 
+                   HeightRequest="80" 
+                   HorizontalOptions="Center" />
+            <Label Text="Central Granitos" 
+                   TextColor="#333" 
+                   FontAttributes="Bold" 
+                   HorizontalOptions="Center" 
+                   Margin="0,10,0,0"/>
         </VerticalStackLayout>
     </Shell.FlyoutHeader>
 
-    <FlyoutItem Title="Dashboard">
+    <FlyoutItem Title="Dashboard" Icon="icon_dashboard.png">
         <ShellContent Title="Dashboard" ContentTemplate="{DataTemplate local:DashboardPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Estoque">
+    <FlyoutItem Title="Estoque" Icon="icon_estoque.png">
         <ShellContent Title="Estoque" ContentTemplate="{DataTemplate estoque:EstoquePage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Orçamentos">
+    <FlyoutItem Title="Orçamentos" Icon="icon_orcamento.png">
         <ShellContent Title="Orçamentos" ContentTemplate="{DataTemplate orcamentos:OrcamentosPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Produção">
+    <FlyoutItem Title="Produção" Icon="icon_producao.png">
         <ShellContent Title="Produção" ContentTemplate="{DataTemplate producao:ProducaoPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Financeiro">
+    <FlyoutItem Title="Financeiro" Icon="icon_financeiro.png">
         <ShellContent Title="Financeiro" ContentTemplate="{DataTemplate financeiro:FinanceiroPage}" />
     </FlyoutItem>
 
-    <MenuItem Text="Sair do Sistema" Clicked="OnLogoutClicked" />
+    <MenuItem Text="Sair do Sistema" 
+              Clicked="OnLogoutClicked" />
 
 </Shell>

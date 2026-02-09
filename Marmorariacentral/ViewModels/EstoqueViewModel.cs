@@ -1,8 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Maui.Views;
 using Marmorariacentral.Models;
 using Marmorariacentral.Services;
+using Marmorariacentral.Views.Estoque; 
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+
+#pragma warning disable CA1416 // Silencia avisos de compatibilidade de plataforma
 
 namespace Marmorariacentral.ViewModels
 {
@@ -11,50 +16,79 @@ namespace Marmorariacentral.ViewModels
         private readonly DatabaseService _dbService;
         private readonly FirebaseService _firebaseService;
 
-        [ObservableProperty]
-        private ObservableCollection<EstoqueItem> itensEstoque = new();
+        private ObservableCollection<EstoqueItem> _itensEstoque = new();
+        public ObservableCollection<EstoqueItem> ItensEstoque 
+        { 
+            get => _itensEstoque; 
+            set => SetProperty(ref _itensEstoque, value); 
+        }
+
+        private bool _isBusy;
+        public bool IsBusy 
+        { 
+            get => _isBusy; 
+            set => SetProperty(ref _isBusy, value); 
+        }
 
         public EstoqueViewModel(DatabaseService dbService, FirebaseService firebaseService)
         {
             _dbService = dbService;
             _firebaseService = firebaseService;
-            
-            // Carrega os dados ao iniciar
-            Task.Run(async () => await CarregarEstoque());
+            _ = CarregarEstoque();
         }
 
         [RelayCommand]
         public async Task CarregarEstoque()
         {
-            var lista = await _dbService.GetItemsAsync<EstoqueItem>();
-            MainThread.BeginInvokeOnMainThread(() =>
+            if (IsBusy) return;
+            try
             {
-                ItensEstoque.Clear();
-                foreach (var item in lista)
-                    ItensEstoque.Add(item);
-            });
+                IsBusy = true;
+                var lista = await _dbService.GetItemsAsync<EstoqueItem>();
+                MainThread.BeginInvokeOnMainThread(() => 
+                {
+                    ItensEstoque.Clear();
+                    foreach (var item in lista) ItensEstoque.Add(item);
+                });
+            }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
+            finally { IsBusy = false; }
         }
 
         [RelayCommand]
-        public async Task AdicionarChapa(EstoqueItem novoItem)
+        public async Task AbrirCadastro()
         {
-            // 1. Salva no SQLite (Garante o funcionamento Offline)
-            await _dbService.SaveItemAsync(novoItem);
-            
-            // Atualiza a lista na tela
-            ItensEstoque.Insert(0, novoItem);
+            // O erro CS0246 morre aqui se o using acima estiver correto
+            var popup = new CadastroChapaPopup();
+            var resultado = await Shell.Current.ShowPopupAsync(popup);
+            if (resultado is EstoqueItem novoItem) await SalvarItem(novoItem);
+        }
 
-            // 2. Tenta sincronizar com o Firebase (Online)
-            try 
+        [RelayCommand]
+        public async Task EditarItem(EstoqueItem item)
+        {
+            if (item == null) return;
+            var popup = new CadastroChapaPopup(item);
+            var resultado = await Shell.Current.ShowPopupAsync(popup);
+            if (resultado is EstoqueItem itemEditado) await SalvarItem(itemEditado);
+        }
+
+        [RelayCommand]
+        public async Task SalvarItem(EstoqueItem item)
+        {
+            await _dbService.SaveItemAsync(item);
+            await CarregarEstoque();
+            try { await _firebaseService.SaveEstoqueAsync(item); } catch { }
+        }
+
+        [RelayCommand]
+        public async Task ExcluirItem(EstoqueItem item)
+        {
+            if (item == null) return;
+            if (await Shell.Current.DisplayAlert("Atenção", $"Deseja excluir {item.NomeChapa}?", "Sim", "Não"))
             {
-                await _firebaseService.SaveEstoqueAsync(novoItem);
-                novoItem.IsSynced = true;
-                await _dbService.SaveItemAsync(novoItem); // Marca como sincronizado localmente
-            }
-            catch (Exception ex)
-            {
-                // Se falhar (sem internet), o IsSynced continua false para tentarmos depois
-                System.Diagnostics.Debug.WriteLine($"Erro sincronia Firebase: {ex.Message}");
+                await _dbService.DeleteItemAsync(item);
+                await CarregarEstoque();
             }
         }
     }

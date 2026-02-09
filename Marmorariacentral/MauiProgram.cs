@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
+using CommunityToolkit.Maui;
 using Marmorariacentral.Services;
 using Marmorariacentral.ViewModels;
-using Marmorariacentral.Views.Dashboard; // Ajustado conforme sua estrutura de pastas
-using Marmorariacentral.Views.Estoque;   // Ajustado conforme sua estrutura de pastas
+using Marmorariacentral.Views.Dashboard;
+using Marmorariacentral.Views.Estoque; // <-- ESSA LINHA MATA O ERRO CS0246
 using Marmorariacentral.Views.Login;
 using Marmorariacentral.Views.Orcamentos;
 using Marmorariacentral.Views.Producao;
 using Marmorariacentral.Views.Financeiro;
-
 namespace Marmorariacentral;
 
 public static class MauiProgram
@@ -17,6 +17,7 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
+            .UseMauiCommunityToolkit() // Necessário para Popups e alertas profissionais
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -27,12 +28,12 @@ public static class MauiProgram
         // REGISTRO DE DEPENDÊNCIAS (DI)
         // ==========================================
 
-        // Services - Singletons (Uma única instância para o app todo)
+        // Services - Singletons (Uma única instância compartilhada)
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddSingleton<FirebaseService>();
         builder.Services.AddSingleton<AuthService>();
 
-        // ViewModels - Transients (Cria uma nova instância sempre que navegar)
+        // ViewModels - Transients (Criadas ao abrir a página)
         builder.Services.AddTransient<OrcamentoViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<EstoqueViewModel>();
@@ -47,6 +48,9 @@ public static class MauiProgram
         builder.Services.AddTransient<OrcamentosPage>();
         builder.Services.AddTransient<ProducaoPage>();
         builder.Services.AddTransient<FinanceiroPage>();
+
+        // READICIONADO: Necessário para o Popup profissional funcionar
+        builder.Services.AddTransient<CadastroChapaPopup>();
 
         // ==========================================
 

@@ -8,5 +8,8 @@ public partial class EstoquePage : ContentPage
 	{
 		InitializeComponent();
 		BindingContext = viewModel;
+
+		if (viewModel != null) 
+        System.Diagnostics.Debug.WriteLine("=== ESTOQUE: ViewModel OK ===");
 	}
 }

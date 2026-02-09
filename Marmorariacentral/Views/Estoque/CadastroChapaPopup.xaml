@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mct:Popup
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:mct="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    x:Class="Marmorariacentral.Views.Estoque.CadastroChapaPopup">
+
+    <Grid BackgroundColor="#80000000">
+
+        <Border
+            BackgroundColor="White"
+            Padding="25"
+            WidthRequest="400"
+            HorizontalOptions="Center"
+            VerticalOptions="Center">
+
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="20"/>
+            </Border.StrokeShape>
+
+            <VerticalStackLayout Spacing="15">
+
+                <Label
+                    x:Name="LblTitulo"
+                    Text="Nova Chapa"
+                    FontSize="20"
+                    FontAttributes="Bold"
+                    TextColor="#8B1A1A"
+                    HorizontalOptions="Center"/>
+
+                <Entry x:Name="EntryNome" Placeholder="Nome da Pedra" />
+
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+
+                    <VerticalStackLayout Grid.Column="0" Spacing="5">
+                        <Label Text="M² Total" FontSize="12" TextColor="#666"/>
+                        <Entry x:Name="EntryMetro" Placeholder="0.00" Keyboard="Numeric"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="5">
+                        <Label Text="Qtd Chapas" FontSize="12" TextColor="#666"/>
+                        <Entry x:Name="EntryQtd" Placeholder="0" Keyboard="Numeric"/>
+                    </VerticalStackLayout>
+
+                </Grid>
+
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Valor por M² (R$)" FontSize="12" TextColor="#666"/>
+                    <Entry x:Name="EntryValor" Placeholder="0.00" Keyboard="Numeric"/>
+                </VerticalStackLayout>
+
+                <Button
+                    Text="SALVAR NO ESTOQUE"
+                    BackgroundColor="#8B1A1A"
+                    TextColor="White"
+                    Clicked="OnSalvarClicked"/>
+
+                <Button
+                    Text="Cancelar"
+                    BackgroundColor="Transparent"
+                    TextColor="#999"
+                    Clicked="OnCancelarClicked"/>
+
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</mct:Popup>
