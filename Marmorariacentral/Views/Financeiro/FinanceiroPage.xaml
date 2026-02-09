@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:Marmorariacentral.Models"
+             x:Class="Marmorariacentral.Views.Financeiro.FinanceiroPage"
+             Title="Gestão Financeira"
+             BackgroundColor="#F2F2F7">
+
+    <Grid RowDefinitions="Auto, *">
+        <Border Grid.Row="0" Padding="20" BackgroundColor="White" StrokeThickness="0">
+            <Label Text="Contas e Fluxo" FontSize="24" FontAttributes="Bold" TextColor="#333"/>
+        </Border>
+
+        <ScrollView Grid.Row="1" Padding="15">
+            <VerticalStackLayout Spacing="15">
+                <Label Text="Contas Fixas" FontAttributes="Bold" Margin="5,0"/>
+                
+                <CollectionView ItemsSource="{Binding ContasFixas}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:FinanceiroRegistro">
+                            <Border Margin="0,0,0,10" Padding="15" StrokeShape="RoundRectangle 12" BackgroundColor="White">
+                                <Grid ColumnDefinitions="Auto, *, Auto">
+                                    <Ellipse Grid.Column="0" WidthRequest="15" HeightRequest="15" 
+                                             Fill="#8B1A1A" VerticalOptions="Center" Margin="0,0,15,0"/>
+                                    
+                                    <VerticalStackLayout Grid.Column="1">
+                                        <Label Text="{Binding Descricao}" FontAttributes="Bold"/>
+                                        <Label Text="{Binding DataVencimento, StringFormat='Vence em: {0:dd/MM}'}" FontSize="12" TextColor="#777"/>
+                                    </VerticalStackLayout>
+
+                                    <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" 
+                                           VerticalOptions="Center" FontAttributes="Bold" TextColor="#333"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

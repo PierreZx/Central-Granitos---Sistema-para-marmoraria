@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:Marmorariacentral.Models"
+             x:Class="Marmorariacentral.Views.Estoque.EstoquePage"
+             Title="Estoque de Chapas"
+             BackgroundColor="#F2F2F7">
+
+    <Grid RowDefinitions="Auto, *">
+        
+        <Border Grid.Row="0" Padding="20" BackgroundColor="White" StrokeThickness="0">
+            <Border.Shadow>
+                <Shadow Brush="Black" Offset="0,2" Opacity="0.1" Radius="5"/>
+            </Border.Shadow>
+            <HorizontalStackLayout Spacing="20" HorizontalOptions="Fill">
+                <Label Text="Inventário" FontSize="24" FontAttributes="Bold" VerticalOptions="Center" TextColor="#333"/>
+                <Button Text="+ Nova Chapa" 
+                        BackgroundColor="#8B1A1A" 
+                        TextColor="White" 
+                        CornerRadius="10"
+                        HeightRequest="45"/>
+            </HorizontalStackLayout>
+        </Border>
+
+        <RefreshView Grid.Row="1" Command="{Binding CarregarEstoqueCommand}">
+            <CollectionView ItemsSource="{Binding ItensEstoque}" Margin="15">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:EstoqueItem">
+                        <Border Margin="0,0,0,10" Padding="15" StrokeShape="RoundRectangle 12" StrokeThickness="0" BackgroundColor="White">
+                            <Border.Shadow>
+                                <Shadow Brush="Black" Offset="0,2" Opacity="0.05" Radius="5"/>
+                            </Border.Shadow>
+                            
+                            <Grid ColumnDefinitions="*, Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="{Binding NomeChapa}" FontAttributes="Bold" FontSize="16" TextColor="#333"/>
+                                    <Label Text="{Binding MetroQuadradoTotal, StringFormat='{0:N2} m²'}" FontSize="13" TextColor="#666"/>
+                                </VerticalStackLayout>
+                                
+                                <VerticalStackLayout Grid.Column="1" HorizontalOptions="End">
+                                    <Label Text="{Binding QuantidadeChapas, StringFormat='{0} un'}" FontAttributes="Bold" TextColor="#8B1A1A" HorizontalOptions="End"/>
+                                    <Label Text="{Binding ValorPorMetro, StringFormat='{0:C}/m²'}" FontSize="11" TextColor="#999"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Margin="0,50">
+                        <Label Text="Nenhuma chapa no estoque." TextColor="#AAA" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

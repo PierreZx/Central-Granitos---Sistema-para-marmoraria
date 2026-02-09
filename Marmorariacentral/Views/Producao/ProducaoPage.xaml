@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:Marmorariacentral.Models"
+             x:Class="Marmorariacentral.Views.Producao.ProducaoPage"
+             Title="Linha de Produção"
+             BackgroundColor="#F2F2F7">
+
+    <Grid RowDefinitions="Auto, *">
+        <Border Grid.Row="0" Padding="20" BackgroundColor="White" StrokeThickness="0">
+            <Label Text="Fluxo de Trabalho" FontSize="24" FontAttributes="Bold" TextColor="#333"/>
+        </Border>
+
+        <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout Padding="15" Spacing="20">
+                
+                <VerticalStackLayout WidthRequest="300" Spacing="10">
+                    <Label Text="A INICIAR" FontAttributes="Bold" TextColor="#8B1A1A" Margin="5,0"/>
+                    <CollectionView ItemsSource="{Binding ItensNovos}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Orcamento">
+                                <Border Margin="0,0,0,10" Padding="15" StrokeShape="RoundRectangle 10" BackgroundColor="White">
+                                    <VerticalStackLayout>
+                                        <Label Text="{Binding NomeCliente}" FontAttributes="Bold" />
+                                        <Label Text="Ver detalhes da peça..." FontSize="11" TextColor="#777" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout WidthRequest="300" Spacing="10">
+                    <Label Text="EM PRODUÇÃO" FontAttributes="Bold" TextColor="#DAA520" Margin="5,0"/>
+                    <CollectionView ItemsSource="{Binding ItensEmProducao}">
+                        </CollectionView>
+                </VerticalStackLayout>
+
+            </HorizontalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

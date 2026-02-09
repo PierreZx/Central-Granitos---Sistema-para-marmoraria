@@ -3,13 +3,52 @@
     x:Class="Marmorariacentral.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:Marmorariacentral"
-    Shell.FlyoutBehavior="Disabled"
-    Title="Marmorariacentral">
+    xmlns:local="clr-namespace:Marmorariacentral.Views.Dashboard"
+    xmlns:estoque="clr-namespace:Marmorariacentral.Views.Estoque"
+    xmlns:orcamentos="clr-namespace:Marmorariacentral.Views.Orcamentos"
+    xmlns:producao="clr-namespace:Marmorariacentral.Views.Producao"
+    xmlns:financeiro="clr-namespace:Marmorariacentral.Views.Financeiro"
+    Shell.FlyoutBehavior="Flyout"
+    FlyoutBackgroundColor="White">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <Shell.Resources>
+        <ResourceDictionary>
+            <Style x:Key="BaseStyle" TargetType="Element">
+                <Setter Property="Shell.BackgroundColor" Value="#8B1A1A" />
+                <Setter Property="Shell.ForegroundColor" Value="White" />
+                <Setter Property="Shell.TitleColor" Value="White" />
+                <Setter Property="Shell.UnselectedColor" Value="#757575" />
+            </Style>
+        </ResourceDictionary>
+    </Shell.Resources>
+
+    <Shell.FlyoutHeader>
+        <VerticalStackLayout Padding="20" BackgroundColor="#F8F8F8">
+            <Image Source="logo_central.png" HeightRequest="80" HorizontalOptions="Center" />
+            <Label Text="Central Granitos" TextColor="#333" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,10,0,0"/>
+        </VerticalStackLayout>
+    </Shell.FlyoutHeader>
+
+    <FlyoutItem Title="Dashboard">
+        <ShellContent Title="Dashboard" ContentTemplate="{DataTemplate local:DashboardPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Estoque">
+        <ShellContent Title="Estoque" ContentTemplate="{DataTemplate estoque:EstoquePage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Orçamentos">
+        <ShellContent Title="Orçamentos" ContentTemplate="{DataTemplate orcamentos:OrcamentosPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Produção">
+        <ShellContent Title="Produção" ContentTemplate="{DataTemplate producao:ProducaoPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Financeiro">
+        <ShellContent Title="Financeiro" ContentTemplate="{DataTemplate financeiro:FinanceiroPage}" />
+    </FlyoutItem>
+
+    <MenuItem Text="Sair do Sistema" Clicked="OnLogoutClicked" />
 
 </Shell>

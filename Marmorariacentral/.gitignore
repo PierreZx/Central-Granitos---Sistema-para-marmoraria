@@ -22,3 +22,6 @@ obj/
 
 # Firebase local configs (se usar depois)
 google-services.json
+
+# Firebase Private Key
+**/firebase_key.json

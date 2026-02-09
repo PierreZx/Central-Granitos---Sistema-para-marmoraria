@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:Marmorariacentral.Models"
+             x:Class="Marmorariacentral.Views.Orcamentos.OrcamentosPage"
+             Title="Orçamentos"
+             BackgroundColor="#F2F2F7">
+
+    <Grid RowDefinitions="Auto, *, Auto">
+        
+        <Border Grid.Row="0" Padding="20" BackgroundColor="White" StrokeThickness="0">
+            <Label Text="Clientes e Projetos" FontSize="24" FontAttributes="Bold" TextColor="#333"/>
+        </Border>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Orcamentos}" Margin="15">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:Orcamento">
+                    <Border Margin="0,0,0,12" Padding="15" StrokeShape="RoundRectangle 15" BackgroundColor="White" StrokeThickness="0">
+                        <Border.Shadow>
+                            <Shadow Brush="Black" Offset="0,2" Opacity="0.05" Radius="5"/>
+                        </Border.Shadow>
+                        
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="{Binding NomeCliente}" FontSize="18" FontAttributes="Bold" TextColor="#8B1A1A"/>
+                            <Label Text="{Binding Contato}" FontSize="14" TextColor="#666"/>
+                            <Label Text="{Binding Endereco}" FontSize="12" TextColor="#999"/>
+                            
+                            <BoxView HeightRequest="1" Color="#EEE" Margin="0,10"/>
+                            
+                            <HorizontalStackLayout HorizontalOptions="End" Spacing="10">
+                                <Label Text="TOTAL:" VerticalOptions="Center" FontSize="12" TextColor="#777"/>
+                                <Label Text="{Binding ValorTotal, StringFormat='{0:C}'}" FontSize="18" FontAttributes="Bold" TextColor="#333"/>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button Grid.Row="2" Text="+ NOVO ORÇAMENTO" 
+                Margin="20" HeightRequest="55"
+                BackgroundColor="#8B1A1A" TextColor="White" 
+                FontAttributes="Bold" CornerRadius="15"/>
+    </Grid>
+</ContentPage>
