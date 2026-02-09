@@ -3,11 +3,12 @@ using CommunityToolkit.Maui;
 using Marmorariacentral.Services;
 using Marmorariacentral.ViewModels;
 using Marmorariacentral.Views.Dashboard;
-using Marmorariacentral.Views.Estoque; // <-- ESSA LINHA MATA O ERRO CS0246
+using Marmorariacentral.Views.Estoque;
 using Marmorariacentral.Views.Login;
 using Marmorariacentral.Views.Orcamentos;
 using Marmorariacentral.Views.Producao;
-using Marmorariacentral.Views.Financeiro;
+using Marmorariacentral.Views.Financeiro; // Garante acesso ao financeiro
+
 namespace Marmorariacentral;
 
 public static class MauiProgram
@@ -17,7 +18,7 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
-            .UseMauiCommunityToolkit() // Necessário para Popups e alertas profissionais
+            .UseMauiCommunityToolkit() // Essencial para Popups funcionarem
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -28,12 +29,12 @@ public static class MauiProgram
         // REGISTRO DE DEPENDÊNCIAS (DI)
         // ==========================================
 
-        // Services - Singletons (Uma única instância compartilhada)
+        // Services - Singletons
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddSingleton<FirebaseService>();
         builder.Services.AddSingleton<AuthService>();
 
-        // ViewModels - Transients (Criadas ao abrir a página)
+        // ViewModels - Transients
         builder.Services.AddTransient<OrcamentoViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<EstoqueViewModel>();
@@ -49,8 +50,9 @@ public static class MauiProgram
         builder.Services.AddTransient<ProducaoPage>();
         builder.Services.AddTransient<FinanceiroPage>();
 
-        // READICIONADO: Necessário para o Popup profissional funcionar
+        // POPUPS - Necessários para injeção de dependência via ShowPopupAsync
         builder.Services.AddTransient<CadastroChapaPopup>();
+        builder.Services.AddTransient<CadastroFinanceiroPopup>();
 
         // ==========================================
 

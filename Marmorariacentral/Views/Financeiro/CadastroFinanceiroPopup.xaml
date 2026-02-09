@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mct:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+           xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+           xmlns:mct="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+           x:Class="Marmorariacentral.Views.Financeiro.CadastroFinanceiroPopup"
+           Color="Transparent">
+
+    <Border BackgroundColor="White"
+            StrokeShape="RoundRectangle 20"
+            Padding="25"
+            WidthRequest="450">
+
+        <VerticalStackLayout Spacing="15">
+
+            <Label Text="Novo Lançamento"
+                   FontSize="20"
+                   FontAttributes="Bold"
+                   TextColor="#8B1A1A"
+                   HorizontalOptions="Center"/>
+
+            <Entry x:Name="EntryDesc"
+                   Placeholder="Descrição (Ex: Aluguel, Café, Cliente X)" />
+
+            <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                <VerticalStackLayout Grid.Column="0">
+                    <Label Text="Valor (R$)" FontSize="12" TextColor="#666"/>
+                    <Entry x:Name="EntryValor"
+                           Placeholder="0.00"
+                           Keyboard="Numeric" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="1">
+                    <Label Text="Data Vencimento" FontSize="12" TextColor="#666"/>
+                    <DatePicker x:Name="PickerData"
+                                Format="dd/MM/yyyy" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <HorizontalStackLayout Spacing="20" HorizontalOptions="Center">
+
+                <HorizontalStackLayout Spacing="5">
+                    <CheckBox x:Name="CheckMensal" />
+                    <Label Text="Mensal (Fixo)" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Spacing="5">
+                    <CheckBox x:Name="CheckParcelado" />
+                    <Label Text="Parcelado" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+
+            </HorizontalStackLayout>
+
+            <VerticalStackLayout Spacing="5"
+                                 IsVisible="{Binding IsChecked, Source={x:Reference CheckParcelado}}">
+                <Label Text="Quantidade de Parcelas" FontSize="12" TextColor="#666"/>
+                <Entry x:Name="EntryParcelas"
+                       Placeholder="Ex: 12"
+                       Keyboard="Numeric" />
+            </VerticalStackLayout>
+
+            <Button Text="LANÇAR NO FINANCEIRO"
+                    BackgroundColor="#8B1A1A"
+                    TextColor="White"
+                    Clicked="OnSalvarClicked"/>
+
+            <Button Text="Cancelar"
+                    BackgroundColor="Transparent"
+                    TextColor="#999"
+                    Clicked="OnCancelarClicked"/>
+
+        </VerticalStackLayout>
+    </Border>
+</mct:Popup>
