@@ -16,19 +16,27 @@ namespace Marmorariacentral.ViewModels
         private readonly DatabaseService _dbService;
         private readonly FirebaseService _firebaseService;
 
-        // Propriedades Manuais para evitar erros de gerador de código
+        private List<FinanceiroRegistro> _todasAsContas = new();
+
         private ObservableCollection<FinanceiroRegistro> _contasAtivas = new();
-        public ObservableCollection<FinanceiroRegistro> ContasAtivas 
-        { 
-            get => _contasAtivas; 
-            set => SetProperty(ref _contasAtivas, value); 
+        public ObservableCollection<FinanceiroRegistro> ContasAtivas
+        {
+            get => _contasAtivas;
+            set => SetProperty(ref _contasAtivas, value);
         }
 
         private ObservableCollection<FinanceiroRegistro> _extratoDia = new();
-        public ObservableCollection<FinanceiroRegistro> ExtratoDia 
-        { 
-            get => _extratoDia; 
-            set => SetProperty(ref _extratoDia, value); 
+        public ObservableCollection<FinanceiroRegistro> ExtratoDia
+        {
+            get => _extratoDia;
+            set => SetProperty(ref _extratoDia, value);
+        }
+
+        private double _saldoTotal;
+        public double SaldoTotal
+        {
+            get => _saldoTotal;
+            set => SetProperty(ref _saldoTotal, value);
         }
 
         public FinanceiroViewModel(DatabaseService dbService, FirebaseService firebaseService)
@@ -44,22 +52,12 @@ namespace Marmorariacentral.ViewModels
             try
             {
                 var lista = await _dbService.GetItemsAsync<FinanceiroRegistro>();
-                
+                _todasAsContas = lista.ToList();
+
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    ContasAtivas.Clear();
-                    ExtratoDia.Clear();
-
-                    foreach (var item in lista)
-                    {
-                        // Calcula a cor baseada no vencimento
-                        item.StatusColor = CalcularCorStatus(item.DataVencimento);
-
-                        if (!item.FoiPago)
-                            ContasAtivas.Add(item);
-                        else
-                            ExtratoDia.Add(item);
-                    }
+                    AtualizarListasVisuais(_todasAsContas);
+                    CalcularSaldo();
                 });
             }
             catch (Exception ex)
@@ -68,14 +66,86 @@ namespace Marmorariacentral.ViewModels
             }
         }
 
+        private void AtualizarListasVisuais(List<FinanceiroRegistro> lista)
+        {
+            ContasAtivas.Clear();
+            ExtratoDia.Clear();
+
+            foreach (var item in lista.OrderBy(x => x.DataVencimento))
+            {
+                item.StatusColor = CalcularCorStatus(item.DataVencimento);
+
+                if (!item.FoiPago)
+                    ContasAtivas.Add(item);
+                else
+                    ExtratoDia.Add(item);
+            }
+        }
+
+        private void CalcularSaldo()
+        {
+            var entradas = _todasAsContas
+                .Where(x => x.FoiPago && x.Tipo == "Entrada")
+                .Sum(x => x.Valor);
+
+            var saidas = _todasAsContas
+                .Where(x => x.FoiPago && x.Tipo == "Saida")
+                .Sum(x => x.Valor);
+
+            SaldoTotal = entradas - saidas;
+        }
+
+        [RelayCommand]
+        public void Filtrar(string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+            {
+                AtualizarListasVisuais(_todasAsContas);
+                return;
+            }
+
+            var filtrados = _todasAsContas
+                .Where(x =>
+                    x.Descricao.ToLower().Contains(texto.ToLower()) ||
+                    x.Valor.ToString().Contains(texto))
+                .ToList();
+
+            AtualizarListasVisuais(filtrados);
+        }
+
+        public void OrdenarLista(string criterio)
+        {
+            IEnumerable<FinanceiroRegistro> ordenado = _todasAsContas;
+
+            switch (criterio)
+            {
+                case "Vencimento":
+                    ordenado = _todasAsContas.OrderBy(x => x.DataVencimento);
+                    break;
+
+                case "Maior Valor":
+                    ordenado = _todasAsContas.OrderByDescending(x => x.Valor);
+                    break;
+
+                case "Menor Valor":
+                    ordenado = _todasAsContas.OrderBy(x => x.Valor);
+                    break;
+            }
+
+            AtualizarListasVisuais(ordenado.ToList());
+        }
+
         private Color CalcularCorStatus(DateTime vencimento)
         {
             var hoje = DateTime.Today;
-            var diasParaVencer = (vencimento - hoje).TotalDays;
 
-            if (diasParaVencer < 0) return Color.FromArgb("#FF0000"); // Vermelho (Vencido)
-            if (diasParaVencer <= 4) return Color.FromArgb("#FFD700"); // Amarelo (Próximo)
-            return Color.FromArgb("#008000"); // Verde (No prazo)
+            if (vencimento.Date <= hoje)
+                return Color.FromArgb("#FF0000");
+
+            if ((vencimento - hoje).TotalDays <= 4)
+                return Color.FromArgb("#FFD700");
+
+            return Color.FromArgb("#008000");
         }
 
         [RelayCommand]
@@ -83,38 +153,28 @@ namespace Marmorariacentral.ViewModels
         {
             if (registro == null) return;
 
+            bool confirmar = await Shell.Current.DisplayAlert(
+                "Confirmar pagamento",
+                $"Marcar '{registro.Descricao}' como pago?",
+                "Sim",
+                "Cancelar");
+
+            if (!confirmar)
+            {
+                registro.FoiPago = false;
+                return;
+            }
+
             registro.FoiPago = true;
 
-            // Lógica de Recorrência Mensal
-            if (registro.IsFixo)
-            {
-                var proximoMes = new FinanceiroRegistro
-                {
-                    Descricao = registro.Descricao,
-                    Valor = registro.Valor,
-                    DataVencimento = registro.DataVencimento.AddMonths(1),
-                    IsFixo = true,
-                    Tipo = registro.Tipo
-                };
-                await _dbService.SaveItemAsync(proximoMes);
-            }
-            // Lógica de Parcelamento
-            else if (registro.IsParcelado && registro.ParcelaAtual < registro.TotalParcelas)
-            {
-                var proximaParcela = new FinanceiroRegistro
-                {
-                    Descricao = registro.Descricao,
-                    Valor = registro.Valor,
-                    DataVencimento = registro.DataVencimento.AddMonths(1),
-                    IsParcelado = true,
-                    ParcelaAtual = registro.ParcelaAtual + 1,
-                    TotalParcelas = registro.TotalParcelas,
-                    Tipo = registro.Tipo
-                };
-                await _dbService.SaveItemAsync(proximaParcela);
-            }
-
             await _dbService.SaveItemAsync(registro);
+
+            try
+            {
+                await _firebaseService.SaveFinanceiroAsync(registro);
+            }
+            catch { }
+
             await CarregarDados();
         }
 
@@ -126,7 +186,21 @@ namespace Marmorariacentral.ViewModels
 
             if (resultado is FinanceiroRegistro novo)
             {
-                await _dbService.SaveItemAsync(novo);
+                await SalvarRegistroFull(novo);
+                await CarregarDados();
+            }
+        }
+
+        [RelayCommand]
+        public async Task AbrirLancamentoExtrato()
+        {
+            // O parâmetro 'true' ativa o modo simplificado no popup
+            var popup = new CadastroFinanceiroPopup(null, true); 
+            var resultado = await Shell.Current.ShowPopupAsync(popup);
+
+            if (resultado is FinanceiroRegistro novo)
+            {
+                await SalvarRegistroFull(novo);
                 await CarregarDados();
             }
         }
@@ -136,13 +210,12 @@ namespace Marmorariacentral.ViewModels
         {
             if (registro == null) return;
 
-            // Reutiliza o popup passando o registro para edição
             var popup = new CadastroFinanceiroPopup(registro);
             var resultado = await Shell.Current.ShowPopupAsync(popup);
 
             if (resultado is FinanceiroRegistro editado)
             {
-                await _dbService.SaveItemAsync(editado);
+                await SalvarRegistroFull(editado);
                 await CarregarDados();
             }
         }
@@ -153,16 +226,26 @@ namespace Marmorariacentral.ViewModels
             if (registro == null) return;
 
             bool confirmar = await Shell.Current.DisplayAlert(
-                "Atenção", 
-                $"Deseja excluir '{registro.Descricao}' permanentemente?", 
-                "Sim", 
-                "Não");
+                "Excluir",
+                $"Excluir '{registro.Descricao}'?",
+                "Sim",
+                "Cancelar");
 
-            if (confirmar)
+            if (!confirmar) return;
+
+            await _dbService.DeleteItemAsync(registro);
+            await CarregarDados();
+        }
+
+        private async Task SalvarRegistroFull(FinanceiroRegistro reg)
+        {
+            await _dbService.SaveItemAsync(reg);
+
+            try
             {
-                await _dbService.DeleteItemAsync(registro);
-                await CarregarDados();
+                await _firebaseService.SaveFinanceiroAsync(reg);
             }
+            catch { }
         }
     }
 }

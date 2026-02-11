@@ -7,8 +7,6 @@ namespace Marmorariacentral.Models
         [PrimaryKey]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        // Inicializamos com string.Empty para resolver o erro CS8618 
-        // e garantir que nunca seja nulo ao salvar no banco.
         public string NomeChapa { get; set; } = string.Empty;
 
         public double MetroQuadradoTotal { get; set; }
@@ -18,5 +16,9 @@ namespace Marmorariacentral.Models
         public int QuantidadeChapas { get; set; }
 
         public bool IsSynced { get; set; } = false;
+
+        // Propriedade profissional para exibição no Picker da Calculadora
+        [Ignore]
+        public string DisplayInfo => $"{NomeChapa} - {ValorPorMetro:C}/m²";
     }
 }

@@ -7,7 +7,7 @@ using Marmorariacentral.Views.Estoque;
 using Marmorariacentral.Views.Login;
 using Marmorariacentral.Views.Orcamentos;
 using Marmorariacentral.Views.Producao;
-using Marmorariacentral.Views.Financeiro; // Garante acesso ao financeiro
+using Marmorariacentral.Views.Financeiro;
 
 namespace Marmorariacentral;
 
@@ -18,7 +18,7 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
-            .UseMauiCommunityToolkit() // Essencial para Popups funcionarem
+            .UseMauiCommunityToolkit() // Essencial para Popups e lógica de UI avançada
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -41,6 +41,10 @@ public static class MauiProgram
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<ProducaoViewModel>();
         builder.Services.AddTransient<FinanceiroViewModel>();
+        
+        // Novas ViewModels para a Calculadora
+        builder.Services.AddTransient<DetalhesClienteViewModel>();
+        builder.Services.AddTransient<CalculadoraPecaViewModel>();
 
         // Views - Transients
         builder.Services.AddTransient<DashboardPage>();
@@ -50,9 +54,14 @@ public static class MauiProgram
         builder.Services.AddTransient<ProducaoPage>();
         builder.Services.AddTransient<FinanceiroPage>();
 
-        // POPUPS - Necessários para injeção de dependência via ShowPopupAsync
+        // Novas Páginas do Orçamento
+        builder.Services.AddTransient<DetalhesClientePage>();
+        builder.Services.AddTransient<CalculadoraPecaPage>();
+
+        // POPUPS
         builder.Services.AddTransient<CadastroChapaPopup>();
         builder.Services.AddTransient<CadastroFinanceiroPopup>();
+        builder.Services.AddTransient<CadastroClientePopup>();
 
         // ==========================================
 

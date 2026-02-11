@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Maui.Views;
 using Marmorariacentral.Models;
 using Marmorariacentral.Services;
+using Marmorariacentral.Views.Orcamentos;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace Marmorariacentral.ViewModels
 {
@@ -11,46 +14,117 @@ namespace Marmorariacentral.ViewModels
         private readonly DatabaseService _dbService;
         private readonly FirebaseService _firebaseService;
 
-        [ObservableProperty]
-        private ObservableCollection<Orcamento> orcamentos = new();
+        private ObservableCollection<Cliente> _clientes = new();
+        public ObservableCollection<Cliente> Clientes 
+        { 
+            get => _clientes; 
+            set => SetProperty(ref _clientes, value); 
+        }
 
         public OrcamentoViewModel(DatabaseService dbService, FirebaseService firebaseService)
         {
             _dbService = dbService;
             _firebaseService = firebaseService;
-            Task.Run(async () => await CarregarOrcamentos());
+            _ = CarregarDados();
         }
 
         [RelayCommand]
-        public async Task CarregarOrcamentos()
+        public async Task CarregarDados()
         {
-            var lista = await _dbService.GetItemsAsync<Orcamento>();
-            MainThread.BeginInvokeOnMainThread(() =>
+            try
             {
-                Orcamentos.Clear();
-                foreach (var item in lista)
-                    Orcamentos.Add(item);
+                var lista = await _dbService.GetItemsAsync<Cliente>();
+                MainThread.BeginInvokeOnMainThread(() => 
+                {
+                    Clientes.Clear();
+                    foreach (var c in lista.OrderBy(x => x.Nome)) 
+                    {
+                        Clientes.Add(c);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Erro ao carregar clientes: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        public async Task AbrirCadastroCliente()
+        {
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                try 
+                {
+                    var popup = new CadastroClientePopup();
+                    var resultado = await Shell.Current.ShowPopupAsync(popup);
+
+                    if (resultado is Cliente novo)
+                    {
+                        await _dbService.SaveItemAsync(novo);
+                        _ = Task.Run(async () => {
+                            try { await _firebaseService.SaveClienteAsync(novo); }
+                            catch { }
+                        });
+                        await CarregarDados();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Erro ao abrir cadastro: {ex.Message}");
+                }
             });
         }
 
         [RelayCommand]
-        public async Task SalvarNovoOrcamento(Orcamento novo)
+        public async Task EditarCliente(Cliente cliente)
         {
-            // 1. Salva Local (Offline-first)
-            await _dbService.SaveItemAsync(novo);
-            Orcamentos.Insert(0, novo);
+            if (cliente == null) return;
 
-            // 2. Sincroniza Online
-            try
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
-                await _firebaseService.SaveOrcamentoAsync(novo);
-                novo.IsSynced = true;
-                await _dbService.SaveItemAsync(novo);
-            }
-            catch (Exception ex)
+                var popup = new CadastroClientePopup(cliente);
+                var resultado = await Shell.Current.ShowPopupAsync(popup);
+
+                if (resultado is Cliente editado)
+                {
+                    await _dbService.SaveItemAsync(editado);
+                    _ = Task.Run(async () => {
+                        try { await _firebaseService.SaveClienteAsync(editado); }
+                        catch { }
+                    });
+                    await CarregarDados();
+                }
+            });
+        }
+
+        [RelayCommand]
+        public async Task ExcluirCliente(Cliente cliente)
+        {
+            if (cliente == null) return;
+
+            bool confirmar = await Shell.Current.DisplayAlert("Excluir", 
+                $"Deseja remover permanentemente o cliente {cliente.Nome}?", "Sim", "Não");
+            
+            if (confirmar)
             {
-                System.Diagnostics.Debug.WriteLine($"Erro Firebase: {ex.Message}");
+                await _dbService.DeleteItemAsync(cliente);
+                await CarregarDados();
             }
+        }
+
+        [RelayCommand]
+        public async Task AbrirDetalhesCliente(Cliente cliente)
+        {
+            if (cliente == null) return;
+
+            var navigationParameter = new Dictionary<string, object>
+            {
+                { "Cliente", cliente }
+            };
+
+            // AJUSTE: Rota corrigida de "Detalhe" para "Detalhes" para bater com AppShell.xaml.cs
+            await Shell.Current.GoToAsync("DetalhesClientePage", navigationParameter);
         }
     }
 }

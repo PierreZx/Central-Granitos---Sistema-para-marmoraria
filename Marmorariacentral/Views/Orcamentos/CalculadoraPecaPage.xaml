@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:Marmorariacentral.ViewModels"
+             x:Class="Marmorariacentral.Views.Orcamentos.CalculadoraPecaPage"
+             x:DataType="viewmodels:CalculadoraPecaViewModel"
+             Title="Calculadora de Peça"
+             BackgroundColor="#F2F2F7">
+
+    <Grid ColumnSpacing="0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{OnIdiom Default='*', Desktop='400'}" />
+            <ColumnDefinition Width="{OnIdiom Default='0', Desktop='*'}" />
+        </Grid.ColumnDefinitions>
+        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="{OnIdiom Default='Auto', Desktop='0'}" />
+        </Grid.RowDefinitions>
+
+        <ScrollView Grid.Column="0" Grid.Row="0" BackgroundColor="White">
+            <VerticalStackLayout Padding="25" Spacing="20">
+                <Label Text="Dados da Peça" FontSize="20" FontAttributes="Bold" TextColor="#8B1A1A" Margin="0,0,0,10"/>
+
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Ambiente" FontSize="14" TextColor="#666" Margin="5,0"/>
+                    <Entry Placeholder="Ex: Cozinha, Lavatório Suíte" 
+                           Text="{Binding Peca.Ambiente}"
+                           BackgroundColor="#F9F9F9"/>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Material / Pedra" FontSize="14" TextColor="#666" Margin="5,0"/>
+                    <Border StrokeShape="RoundRectangle 5" StrokeThickness="1" Stroke="#DDD">
+                        <Picker Title="Selecione o material" 
+                                ItemsSource="{Binding ListaEstoque}" 
+                                ItemDisplayBinding="{Binding DisplayInfo}" 
+                                SelectedItem="{Binding PedraSelecionada}"
+                                HeightRequest="45"/>
+                    </Border>
+                </VerticalStackLayout>
+
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                    <VerticalStackLayout Grid.Column="0" Spacing="5">
+                        <Label Text="Largura (m)" FontSize="14" TextColor="#666" Margin="5,0"/>
+                        <Entry Text="{Binding LarguraInput}" Keyboard="Numeric" BackgroundColor="#F9F9F9"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="5">
+                        <Label Text="Altura (m)" FontSize="14" TextColor="#666" Margin="5,0"/>
+                        <Entry Text="{Binding AlturaInput}" Keyboard="Numeric" BackgroundColor="#F9F9F9"/>
+                    </VerticalStackLayout>
+                </Grid>
+
+                <Frame BackgroundColor="#E8F5E9" BorderColor="#2E7D32" Padding="15" CornerRadius="10" Margin="0,10">
+                    <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                        <Label Text="Valor Total da Peça:" FontSize="13" TextColor="#2E7D32" HorizontalOptions="Center"/>
+                        <Label Text="{Binding Peca.ValorTotalPeca, StringFormat='{0:C}'}" 
+                               FontSize="22" FontAttributes="Bold" TextColor="#1B5E20" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Button Text="ADICIONAR AO ORÇAMENTO" 
+                        Command="{Binding SalvarPecaCommand}" 
+                        BackgroundColor="#8B1A1A" TextColor="White" 
+                        HeightRequest="55" FontAttributes="Bold" CornerRadius="10"/>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid Grid.Column="1" Grid.Row="0" BackgroundColor="#F2F2F7" Padding="40"
+              IsVisible="{OnIdiom Desktop=True, Default=False}">
+            <VerticalStackLayout Spacing="15" VerticalOptions="Center">
+                <Label Text="Visualização da Peça (2D)" FontSize="16" FontAttributes="Bold" 
+                       TextColor="#333" HorizontalOptions="Center"/>
+                
+                <Border StrokeShape="RoundRectangle 20" 
+                        StrokeThickness="2" 
+                        Stroke="#DDD" 
+                        BackgroundColor="White"
+                        HeightRequest="450"
+                        WidthRequest="550"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center">
+                    
+                    <GraphicsView x:Name="CanvasPeca" 
+                                  Drawable="{Binding DesenhoPeca}"
+                                  InputTransparent="True"
+                                  HorizontalOptions="Fill"
+                                  VerticalOptions="Fill"/>
+                </Border>
+                <Label Text="As medidas são ilustrativas para conferência de proporção." 
+                       FontSize="12" TextColor="#999" HorizontalOptions="Center"/>
+            </VerticalStackLayout>
+        </Grid>
+    </Grid>
+</ContentPage>

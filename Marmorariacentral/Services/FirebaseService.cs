@@ -16,7 +16,7 @@ namespace Marmorariacentral.Services
 
         public FirebaseService()
         {
-            // A inicialização real ocorre no Init para garantir que o arquivo seja lido
+            // A inicialização real ocorre no Init
         }
 
         private async Task Init()
@@ -25,12 +25,10 @@ namespace Marmorariacentral.Services
 
             try
             {
-                // Carrega o arquivo JSON das credenciais que você salvou em Resources/Raw
                 using var stream = await FileSystem.OpenAppPackageFileAsync(_keyFileName);
                 using var reader = new StreamReader(stream);
                 var jsonContents = await reader.ReadToEndAsync();
 
-                // Define a variável de ambiente necessária para o SDK do Google encontrar a chave
                 string tempPath = Path.Combine(FileSystem.CacheDirectory, _keyFileName);
                 File.WriteAllText(tempPath, jsonContents);
                 Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", tempPath);
@@ -82,7 +80,51 @@ namespace Marmorariacentral.Services
             await docRef.SetAsync(data);
         }
 
-        // --- RESETAR COLEÇÃO (LIMPAR DADOS ANTIGOS) ---
+        // --- SALVAR FINANCEIRO (CORRIGIDO PARA FIRESTORE) ---
+        public async Task SaveFinanceiroAsync(FinanceiroRegistro item)
+        {
+            await Init();
+            if (_db == null) return;
+
+            // Criamos a referência na coleção "financeiro" usando o ID do registro
+            DocumentReference docRef = _db.Collection("financeiro").Document(item.Id);
+
+            var data = new Dictionary<string, object>
+            {
+                { "descricao", item.Descricao },
+                { "valor", item.Valor },
+                { "data_vencimento", Timestamp.FromDateTime(item.DataVencimento.ToUniversalTime()) },
+                { "foi_pago", item.FoiPago },
+                { "tipo", item.Tipo },
+                { "is_fixo", item.IsFixo },
+                { "is_parcelado", item.IsParcelado },
+                { "parcela_atual", item.ParcelaAtual },
+                { "total_parcelas", item.TotalParcelas },
+                { "dia_fixo", item.DiaVencimentoFixo }
+            };
+
+            await docRef.SetAsync(data);
+        }
+
+        public async Task SaveClienteAsync(Cliente cliente)
+        {
+            await Init();
+            if (_db == null) return;
+
+            DocumentReference docRef = _db.Collection("clientes").Document(cliente.Id);
+
+            var data = new Dictionary<string, object>
+            {
+                { "nome", cliente.Nome },
+                { "contato", cliente.Contato },
+                { "endereco", cliente.Endereco },
+                { "data_cadastro", Timestamp.FromDateTime(cliente.DataCadastro.ToUniversalTime()) }
+            };
+
+            await docRef.SetAsync(data);
+        }
+
+        // --- RESETAR COLEÇÃO ---
         public async Task ResetCollectionAsync(string collectionName)
         {
             await Init();

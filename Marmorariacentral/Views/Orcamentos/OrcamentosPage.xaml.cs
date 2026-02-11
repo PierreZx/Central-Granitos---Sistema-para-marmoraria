@@ -6,7 +6,6 @@ namespace Marmorariacentral.Views.Orcamentos
     {
         private readonly OrcamentoViewModel _viewModel;
 
-        // O MAUI injeta automaticamente a ViewModel aqui porque a registramos no MauiProgram.cs
         public OrcamentosPage(OrcamentoViewModel viewModel)
         {
             InitializeComponent();
@@ -19,8 +18,11 @@ namespace Marmorariacentral.Views.Orcamentos
         {
             base.OnAppearing();
             
-            // Sempre que o usuário entrar na tela, atualizamos a lista do banco
-            await _viewModel.CarregarOrcamentosCommand.ExecuteAsync(null);
+            if (_viewModel != null)
+            {
+                // O comando foi renomeado para CarregarDados para ser mais abrangente
+                await _viewModel.CarregarDadosCommand.ExecuteAsync(null);
+            }
         }
     }
 }

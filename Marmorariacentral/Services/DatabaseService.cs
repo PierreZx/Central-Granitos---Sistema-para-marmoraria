@@ -22,7 +22,7 @@ namespace Marmorariacentral.Services
             _database = new SQLiteAsyncConnection(_dbPath);
 
             // Criamos todas as tabelas baseadas nas Models que definimos
-            await _database.CreateTablesAsync<Usuario, Orcamento, EstoqueItem, FinanceiroRegistro>();
+            await _database.CreateTablesAsync<Usuario, Orcamento, EstoqueItem, FinanceiroRegistro, Cliente>();
         }
 
         public async Task<List<T>> GetItemsAsync<T>() where T : new()

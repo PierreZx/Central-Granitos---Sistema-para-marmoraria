@@ -1,36 +1,87 @@
+using Marmorariacentral.ViewModels;
+using Marmorariacentral.Models;
+
 namespace Marmorariacentral.Views.Financeiro;
 
 public partial class FinanceiroPage : ContentPage
 {
-    public FinanceiroPage(ViewModels.FinanceiroViewModel viewModel)
+    public FinanceiroPage(FinanceiroViewModel viewModel)
     {
         InitializeComponent();
         BindingContext = viewModel;
     }
 
-    // Lógica para trocar de aba
+    /// <summary>
+    /// Troca de abas (Contas, Extrato, Produção)
+    /// </summary>
     private void OnTabClicked(object sender, EventArgs e)
     {
-        var btn = (Button)sender;
-        var tab = btn.CommandParameter.ToString();
+        if (sender is Button btn && btn.CommandParameter != null)
+        {
+            var tab = btn.CommandParameter.ToString();
 
-        // Esconde tudo
-        ViewContas.IsVisible = false;
-        ViewExtrato.IsVisible = false;
-        ViewProducao.IsVisible = false;
+            ListContas.IsVisible = (tab == "Contas");
+            ListExtrato.IsVisible = (tab == "Extrato");
+            ViewProducao.IsVisible = (tab == "Producao");
 
-        // Mostra a selecionada
-        if (tab == "Contas") ViewContas.IsVisible = true;
-        else if (tab == "Extrato") ViewExtrato.IsVisible = true;
-        else if (tab == "Producao") ViewProducao.IsVisible = true;
+            // Ajuste do Botão de Lançamento
+            if (tab == "Extrato")
+            {
+                BtnLancar.Text = "+ LANÇAR ENTRADA/SAÍDA";
+                BtnLancar.Command = ((FinanceiroViewModel)BindingContext).AbrirLancamentoExtratoCommand;
+            }
+            else
+            {
+                BtnLancar.Text = "+ CADASTRAR CONTA";
+                BtnLancar.Command = ((FinanceiroViewModel)BindingContext).AbrirCadastroCommand;
+            }
+
+            // Estética das Tabs
+            BtnTabContas.TextColor = (tab == "Contas") ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
+            BtnTabExtrato.TextColor = (tab == "Extrato") ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
+        }
     }
 
+    /// <summary>
+    /// Popup de confirmação de pagamento
+    /// </summary>
     private async void OnPagoChanged(object sender, CheckedChangedEventArgs e)
     {
-        if (e.Value && sender is CheckBox cb && cb.BindingContext is Models.FinanceiroRegistro registro)
+        // só dispara quando o usuário marca
+        if (!e.Value) return;
+
+        if (sender is CheckBox cb && cb.BindingContext is FinanceiroRegistro registro)
         {
-            var vm = (ViewModels.FinanceiroViewModel)BindingContext;
-            await vm.ConfirmarPagamentoCommand.ExecuteAsync(registro);
+            if (BindingContext is FinanceiroViewModel vm)
+            {
+                await vm.ConfirmarPagamentoCommand.ExecuteAsync(registro);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Filtro em tempo real enquanto digita
+    /// </summary>
+    private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (BindingContext is FinanceiroViewModel vm)
+        {
+            vm.FiltrarCommand.Execute(e.NewTextValue);
+        }
+    }
+
+    /// <summary>
+    /// Ordenação da lista
+    /// </summary>
+    private void OnSortChanged(object sender, EventArgs e)
+    {
+        if (sender is Picker picker && BindingContext is FinanceiroViewModel vm)
+        {
+            var criterio = picker.SelectedItem?.ToString();
+            if (!string.IsNullOrEmpty(criterio))
+            {
+                vm.OrdenarLista(criterio);
+            }
         }
     }
 }

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mct:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+           xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+           xmlns:mct="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+           x:Class="Marmorariacentral.Views.Orcamentos.CadastroClientePopup"
+           Color="Transparent">
+
+    <Border BackgroundColor="White" 
+            StrokeShape="RoundRectangle 20" 
+            Padding="25" 
+            WidthRequest="400" 
+            HeightRequest="450"
+            VerticalOptions="Center" 
+            HorizontalOptions="Center">
+        
+        <VerticalStackLayout Spacing="15" VerticalOptions="Center">
+            <Label Text="Cadastrar Novo Cliente" 
+                   FontSize="22" 
+                   FontAttributes="Bold" 
+                   TextColor="#8B1A1A" 
+                   HorizontalOptions="Center"
+                   Margin="0,0,0,10"/>
+
+            <Entry x:Name="EntryNome" Placeholder="Nome Completo" TextColor="Black"/>
+            <Entry x:Name="EntryContato" Placeholder="WhatsApp / Telefone" Keyboard="Telephone" TextColor="Black"/>
+            <Entry x:Name="EntryEndereco" Placeholder="Endereço da Obra" TextColor="Black"/>
+
+            <Button Text="CADASTRAR CLIENTE" 
+                    BackgroundColor="#8B1A1A" 
+                    TextColor="White" 
+                    Clicked="OnCadastrarClicked" 
+                    HeightRequest="50"
+                    CornerRadius="10"
+                    Margin="0,10,0,0"/>
+            
+            <Button Text="Cancelar" 
+                    BackgroundColor="Transparent" 
+                    TextColor="#999" 
+                    Clicked="OnCancelarClicked"
+                    HeightRequest="40"/>
+        </VerticalStackLayout>
+    </Border>
+</mct:Popup>
