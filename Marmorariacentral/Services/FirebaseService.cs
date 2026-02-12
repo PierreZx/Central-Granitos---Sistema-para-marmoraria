@@ -16,7 +16,6 @@ namespace Marmorariacentral.Services
 
         public FirebaseService()
         {
-            // A inicialização real ocorre no Init
         }
 
         private async Task Init()
@@ -41,77 +40,49 @@ namespace Marmorariacentral.Services
             }
         }
 
-        // --- SALVAR NO ESTOQUE ---
-        public async Task SaveEstoqueAsync(EstoqueItem item)
+        // ---------------- CLIENTES ----------------
+
+        public async Task<List<Cliente>> GetClientesAsync()
         {
             await Init();
-            if (_db == null) return;
+            var lista = new List<Cliente>();
 
-            DocumentReference docRef = _db.Collection("estoque").Document(item.Id);
-            
-            var data = new Dictionary<string, object>
+            if (_db == null) return lista;
+
+            try
             {
-                { "nome", item.NomeChapa },
-                { "quantidade", item.QuantidadeChapas },
-                { "metros", item.MetroQuadradoTotal },
-                { "preco_m2", item.ValorPorMetro }
-            };
+                var snapshot = await _db.Collection("clientes").GetSnapshotAsync();
 
-            await docRef.SetAsync(data);
-        }
+                foreach (var document in snapshot.Documents)
+                {
+                    if (!document.Exists) continue;
 
-        // --- SALVAR ORÇAMENTO ---
-        public async Task SaveOrcamentoAsync(Orcamento orcamento)
-        {
-            await Init();
-            if (_db == null) return;
+                    var dict = document.ToDictionary();
 
-            DocumentReference docRef = _db.Collection("orcamentos").Document(orcamento.Id);
-
-            var data = new Dictionary<string, object>
+                    lista.Add(new Cliente
+                    {
+                        Id = document.Id,
+                        Nome = dict.ContainsKey("nome") ? dict["nome"]?.ToString() ?? "" : "",
+                        Contato = dict.ContainsKey("contato") ? dict["contato"]?.ToString() ?? "" : "",
+                        Endereco = dict.ContainsKey("endereco") ? dict["endereco"]?.ToString() ?? "" : "",
+                        DataCadastro = dict.ContainsKey("data_cadastro") && dict["data_cadastro"] is Timestamp ts
+                            ? ts.ToDateTime()
+                            : DateTime.Now
+                    });
+                }
+            }
+            catch (Exception ex)
             {
-                { "nome_cliente", orcamento.NomeCliente },
-                { "contato", orcamento.Contato },
-                { "valor_total", orcamento.ValorTotal },
-                { "status", orcamento.Status },
-                { "data_criacao", Timestamp.FromDateTime(orcamento.DataCriacao.ToUniversalTime()) }
-            };
+                System.Diagnostics.Debug.WriteLine($"Erro ao buscar clientes: {ex.Message}");
+            }
 
-            await docRef.SetAsync(data);
-        }
-
-        // --- SALVAR FINANCEIRO (CORRIGIDO PARA FIRESTORE) ---
-        public async Task SaveFinanceiroAsync(FinanceiroRegistro item)
-        {
-            await Init();
-            if (_db == null) return;
-
-            // Criamos a referência na coleção "financeiro" usando o ID do registro
-            DocumentReference docRef = _db.Collection("financeiro").Document(item.Id);
-
-            var data = new Dictionary<string, object>
-            {
-                { "descricao", item.Descricao },
-                { "valor", item.Valor },
-                { "data_vencimento", Timestamp.FromDateTime(item.DataVencimento.ToUniversalTime()) },
-                { "foi_pago", item.FoiPago },
-                { "tipo", item.Tipo },
-                { "is_fixo", item.IsFixo },
-                { "is_parcelado", item.IsParcelado },
-                { "parcela_atual", item.ParcelaAtual },
-                { "total_parcelas", item.TotalParcelas },
-                { "dia_fixo", item.DiaVencimentoFixo }
-            };
-
-            await docRef.SetAsync(data);
+            return lista;
         }
 
         public async Task SaveClienteAsync(Cliente cliente)
         {
             await Init();
             if (_db == null) return;
-
-            DocumentReference docRef = _db.Collection("clientes").Document(cliente.Id);
 
             var data = new Dictionary<string, object>
             {
@@ -121,22 +92,119 @@ namespace Marmorariacentral.Services
                 { "data_cadastro", Timestamp.FromDateTime(cliente.DataCadastro.ToUniversalTime()) }
             };
 
-            await docRef.SetAsync(data);
+            await _db.Collection("clientes")
+                     .Document(cliente.Id)
+                     .SetAsync(data);
         }
 
-        // --- RESETAR COLEÇÃO ---
-        public async Task ResetCollectionAsync(string collectionName)
+        // ---------------- PEÇAS DO ORÇAMENTO ----------------
+
+        public async Task SavePecaOrcamentoAsync(PecaOrcamento peca)
         {
             await Init();
             if (_db == null) return;
 
-            CollectionReference collection = _db.Collection(collectionName);
-            QuerySnapshot snapshot = await collection.GetSnapshotAsync();
-
-            foreach (DocumentSnapshot document in snapshot.Documents)
+            var data = new Dictionary<string, object>
             {
-                await document.Reference.DeleteAsync();
+                { "cliente_id", peca.ClienteId },
+                { "ambiente", peca.Ambiente },
+                { "pedra_nome", peca.PedraNome },
+                { "valor_m2", peca.ValorM2 },
+                { "largura", peca.Largura },
+                { "altura", peca.Altura },
+                { "valor_total", peca.ValorTotalPeca }
+            };
+
+            await _db.Collection("orcamentos_detalhes")
+                     .Document(peca.Id)
+                     .SetAsync(data);
+        }
+
+        public async Task<List<PecaOrcamento>> GetPecasPorClienteAsync(string clienteId)
+        {
+            await Init();
+            var lista = new List<PecaOrcamento>();
+
+            if (_db == null) return lista;
+
+            try
+            {
+                var query = _db.Collection("orcamentos_detalhes")
+                               .WhereEqualTo("cliente_id", clienteId);
+
+                var snapshot = await query.GetSnapshotAsync();
+
+                foreach (var doc in snapshot.Documents)
+                {
+                    if (!doc.Exists) continue;
+
+                    var dict = doc.ToDictionary();
+
+                    lista.Add(new PecaOrcamento
+                    {
+                        Id = doc.Id,
+                        ClienteId = clienteId,
+                        Ambiente = dict.ContainsKey("ambiente") ? dict["ambiente"]?.ToString() ?? "" : "",
+                        PedraNome = dict.ContainsKey("pedra_nome") ? dict["pedra_nome"]?.ToString() ?? "" : "",
+                        ValorM2 = dict.ContainsKey("valor_m2") ? Convert.ToDouble(dict["valor_m2"]) : 0,
+                        Largura = dict.ContainsKey("largura") ? Convert.ToDouble(dict["largura"]) : 0,
+                        Altura = dict.ContainsKey("altura") ? Convert.ToDouble(dict["altura"]) : 0,
+                        ValorTotalPeca = dict.ContainsKey("valor_total") ? Convert.ToDouble(dict["valor_total"]) : 0
+                    });
+                }
             }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Erro ao buscar peças: {ex.Message}");
+            }
+
+            return lista;
+        }
+
+        // ---------------- ESTOQUE ----------------
+
+        public async Task SaveEstoqueAsync(EstoqueItem estoque)
+        {
+            await Init();
+            if (_db == null) return;
+
+            var data = new Dictionary<string, object>
+            {
+                { "nome_chapa", estoque.NomeChapa },
+                { "metro_total", estoque.MetroQuadradoTotal },
+                { "valor_metro", estoque.ValorPorMetro },
+                { "quantidade_chapas", estoque.QuantidadeChapas }
+            };
+
+            await _db.Collection("estoque")
+                     .Document(estoque.Id)
+                     .SetAsync(data);
+        }
+
+        // ---------------- FINANCEIRO ----------------
+
+        public async Task SaveFinanceiroAsync(FinanceiroRegistro financeiro)
+        {
+            await Init();
+            if (_db == null) return;
+
+            var data = new Dictionary<string, object>
+            {
+                { "descricao", financeiro.Descricao },
+                { "valor", financeiro.Valor },
+                { "tipo", financeiro.Tipo },
+                { "data_vencimento", Timestamp.FromDateTime(financeiro.DataVencimento.ToUniversalTime()) },
+                { "foi_pago", financeiro.FoiPago },
+                { "is_fixo", financeiro.IsFixo },
+                { "is_parcelado", financeiro.IsParcelado },
+                { "parcela_atual", financeiro.ParcelaAtual },
+                { "total_parcelas", financeiro.TotalParcelas },
+                { "dia_vencimento_fixo", financeiro.DiaVencimentoFixo }
+            };
+
+            await _db.Collection("financeiro")
+                     .Document(financeiro.Id)
+                     .SetAsync(data);
         }
     }
 }

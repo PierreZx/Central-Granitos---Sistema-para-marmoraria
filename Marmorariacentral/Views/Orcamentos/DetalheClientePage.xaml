@@ -12,54 +12,57 @@
         <Border Grid.Row="0" Padding="20" BackgroundColor="White" StrokeThickness="0">
             <Grid ColumnDefinitions="*, Auto">
                 <VerticalStackLayout Grid.Column="0">
-                    <Label Text="{Binding Cliente.Nome}" FontSize="22" FontAttributes="Bold" TextColor="#8B1A1A"/>
-                    <Label Text="{Binding Cliente.Endereco}" FontSize="13" TextColor="#666"/>
+                    <Label Text="{Binding ClienteSelecionado.Nome}" FontSize="22" FontAttributes="Bold" TextColor="#8B1A1A"/>
+                    <Label Text="{Binding ClienteSelecionado.Endereco}" FontSize="13" TextColor="#666"/>
                 </VerticalStackLayout>
                 <Button Grid.Column="1" Text="+ PEÇA" 
                         Command="{Binding IrParaCalculadoraCommand}" 
                         BackgroundColor="#8B1A1A" TextColor="White" 
                         FontAttributes="Bold" CornerRadius="8"/>
             </Grid>
-                </Border>
-
-                <CollectionView Grid.Row="1" ItemsSource="{Binding PecasAdicionadas}" Margin="15">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="models:PecaOrcamento">
-                            <Border Margin="0,0,0,10" Padding="15" StrokeShape="RoundRectangle 10" BackgroundColor="White">
-            <Grid ColumnDefinitions="*, Auto">
-                <VerticalStackLayout Grid.Column="0" Spacing="2">
-                    <Label Text="{Binding Ambiente}" FontAttributes="Bold" FontSize="16" TextColor="#333"/>
-                    <Label Text="{Binding PedraNome}" FontSize="14" TextColor="#8B1A1A"/>
-                    <Label Text="{Binding ValorTotalPeca, StringFormat='Valor: {0:C}'}" FontAttributes="Bold" TextColor="#2E7D32"/>
-                </VerticalStackLayout>
-                
-                <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                    <Button Text="✎" 
-                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DetalhesClienteViewModel}}, Path=EditarPecaCommand}"
-                            CommandParameter="{Binding .}"
-                            BackgroundColor="#F0F0F0" TextColor="Black" WidthRequest="45" HeightRequest="45" CornerRadius="10"/>
-                    
-                    <Button Text="🗑" 
-                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DetalhesClienteViewModel}}, Path=RemoverPecaCommand}"
-                            CommandParameter="{Binding .}"
-                            BackgroundColor="#FFEBEB" TextColor="Red" WidthRequest="45" HeightRequest="45" CornerRadius="10"/>
-                </HorizontalStackLayout>
-            </Grid>
         </Border>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding ListaPecas}" Margin="15">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:PecaOrcamento">
+                    <Border Margin="0,0,0,10" Padding="15" StrokeShape="RoundRectangle 10" BackgroundColor="White">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="{Binding Ambiente}" FontAttributes="Bold" FontSize="16" TextColor="#333"/>
+                                <Label Text="{Binding PedraNome}" FontSize="14" TextColor="#8B1A1A"/>
+                                <Label Text="{Binding ValorTotalPeca, StringFormat='Valor: {0:C}'}" FontAttributes="Bold" TextColor="#2E7D32"/>
+                            </VerticalStackLayout>
+                            
+                            <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                <Button Text="✎" 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DetalhesClienteViewModel}}, Path=EditarPecaCommand}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="#F0F0F0" TextColor="Black" WidthRequest="45" HeightRequest="45" CornerRadius="10"/>
+                                
+                                <Button Text="🗑" 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DetalhesClienteViewModel}}, Path=RemoverPecaCommand}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="#FFEBEB" TextColor="Red" WidthRequest="45" HeightRequest="45" CornerRadius="10"/>
+                            </HorizontalStackLayout>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
+            <CollectionView.EmptyView>
+                <Label Text="Nenhuma peça adicionada ainda." HorizontalOptions="Center" VerticalOptions="Center" Margin="0,50" TextColor="#999"/>
+            </CollectionView.EmptyView>
         </CollectionView>
 
         <Border Grid.Row="2" Padding="20" BackgroundColor="White" StrokeThickness="1" Stroke="#DDD">
             <VerticalStackLayout Spacing="15">
                 <HorizontalStackLayout HorizontalOptions="End" Spacing="10">
                     <Label Text="TOTAL DO ORÇAMENTO:" VerticalOptions="Center" FontSize="14" TextColor="#333"/>
-                    <Label Text="{Binding TotalOrcamento, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" TextColor="#1B5E20"/>
+                    <Label Text="{Binding ValorTotalGeral, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" TextColor="#1B5E20"/>
                 </HorizontalStackLayout>
                 
                 <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
-                    <Button Grid.Column="0" Text="SALVAR" BackgroundColor="Green" TextColor="White" FontAttributes="Bold" HeightRequest="50"/>
-                    <Button Grid.Column="1" Text="GERAR PDF" BackgroundColor="#444" TextColor="White" FontAttributes="Bold" HeightRequest="50"/>
+                    <Button Grid.Column="0" Text="MANDAR P/ PRODUÇÃO" BackgroundColor="Green" TextColor="White" FontAttributes="Bold" HeightRequest="50" CornerRadius="10"/>
+                    <Button Grid.Column="1" Text="GERAR PDF" BackgroundColor="#444" TextColor="White" FontAttributes="Bold" HeightRequest="50" CornerRadius="10"/>
                 </Grid>
             </VerticalStackLayout>
         </Border>

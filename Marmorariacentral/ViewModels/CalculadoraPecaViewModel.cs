@@ -5,7 +5,7 @@ using Marmorariacentral.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq; // Garante o uso do LINQ
+using System.Linq;
 
 namespace Marmorariacentral.ViewModels
 {
@@ -20,13 +20,36 @@ namespace Marmorariacentral.ViewModels
         private ObservableCollection<EstoqueItem> listaEstoque = new();
 
         [ObservableProperty]
-        private EstoqueItem? pedraSelecionada; // O '?' indica que pode ser nulo
+        private EstoqueItem? pedraSelecionada;
 
         [ObservableProperty]
         private string larguraInput = "0,00";
 
         [ObservableProperty]
         private string alturaInput = "0,00";
+
+        // METRO LINEAR
+        [ObservableProperty]
+        private string valorMetroLinearInput = "130";
+
+        [ObservableProperty]
+        private double valorMaoDeObra;
+
+        [ObservableProperty]
+        private double totalGeral;
+
+        // MULTIPLICADOR
+        [ObservableProperty]
+        private bool usarMultiplicador = false;
+
+        [ObservableProperty]
+        private string quantidadeInput = "1";
+
+        public int Quantidade =>
+            int.TryParse(QuantidadeInput, out int q) ? Math.Max(q, 1) : 1;
+
+        // VALOR MATERIAL (usado pelo XAML)
+        public double ValorMaterial => Peca?.ValorTotalPeca ?? 0;
 
         [ObservableProperty]
         private PecaDrawable desenhoPeca = new();
@@ -45,14 +68,6 @@ namespace Marmorariacentral.ViewModels
                 Peca = pecaEdicao;
                 LarguraInput = pecaEdicao.Largura.ToString("N2", CultureInfo.CurrentCulture);
                 AlturaInput = pecaEdicao.Altura.ToString("N2", CultureInfo.CurrentCulture);
-                
-                // CORREÇÃO CS8601: Verificação de segurança ao buscar na lista
-                if (ListaEstoque != null && ListaEstoque.Any())
-                {
-                    PedraSelecionada = ListaEstoque.FirstOrDefault(x => x.NomeChapa == pecaEdicao.PedraNome);
-                }
-
-                ProcessarMudancaMedida();
             }
         }
 
@@ -64,25 +79,22 @@ namespace Marmorariacentral.ViewModels
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     ListaEstoque.Clear();
-                    foreach (var item in itens) ListaEstoque.Add(item);
-                    
-                    // CORREÇÃO CS8601: Busca segura após carregar a lista
-                    if (Peca != null && !string.IsNullOrEmpty(Peca.PedraNome))
-                    {
-                        var pedraEncontrada = ListaEstoque.FirstOrDefault(x => x.NomeChapa == Peca.PedraNome);
-                        if (pedraEncontrada != null)
-                        {
-                            PedraSelecionada = pedraEncontrada;
-                        }
-                    }
+                    foreach (var item in itens)
+                        ListaEstoque.Add(item);
                 });
             }
-            catch (Exception ex) { Debug.WriteLine(ex.Message); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
         }
 
         partial void OnPedraSelecionadaChanged(EstoqueItem? value) => CalcularTotal();
         partial void OnLarguraInputChanged(string value) => ProcessarMudancaMedida();
         partial void OnAlturaInputChanged(string value) => ProcessarMudancaMedida();
+        partial void OnValorMetroLinearInputChanged(string value) => CalcularTotal();
+        partial void OnQuantidadeInputChanged(string value) => CalcularTotal();
+        partial void OnUsarMultiplicadorChanged(bool value) => CalcularTotal();
 
         private void ProcessarMudancaMedida()
         {
@@ -97,23 +109,45 @@ namespace Marmorariacentral.ViewModels
 
             DesenhoPeca.Largura = Peca.Largura;
             DesenhoPeca.Altura = Peca.Altura;
-            
+
             OnPropertyChanged(nameof(DesenhoPeca));
             CalcularTotal();
         }
 
         private void CalcularTotal()
         {
-            if (PedraSelecionada != null)
+            if (PedraSelecionada == null)
+                return;
+
+            double area = Peca.Largura * Peca.Altura;
+            double precoM2 = PedraSelecionada.ValorPorMetro;
+
+            double valorPedra = area * precoM2;
+            Peca.ValorM2 = precoM2;
+            Peca.ValorTotalPeca = valorPedra;
+
+            // METRO LINEAR (considerando largura como base)
+            double metroLinear = Peca.Largura;
+
+            if (!double.TryParse(
+                ValorMetroLinearInput.Replace(',', '.'),
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture,
+                out double valorML))
             {
-                decimal area = (decimal)Peca.Largura * (decimal)Peca.Altura;
-                decimal precoM2 = (decimal)PedraSelecionada.ValorPorMetro;
-                
-                Peca.ValorM2 = (double)precoM2;
-                Peca.ValorTotalPeca = (double)(area * precoM2);
-                
-                OnPropertyChanged(nameof(Peca));
+                valorML = 0;
             }
+
+            ValorMaoDeObra = metroLinear * valorML;
+
+            int quantidadeFinal = UsarMultiplicador ? Quantidade : 1;
+
+            TotalGeral = (valorPedra + ValorMaoDeObra) * quantidadeFinal;
+
+            OnPropertyChanged(nameof(Peca));
+            OnPropertyChanged(nameof(ValorMaterial));
+            OnPropertyChanged(nameof(ValorMaoDeObra));
+            OnPropertyChanged(nameof(TotalGeral));
         }
 
         [RelayCommand]
@@ -127,9 +161,9 @@ namespace Marmorariacentral.ViewModels
 
             Peca.PedraNome = PedraSelecionada.NomeChapa;
 
-            await Shell.Current.GoToAsync("..", new Dictionary<string, object> 
-            { 
-                { "NovaPeca", Peca } 
+            await Shell.Current.GoToAsync("..", new Dictionary<string, object>
+            {
+                { "NovaPeca", Peca }
             });
         }
     }
@@ -160,14 +194,10 @@ namespace Marmorariacentral.ViewModels
 
             canvas.FillColor = Color.FromArgb("#808080");
             canvas.FillRectangle(x, y, drawW, drawH);
+
             canvas.StrokeColor = Colors.Black;
             canvas.StrokeSize = 2;
             canvas.DrawRectangle(x, y, drawW, drawH);
-
-            canvas.FontColor = Colors.Black;
-            canvas.FontSize = 14;
-            canvas.DrawString($"{Largura:N2}m", x, y - 15, drawW, 20, HorizontalAlignment.Center, VerticalAlignment.Center);
-            canvas.DrawString($"{Altura:N2}m", x - 60, y + (drawH / 2) - 10, 50, 20, HorizontalAlignment.Right, VerticalAlignment.Center);
         }
     }
 }

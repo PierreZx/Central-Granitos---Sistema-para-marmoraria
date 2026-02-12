@@ -1,11 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Maui.Views;
+using Microsoft.Maui.ApplicationModel;
 using Marmorariacentral.Models;
 using Marmorariacentral.Services;
 using Marmorariacentral.Views.Orcamentos;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Marmorariacentral.ViewModels
 {
@@ -15,16 +17,17 @@ namespace Marmorariacentral.ViewModels
         private readonly FirebaseService _firebaseService;
 
         private ObservableCollection<Cliente> _clientes = new();
-        public ObservableCollection<Cliente> Clientes 
-        { 
-            get => _clientes; 
-            set => SetProperty(ref _clientes, value); 
+        public ObservableCollection<Cliente> Clientes
+        {
+            get => _clientes;
+            set => SetProperty(ref _clientes, value);
         }
 
         public OrcamentoViewModel(DatabaseService dbService, FirebaseService firebaseService)
         {
             _dbService = dbService;
             _firebaseService = firebaseService;
+
             _ = CarregarDados();
         }
 
@@ -33,20 +36,38 @@ namespace Marmorariacentral.ViewModels
         {
             try
             {
-                var lista = await _dbService.GetItemsAsync<Cliente>();
-                MainThread.BeginInvokeOnMainThread(() => 
+                var listaLocal = await _dbService.GetItemsAsync<Cliente>();
+                AtualizarListaUI(listaLocal);
+
+                var listaFirebase = await _firebaseService.GetClientesAsync();
+
+                if (listaFirebase != null && listaFirebase.Any())
                 {
-                    Clientes.Clear();
-                    foreach (var c in lista.OrderBy(x => x.Nome)) 
+                    foreach (var clienteNuvem in listaFirebase)
                     {
-                        Clientes.Add(c);
+                        await _dbService.SaveItemAsync(clienteNuvem);
                     }
-                });
+
+                    var listaAtualizada = await _dbService.GetItemsAsync<Cliente>();
+                    AtualizarListaUI(listaAtualizada);
+                }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Erro ao carregar clientes: {ex.Message}");
+                Debug.WriteLine($"Erro na sincronização: {ex.Message}");
             }
+        }
+
+        private void AtualizarListaUI(List<Cliente> lista)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Clientes.Clear();
+                foreach (var c in lista.OrderBy(x => x.Nome))
+                {
+                    Clientes.Add(c);
+                }
+            });
         }
 
         [RelayCommand]
@@ -54,7 +75,7 @@ namespace Marmorariacentral.ViewModels
         {
             await MainThread.InvokeOnMainThreadAsync(async () =>
             {
-                try 
+                try
                 {
                     var popup = new CadastroClientePopup();
                     var resultado = await Shell.Current.ShowPopupAsync(popup);
@@ -62,17 +83,17 @@ namespace Marmorariacentral.ViewModels
                     if (resultado is Cliente novo)
                     {
                         await _dbService.SaveItemAsync(novo);
-                        _ = Task.Run(async () => {
+
+                        _ = Task.Run(async () =>
+                        {
                             try { await _firebaseService.SaveClienteAsync(novo); }
-                            catch { }
+                            catch (Exception ex) { Debug.WriteLine(ex.Message); }
                         });
+
                         await CarregarDados();
                     }
                 }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Erro ao abrir cadastro: {ex.Message}");
-                }
+                catch (Exception ex) { Debug.WriteLine(ex.Message); }
             });
         }
 
@@ -89,10 +110,13 @@ namespace Marmorariacentral.ViewModels
                 if (resultado is Cliente editado)
                 {
                     await _dbService.SaveItemAsync(editado);
-                    _ = Task.Run(async () => {
+
+                    _ = Task.Run(async () =>
+                    {
                         try { await _firebaseService.SaveClienteAsync(editado); }
                         catch { }
                     });
+
                     await CarregarDados();
                 }
             });
@@ -103,9 +127,12 @@ namespace Marmorariacentral.ViewModels
         {
             if (cliente == null) return;
 
-            bool confirmar = await Shell.Current.DisplayAlert("Excluir", 
-                $"Deseja remover permanentemente o cliente {cliente.Nome}?", "Sim", "Não");
-            
+            bool confirmar = await Shell.Current.DisplayAlert(
+                "Excluir",
+                $"Deseja remover permanentemente o cliente {cliente.Nome}?",
+                "Sim",
+                "Não");
+
             if (confirmar)
             {
                 await _dbService.DeleteItemAsync(cliente);
@@ -123,7 +150,6 @@ namespace Marmorariacentral.ViewModels
                 { "Cliente", cliente }
             };
 
-            // AJUSTE: Rota corrigida de "Detalhe" para "Detalhes" para bater com AppShell.xaml.cs
             await Shell.Current.GoToAsync("DetalhesClientePage", navigationParameter);
         }
     }

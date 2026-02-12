@@ -42,6 +42,23 @@
                 </Border>
             </Grid>
 
+            <Grid ColumnDefinitions="*,Auto">
+    
+                <Label Text="Visão Geral"
+                    FontSize="28"
+                    FontAttributes="Bold"
+                    TextColor="#333"
+                    Margin="0,10" />
+
+                <Border Grid.Column="1"
+                        BackgroundColor="{Binding WifiStatusColor}"
+                        WidthRequest="16"
+                        HeightRequest="16"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 50"
+                        VerticalOptions="Center"/>
+            </Grid>
+
             <Label Text="Atividade Recente" FontSize="18" FontAttributes="Bold" Margin="0,10,0,0" />
             <Border StrokeShape="RoundRectangle 15" StrokeThickness="0" BackgroundColor="White" HeightRequest="200" Padding="20">
                 <Label Text="Nenhuma atividade recente encontrada." VerticalOptions="Center" HorizontalOptions="Center" TextColor="#CCC" />

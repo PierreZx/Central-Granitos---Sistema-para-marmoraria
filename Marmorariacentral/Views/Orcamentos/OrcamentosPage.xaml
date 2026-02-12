@@ -11,38 +11,71 @@
     <Grid RowDefinitions="Auto, *">
         <Border Grid.Row="0" Padding="20" BackgroundColor="White" StrokeThickness="0">
             <Grid ColumnDefinitions="*, Auto">
-                <Label Grid.Column="0" Text="Gerenciar Clientes" FontSize="24" FontAttributes="Bold" TextColor="#333" VerticalOptions="Center"/>
-                <Button Grid.Column="1" Text="NOVO CLIENTE" Command="{Binding AbrirCadastroClienteCommand}" 
-                        BackgroundColor="#E8E8E8" TextColor="#8B1A1A" FontAttributes="Bold"/>
+                <Label Grid.Column="0"
+                       Text="Gerenciar Clientes"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       TextColor="#333"
+                       VerticalOptions="Center"/>
+
+                <Button Grid.Column="1"
+                        Text="NOVO CLIENTE"
+                        Command="{Binding AbrirCadastroClienteCommand}"
+                        BackgroundColor="#E8E8E8"
+                        TextColor="#8B1A1A"
+                        FontAttributes="Bold"/>
             </Grid>
         </Border>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Clientes}" Margin="15">
+        <CollectionView Grid.Row="1"
+                        ItemsSource="{Binding Clientes}"
+                        Margin="15">
+
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:Cliente">
-                    <Border Margin="0,0,0,12" Padding="15" StrokeShape="RoundRectangle 15" BackgroundColor="White">
+                    <Border Margin="0,0,0,12"
+                            Padding="15"
+                            StrokeShape="RoundRectangle 15"
+                            BackgroundColor="White">
+
                         <Border.GestureRecognizers>
-                            <TapGestureRecognizer 
+                            <TapGestureRecognizer
                                 Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:OrcamentoViewModel}}, Path=AbrirDetalhesClienteCommand}"
-                                CommandParameter="{Binding .}"/>
+                                CommandParameter="{Binding .}" />
                         </Border.GestureRecognizers>
 
                         <Grid ColumnDefinitions="*, Auto">
                             <VerticalStackLayout Grid.Column="0" Spacing="5">
-                                <Label Text="{Binding Nome}" FontSize="18" FontAttributes="Bold" TextColor="#8B1A1A"/>
-                                <Label Text="{Binding Endereco}" FontSize="12" TextColor="#666"/>
+                                <Label Text="{Binding Nome}"
+                                       FontSize="18"
+                                       FontAttributes="Bold"
+                                       TextColor="#8B1A1A"/>
+                                <Label Text="{Binding Endereco}"
+                                       FontSize="12"
+                                       TextColor="#666"/>
                             </VerticalStackLayout>
 
-                            <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                                <Button Text="✎" 
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:OrcamentoViewModel}}, Path=EditarClienteCommand}" 
-                                        CommandParameter="{Binding .}" 
-                                        BackgroundColor="#F0F0F0" TextColor="Black" WidthRequest="45" HeightRequest="45" CornerRadius="10"/>
-                                
-                                <Button Text="🗑" 
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:OrcamentoViewModel}}, Path=ExcluirClienteCommand}" 
-                                        CommandParameter="{Binding .}" 
-                                        BackgroundColor="#FFEBEB" TextColor="Red" WidthRequest="45" HeightRequest="45" CornerRadius="10"/>
+                            <HorizontalStackLayout Grid.Column="1"
+                                                   Spacing="8"
+                                                   VerticalOptions="Center">
+
+                                <Button Text="✎"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:OrcamentoViewModel}}, Path=EditarClienteCommand}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="#F0F0F0"
+                                        TextColor="Black"
+                                        WidthRequest="45"
+                                        HeightRequest="45"
+                                        CornerRadius="10"/>
+
+                                <Button Text="🗑"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:OrcamentoViewModel}}, Path=ExcluirClienteCommand}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="#FFEBEB"
+                                        TextColor="Red"
+                                        WidthRequest="45"
+                                        HeightRequest="45"
+                                        CornerRadius="10"/>
                             </HorizontalStackLayout>
                         </Grid>
                     </Border>

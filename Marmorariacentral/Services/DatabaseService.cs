@@ -5,24 +5,31 @@ namespace Marmorariacentral.Services
 {
     public class DatabaseService
     {
-        // O '?' resolve o erro CS8618 (indica que pode ser nulo antes do Init)
         private SQLiteAsyncConnection? _database;
         private readonly string _dbPath;
 
         public DatabaseService()
         {
-            _dbPath = Path.Combine(FileSystem.AppDataDirectory, "marmoraria_v1.db3");
+            // Mantendo o caminho definitivo para não perder dados locais
+            _dbPath = Path.Combine(FileSystem.AppDataDirectory, "marmoraria_definitiva.db3");
         }
 
         private async Task Init()
         {
-            if (_database is not null)
-                return;
+            if (_database is not null) return;
 
             _database = new SQLiteAsyncConnection(_dbPath);
 
-            // Criamos todas as tabelas baseadas nas Models que definimos
-            await _database.CreateTablesAsync<Usuario, Orcamento, EstoqueItem, FinanceiroRegistro, Cliente>();
+            // CORREÇÃO CS1503: Adicionado 'CreateFlags.None' como primeiro argumento.
+            // Isso informa ao SQLite como proceder e permite listar os tipos logo em seguida.
+            await _database.CreateTablesAsync(
+                CreateFlags.None, 
+                typeof(Usuario), 
+                typeof(Orcamento), 
+                typeof(EstoqueItem), 
+                typeof(FinanceiroRegistro), 
+                typeof(Cliente), 
+                typeof(PecaOrcamento));
         }
 
         public async Task<List<T>> GetItemsAsync<T>() where T : new()

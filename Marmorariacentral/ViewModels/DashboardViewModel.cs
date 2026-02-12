@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Marmorariacentral.Services;
 using System.Collections.ObjectModel;
+using Microsoft.Maui.Networking;
 
 namespace Marmorariacentral.ViewModels
 {
@@ -17,26 +18,47 @@ namespace Marmorariacentral.ViewModels
         [ObservableProperty]
         private int totalOrcamentos = 0;
 
+        [ObservableProperty]
+        private Color wifiStatusColor = Colors.Red;
+
         public DashboardViewModel(DatabaseService dbService)
         {
             _dbService = dbService;
-            Task.Run(async () => await LoadDashboardData());
+
+            Connectivity.ConnectivityChanged += Connectivity_ConnectivityChanged;
+            AtualizarWifiStatus();
+        }
+
+        private void Connectivity_ConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
+
+        {
+            AtualizarWifiStatus();
+        }
+
+        private void AtualizarWifiStatus()
+        {
+            if (Connectivity.NetworkAccess == NetworkAccess.Internet)
+                WifiStatusColor = Colors.Green;
+            else
+                WifiStatusColor = Colors.Red;
         }
 
         public async Task LoadDashboardData()
         {
-            // Busca dados reais do SQLite
             var orcamentos = await _dbService.GetItemsAsync<Models.Orcamento>();
             var estoque = await _dbService.GetItemsAsync<Models.EstoqueItem>();
             var financeiro = await _dbService.GetItemsAsync<Models.FinanceiroRegistro>();
 
-            // Atualiza as propriedades (o que fará a tela mudar automaticamente)
             TotalOrcamentos = orcamentos.Count;
-            TotalChapas = (int)estoque.Sum(x => x.QuantidadeChapas);
-            
-            double saldo = financeiro.Where(x => x.Tipo == "Entrada").Sum(x => x.Valor) - 
-                           financeiro.Where(x => x.Tipo == "Saida" && x.FoiPago).Sum(x => x.Valor);
-            
+            TotalChapas = estoque.Sum(x => x.QuantidadeChapas);
+
+            double saldo = financeiro
+                .Where(x => x.Tipo == "Entrada")
+                .Sum(x => x.Valor)
+                - financeiro
+                .Where(x => x.Tipo == "Saida" && x.FoiPago)
+                .Sum(x => x.Valor);
+
             ValorCaixa = saldo.ToString("C");
         }
     }
