@@ -1,327 +1,145 @@
 using Marmorariacentral.ViewModels;
 using Microsoft.Maui.Graphics;
 
-public class PecaDrawable : IDrawable
+namespace Marmorariacentral.Drawables
 {
-    private readonly CalculadoraPecaViewModel vm;
-    private const float MARGEM_INTERNA = 60;
-    private const float TAMANHO_MAXIMO_PECA = 400;
-
-    public PecaDrawable(CalculadoraPecaViewModel viewModel)
+    public class PecaDrawable : IDrawable
     {
-        vm = viewModel;
-    }
+        private readonly CalculadoraPecaViewModel vm;
+        private const float MARGEM = 100; 
+        private readonly Color CorRodobanca = Color.FromArgb("#2E7D32");
+        private readonly Color CorSaia = Color.FromArgb("#B76E00");
+        private readonly Color CorRecorteBojo = Color.FromArgb("#2980B9");
+        private readonly Color CorRecorteCooktop = Color.FromArgb("#C0392B");
 
-    public void Draw(ICanvas canvas, RectF dirtyRect)
-    {
-        try
+        public PecaDrawable(CalculadoraPecaViewModel viewModel) => vm = viewModel;
+
+        public void Draw(ICanvas canvas, RectF dirtyRect)
         {
+            if (vm.Peca.Largura <= 0.01) return;
+
             canvas.Antialias = true;
             canvas.FillColor = Colors.White;
             canvas.FillRectangle(dirtyRect);
 
-            double larguraBase = vm.Peca.Largura;
-            double alturaBase = vm.Peca.Altura;
+            double largEsq = vm.TemPernaEsquerda ? vm.Peca2.Largura : 0;
+            double largDir = (vm.LadoP2 == "Direita") ? vm.Peca2.Largura : (vm.Peca3.Largura > 0.01 ? vm.Peca3.Largura : 0);
+            double largTot = vm.Peca.Largura + largEsq + largDir;
+            double altMax = Math.Max(vm.Peca.Altura, Math.Max(vm.Peca2.Altura, vm.Peca3.Altura));
 
-            if (larguraBase <= 0.01 || alturaBase <= 0.01)
-            {
-                DesenharMensagemSemPeca(canvas, dirtyRect);
-                return;
+            float escala = (float)Math.Min((dirtyRect.Width - MARGEM * 2) / largTot, (dirtyRect.Height - MARGEM * 2) / altMax);
+            float x0 = (dirtyRect.Width - (float)(largTot * escala)) / 2;
+            float y0 = (dirtyRect.Height - (float)(altMax * escala)) / 2;
+
+            if (vm.TemPernaEsquerda) {
+                DesenharPecaTecnica(canvas, x0, y0, (float)(largEsq * escala), (float)(vm.Peca2.Altura * escala), vm.Peca2.Largura, vm.Peca2.Altura,
+                    vm.RodobancaP2Esquerda, vm.RodobancaP2Direita, vm.RodobancaP2Frente, vm.RodobancaP2Tras,
+                    vm.SaiaP2Esquerda, vm.SaiaP2Direita, vm.SaiaP2Frente, vm.SaiaP2Tras, true, false, "P2", escala);
             }
 
-            // ====================================================================
-            // DEFINIÇÃO DAS PEÇAS - SEM PROPRIEDADES TemBancadaL/TemBancadaU
-            // ====================================================================
-            
-            double larguraEsquerda = 0;
-            double alturaEsquerda = 0;
-            double larguraDireita = 0;
-            double alturaDireita = 0;
-            
-            bool temPernaEsquerda = false;
-            bool temPernaDireita = false;
+            float xP1 = x0 + (float)(largEsq * escala);
+            DesenharPecaTecnica(canvas, xP1, y0, (float)(vm.Peca.Largura * escala), (float)(vm.Peca.Altura * escala), vm.Peca.Largura, vm.Peca.Altura,
+                vm.RodobancaP1Esquerda, vm.RodobancaP1Direita, vm.RodobancaP1Frente, vm.RodobancaP1Tras,
+                vm.SaiaP1Esquerda, vm.SaiaP1Direita, vm.SaiaP1Frente, vm.SaiaP1Tras, false, false, "P1", escala);
 
-            // ========================================
-            // BANCADA EM L - SÓ EXISTE SE TIVER MEDIDAS
-            // ========================================
-            if (vm.Peca2.Largura > 0.01 && vm.Peca2.Altura > 0.01)
-            {
-                if (vm.LadoP2 == "Esquerda")
-                {
-                    larguraEsquerda = vm.Peca2.Largura;
-                    alturaEsquerda = vm.Peca2.Altura;
-                    temPernaEsquerda = true;
-                }
-                else
-                {
-                    larguraDireita = vm.Peca2.Largura;
-                    alturaDireita = vm.Peca2.Altura;
-                    temPernaDireita = true;
-                }
+            if (vm.TemPernaDireita) {
+                bool isP2 = vm.LadoP2 == "Direita";
+                float xD = xP1 + (float)(vm.Peca.Largura * escala);
+                double lD = isP2 ? vm.Peca2.Largura : vm.Peca3.Largura;
+                double aD = isP2 ? vm.Peca2.Altura : vm.Peca3.Altura;
+                DesenharPecaTecnica(canvas, xD, y0, (float)(lD * escala), (float)(aD * escala), lD, aD,
+                    isP2 ? vm.RodobancaP2Esquerda : vm.RodobancaP3Esquerda,
+                    isP2 ? vm.RodobancaP2Direita : vm.RodobancaP3Direita,
+                    isP2 ? vm.RodobancaP2Frente : vm.RodobancaP3Frente,
+                    isP2 ? vm.RodobancaP2Tras : vm.RodobancaP3Tras,
+                    isP2 ? vm.SaiaP2Esquerda : vm.SaiaP3Esquerda,
+                    isP2 ? vm.SaiaP2Direita : vm.SaiaP3Direita,
+                    isP2 ? vm.SaiaP2Frente : vm.SaiaP3Frente,
+                    isP2 ? vm.SaiaP2Tras : vm.SaiaP3Tras, false, true, "P3", escala);
             }
-
-            // ========================================
-            // BANCADA EM U - SÓ EXISTE SE TIVER MEDIDAS
-            // ========================================
-            if (vm.Peca3.Largura > 0.01 && vm.Peca3.Altura > 0.01)
-            {
-                // Se já tem perna esquerda do L, adiciona direita
-                if (temPernaEsquerda)
-                {
-                    larguraDireita = vm.Peca3.Largura;
-                    alturaDireita = vm.Peca3.Altura;
-                    temPernaDireita = true;
-                }
-                // Se já tem perna direita do L, adiciona esquerda
-                else if (temPernaDireita)
-                {
-                    larguraEsquerda = vm.Peca3.Largura;
-                    alturaEsquerda = vm.Peca3.Altura;
-                    temPernaEsquerda = true;
-                }
-                // Se não tem nenhuma perna, adiciona as DUAS
-                else
-                {
-                    larguraEsquerda = vm.Peca3.Largura;
-                    alturaEsquerda = vm.Peca3.Altura;
-                    larguraDireita = vm.Peca3.Largura;
-                    alturaDireita = vm.Peca3.Altura;
-                    temPernaEsquerda = true;
-                    temPernaDireita = true;
-                }
-            }
-
-            // ====================================================================
-            // CÁLCULO DE ESCALA
-            // ====================================================================
-            
-            double larguraTotal = larguraBase + larguraEsquerda + larguraDireita;
-            double alturaMaxima = Math.Max(alturaBase, Math.Max(alturaEsquerda, alturaDireita));
-
-            float areaUtilW = dirtyRect.Width - MARGEM_INTERNA * 2;
-            float areaUtilH = dirtyRect.Height - MARGEM_INTERNA * 2;
-
-            float escala = Math.Min(
-                areaUtilW / (float)larguraTotal,
-                areaUtilH / (float)alturaMaxima
-            );
-
-            float escalaMaxima = TAMANHO_MAXIMO_PECA / (float)Math.Max(larguraBase, alturaBase);
-            escala = Math.Min(escala, escalaMaxima);
-            
-            if (float.IsNaN(escala) || float.IsInfinity(escala) || escala <= 0)
-                escala = 1;
-
-            // ====================================================================
-            // POSICIONAMENTO - ALINHADO PELO TOPO
-            // ====================================================================
-            
-            float larguraTotalPx = (float)(larguraTotal * escala);
-            float alturaMaximaPx = (float)(alturaMaxima * escala);
-
-            float centroX = dirtyRect.Width / 2;
-            float centroY = dirtyRect.Height / 2;
-
-            float xInicial = centroX - (larguraTotalPx / 2);
-            float yInicial = MARGEM_INTERNA;
-
-            float larguraPrincipalPx = (float)(larguraBase * escala);
-            float alturaPrincipalPx = (float)(alturaBase * escala);
-            
-            float larguraEsquerdaPx = (float)(larguraEsquerda * escala);
-            float alturaEsquerdaPx = (float)(alturaEsquerda * escala);
-            
-            float larguraDireitaPx = (float)(larguraDireita * escala);
-            float alturaDireitaPx = (float)(alturaDireita * escala);
-
-            float xPrincipal = xInicial + larguraEsquerdaPx;
-            
-            float yPrincipal = yInicial;
-            float yEsquerda = yInicial;
-            float yDireita = yInicial;
-
-            // ====================================================================
-            // DESENHO DAS PEÇAS
-            // ====================================================================
-
-            // PERNA ESQUERDA
-            if (temPernaEsquerda && larguraEsquerdaPx > 1 && alturaEsquerdaPx > 1)
-            {
-                DesenharPeca(canvas, 
-                    xPrincipal - larguraEsquerdaPx, 
-                    yEsquerda, 
-                    larguraEsquerdaPx, 
-                    alturaEsquerdaPx, 
-                    "#A5D8FF");
-            }
-
-            // PEÇA PRINCIPAL
-            DesenharPeca(canvas, 
-                xPrincipal, 
-                yPrincipal, 
-                larguraPrincipalPx, 
-                alturaPrincipalPx, 
-                "#E8E8E8");
-
-            // PERNA DIREITA
-            if (temPernaDireita && larguraDireitaPx > 1 && alturaDireitaPx > 1)
-            {
-                DesenharPeca(canvas, 
-                    xPrincipal + larguraPrincipalPx, 
-                    yDireita, 
-                    larguraDireitaPx, 
-                    alturaDireitaPx, 
-                    "#A5D8FF");
-            }
-
-            // ====================================================================
-            // DESENHO DAS MEDIDAS
-            // ====================================================================
-
-            canvas.FontSize = 13;
-            canvas.FontColor = Colors.Black;
-
-            // Largura Principal
-            if (larguraPrincipalPx > 30)
-            {
-                canvas.DrawString($"{vm.Peca.Largura:F2} m",
-                    xPrincipal, 
-                    yPrincipal + alturaPrincipalPx + 5,
-                    larguraPrincipalPx, 
-                    22,
-                    HorizontalAlignment.Center, 
-                    VerticalAlignment.Top);
-            }
-
-            // Altura Principal
-            if (alturaPrincipalPx > 30)
-            {
-                canvas.SaveState();
-                canvas.Rotate(-90, xPrincipal - 35, yPrincipal + alturaPrincipalPx / 2);
-                canvas.DrawString($"{vm.Peca.Altura:F2} m",
-                    xPrincipal - 45, 
-                    yPrincipal + alturaPrincipalPx / 2 - 8,
-                    30, 
-                    alturaPrincipalPx,
-                    HorizontalAlignment.Center, 
-                    VerticalAlignment.Center);
-                canvas.RestoreState();
-            }
-
-            // Perna Esquerda
-            if (temPernaEsquerda && larguraEsquerdaPx > 30 && alturaEsquerdaPx > 30)
-            {
-                canvas.DrawString($"{larguraEsquerda:F2} m",
-                    xPrincipal - larguraEsquerdaPx, 
-                    yPrincipal + alturaPrincipalPx + 5,
-                    larguraEsquerdaPx, 
-                    22,
-                    HorizontalAlignment.Center, 
-                    VerticalAlignment.Top);
-                
-                canvas.SaveState();
-                canvas.Rotate(-90, 
-                    xPrincipal - larguraEsquerdaPx - 35, 
-                    yEsquerda + alturaEsquerdaPx / 2);
-                canvas.DrawString($"{alturaEsquerda:F2} m",
-                    xPrincipal - larguraEsquerdaPx - 45, 
-                    yEsquerda + alturaEsquerdaPx / 2 - 8,
-                    30, 
-                    alturaEsquerdaPx,
-                    HorizontalAlignment.Center, 
-                    VerticalAlignment.Center);
-                canvas.RestoreState();
-            }
-
-            // Perna Direita
-            if (temPernaDireita && larguraDireitaPx > 30 && alturaDireitaPx > 30)
-            {
-                canvas.DrawString($"{larguraDireita:F2} m",
-                    xPrincipal + larguraPrincipalPx, 
-                    yPrincipal + alturaPrincipalPx + 5,
-                    larguraDireitaPx, 
-                    22,
-                    HorizontalAlignment.Center, 
-                    VerticalAlignment.Top);
-                
-                canvas.SaveState();
-                canvas.Rotate(-90, 
-                    xPrincipal + larguraPrincipalPx + larguraDireitaPx + 35, 
-                    yDireita + alturaDireitaPx / 2);
-                canvas.DrawString($"{alturaDireita:F2} m",
-                    xPrincipal + larguraPrincipalPx + larguraDireitaPx + 25, 
-                    yDireita + alturaDireitaPx / 2 - 8,
-                    30, 
-                    alturaDireitaPx,
-                    HorizontalAlignment.Center, 
-                    VerticalAlignment.Center);
-                canvas.RestoreState();
-            }
-
-            // ====================================================================
-            // LEGENDA
-            // ====================================================================
-            
-            canvas.FontSize = 11;
-            canvas.FontColor = Colors.Gray;
-            
-            string legenda = "⬜ Principal";
-            if (temPernaEsquerda) legenda += "   🟦 Perna Esq";
-            if (temPernaDireita) legenda += "   🟦 Perna Dir";
-            
-            canvas.DrawString(legenda,
-                dirtyRect.Width / 2, 
-                dirtyRect.Height - 20,
-                500, 
-                18,
-                HorizontalAlignment.Center, 
-                VerticalAlignment.Bottom);
         }
-        catch (Exception ex)
+
+        private void DesenharPecaTecnica(ICanvas canvas, float x, float y, float w, float h, double realW, double realH,
+            double rbE, double rbD, double rbF, double rbT, double sE, double sD, double sF, double sT, bool isEsq, bool isDir, string pecaId, float escala)
         {
-            System.Diagnostics.Debug.WriteLine($"Erro no desenho: {ex.Message}");
+            // Reset de estilo para garantir linhas sólidas na peça
+            canvas.StrokeDashPattern = null; 
+            canvas.FillColor = Color.FromArgb("#E8E8E8");
+            canvas.FillRectangle(x, y, w, h);
+            canvas.StrokeColor = Colors.Black;
+            canvas.StrokeSize = 2;
+            canvas.DrawRectangle(x, y, w, h);
+
+            canvas.FontColor = Colors.Black; canvas.FontSize = 12;
+            canvas.DrawString($"{realW:N2}m", x, y - 45, w, 15, HorizontalAlignment.Center, VerticalAlignment.Center);
+            canvas.SaveState();
+            canvas.Translate(x - 45, y + h / 2); canvas.Rotate(-90);
+            canvas.DrawString($"{realH:N2}m", -h / 2, -10, h, 20, HorizontalAlignment.Center, VerticalAlignment.Center);
+            canvas.RestoreState();
+
+            // ACABAMENTOS
+            float hP1Px = (float)(vm.Peca.Altura * escala);
+            DesenharLinhaAcabamento(canvas, x, y, x + w, y, rbT, sT, "T");
+            DesenharLinhaAcabamento(canvas, x, y + h, x + w, y + h, rbF, sF, "F");
+
+            if (!isDir) DesenharLinhaAcabamento(canvas, x, y, x, y + h, rbE, sE, "E");
+            else if (h > hP1Px) DesenharLinhaAcabamento(canvas, x, y + hP1Px, x, y + h, rbE, sE, "E");
+
+            if (!isEsq) DesenharLinhaAcabamento(canvas, x + w, y, x + w, y + h, rbD, sD, "D");
+            else if (h > hP1Px) DesenharLinhaAcabamento(canvas, x + w, y + hP1Px, x + w, y + h, rbD, sD, "D");
+
+            // RECORTES
+            if (vm.TemBojo && vm.PecaDestinoBojo == pecaId)
+                DesenharRecorteTecnico(canvas, x, y, escala, vm.LarguraBojoInput, vm.AlturaBojoInput, vm.BojoXInput, CorRecorteBojo, "BOJO");
+
+            if (vm.TemCooktop && vm.PecaDestinoCooktop == pecaId)
+                DesenharRecorteTecnico(canvas, x, y, escala, vm.LarguraCooktopInput, vm.AlturaCooktopInput, vm.CooktopXInput, CorRecorteCooktop, "COOKTOP");
         }
-    }
 
-    private void DesenharPeca(ICanvas canvas, float x, float y, float w, float h, string corHex)
-    {
-        if (w <= 1 || h <= 1) return;
+        private void DesenharRecorteTecnico(ICanvas canvas, float xPeca, float yPeca, float escala, string sLarg, string sAlt, string sX, Color cor, string label)
+        {
+            float w = (float)(ConverterParaDouble(sLarg) * escala);
+            float h = (float)(ConverterParaDouble(sAlt) * escala);
+            float x = xPeca + (float)(ConverterParaDouble(sX) * escala);
+            float y = yPeca + 10;
 
-        canvas.FillColor = Color.FromArgb(corHex);
-        canvas.FillRectangle(x, y, w, h);
+            canvas.StrokeColor = cor;
+            canvas.StrokeSize = 2;
+            canvas.StrokeDashPattern = new float[] { 4, 2 }; // Define tracejado apenas para o recorte
+            canvas.DrawRectangle(x, y, w, h);
 
-        canvas.StrokeColor = Colors.Black;
-        canvas.StrokeSize = 1.8f;
-        canvas.DrawRectangle(x, y, w, h);
+            canvas.FontColor = cor; canvas.FontSize = 9;
+            canvas.DrawString(label, x, y, w, h, HorizontalAlignment.Center, VerticalAlignment.Center);
+            canvas.DrawString($"{ConverterParaDouble(sLarg):N2}x{ConverterParaDouble(sAlt):N2}", x, y + h + 2, w, 12, HorizontalAlignment.Center, VerticalAlignment.Top);
+            
+            canvas.StrokeDashPattern = null; // Reseta o tracejado imediatamente após desenhar o recorte
+        }
 
-        canvas.StrokeColor = Color.FromArgb("#999999");
-        canvas.StrokeSize = 0.6f;
-        canvas.StrokeDashPattern = new float[] { 2, 3 };
-        canvas.DrawLine(x + 4, y + 4, x + w - 4, y + h - 4);
-        canvas.StrokeDashPattern = null;
-    }
+        private void DesenharLinhaAcabamento(ICanvas canvas, float x1, float y1, float x2, float y2, double rb, double saia, string pos)
+        {
+            canvas.StrokeDashPattern = null; // Garante linha sólida
+            float midX = (x1 + x2) / 2; float midY = (y1 + y2) / 2;
+            if (rb > 0.001) {
+                canvas.StrokeColor = CorRodobanca; canvas.StrokeSize = 4;
+                canvas.DrawLine(x1, y1, x2, y2);
+                canvas.FontColor = CorRodobanca; canvas.FontSize = 10;
+                float offY = (pos == "T") ? -22 : (pos == "F") ? 22 : 0;
+                float offX = (pos == "E") ? -35 : (pos == "D") ? 35 : 0;
+                canvas.DrawString($"{rb:N2}", midX - 15 + offX, midY - 7 + offY, 30, 15, HorizontalAlignment.Center, VerticalAlignment.Center);
+            }
+            if (saia > 0.001) {
+                canvas.StrokeColor = CorSaia; canvas.StrokeSize = 3;
+                float lineOff = rb > 0 ? 5 : 0; canvas.DrawLine(x1 + lineOff, y1 + lineOff, x2 - lineOff, y2 - lineOff);
+                canvas.FontColor = CorSaia; canvas.FontSize = 10;
+                float offY = (pos == "T") ? 18 : (pos == "F") ? -18 : 0;
+                float offX = (pos == "E") ? 25 : (pos == "D") ? -25 : 0;
+                canvas.DrawString($"{saia:N2}", midX - 15 + offX, midY - 7 + offY, 30, 15, HorizontalAlignment.Center, VerticalAlignment.Center);
+            }
+        }
 
-    private void DesenharMensagemSemPeca(ICanvas canvas, RectF dirtyRect)
-    {
-        canvas.FontSize = 18;
-        canvas.FontColor = Colors.Gray;
-        
-        canvas.DrawString("🪨 Desenho da peça",
-            dirtyRect.Width / 2, 
-            dirtyRect.Height / 2 - 25,
-            300, 
-            30,
-            HorizontalAlignment.Center, 
-            VerticalAlignment.Center);
-        
-        canvas.FontSize = 14;
-        canvas.FontColor = Colors.LightGray;
-        canvas.DrawString("Preencha as medidas",
-            dirtyRect.Width / 2, 
-            dirtyRect.Height / 2 + 15,
-            300, 
-            25,
-            HorizontalAlignment.Center, 
-            VerticalAlignment.Center);
+        private double ConverterParaDouble(string valor) {
+            if (string.IsNullOrWhiteSpace(valor)) return 0;
+            return double.TryParse(valor.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double r) ? r : 0;
+        }
     }
 }

@@ -2,564 +2,291 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:Marmorariacentral.ViewModels"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="Marmorariacentral.Views.Orcamentos.CalculadoraPecaPage"
              x:DataType="viewmodels:CalculadoraPecaViewModel"
              Title="Calculadora de Peça"
              BackgroundColor="#F2F2F7">
 
+    <ContentPage.Resources>
+        <toolkit:BoolToObjectConverter x:Key="BoolToColor" TrueObject="#8B1A1A" FalseObject="#777" />
+        <toolkit:BoolToObjectConverter x:Key="BoolToBold" TrueObject="Bold" FalseObject="Normal" />
+        <toolkit:BoolToObjectConverter x:Key="BoolToOpacity" TrueObject="1.0" FalseObject="0.4" />
+    </ContentPage.Resources>
+
     <Grid ColumnDefinitions="420, *">
         
-        <!-- COLUNA ESQUERDA -->
         <ScrollView Grid.Column="0" BackgroundColor="White">
             <VerticalStackLayout Padding="25" Spacing="20">
 
-                <Label Text="Dados da Peça"
-                       FontSize="22"
-                       FontAttributes="Bold"
-                       TextColor="#8B1A1A"/>
+                <Label Text="Dados da Peça" FontSize="22" FontAttributes="Bold" TextColor="#8B1A1A"/>
 
-                <!-- AMBIENTE -->
-                <VerticalStackLayout Spacing="5">
-                    <Label Text="Ambiente" FontSize="14" TextColor="#666"/>
-                    <Entry Text="{Binding Peca.Ambiente}"
-                           BackgroundColor="#F9F9F9"/>
-                </VerticalStackLayout>
+                <Frame BackgroundColor="#F5F5F5" Padding="5" CornerRadius="10" HasShadow="False">
+                    <FlexLayout JustifyContent="SpaceAround">
+                        <Button Text="PRINCIPAL" Command="{Binding MostrarAbaPrincipalCommand}" BackgroundColor="Transparent"
+                                TextColor="{Binding IsAbaPrincipalVisible, Converter={StaticResource BoolToColor}}"
+                                FontAttributes="{Binding IsAbaPrincipalVisible, Converter={StaticResource BoolToBold}}"/>
 
-                <!-- MATERIAL -->
-                <VerticalStackLayout Spacing="5">
-                    <Label Text="Material / Pedra" FontSize="14" TextColor="#666"/>
-                    <Border StrokeShape="RoundRectangle 8"
-                            StrokeThickness="1"
-                            Stroke="#DDD">
-                        <Picker ItemsSource="{Binding ListaEstoque}"
-                                ItemDisplayBinding="{Binding DisplayInfo}"
-                                SelectedItem="{Binding PedraSelecionada}"
-                                HeightRequest="45"/>
-                    </Border>
-                </VerticalStackLayout>
+                        <Button Text="RODOBANCA" Command="{Binding MostrarAbaRodobancaCommand}" BackgroundColor="Transparent"
+                                TextColor="{Binding IsAbaRodobancaVisible, Converter={StaticResource BoolToColor}}"
+                                FontAttributes="{Binding IsAbaRodobancaVisible, Converter={StaticResource BoolToBold}}"/>
 
-                <!-- MEDIDAS PRINCIPAIS -->
-                <VerticalStackLayout Spacing="10">
-                    <VerticalStackLayout>
-                        <Label Text="Largura (m)" FontSize="14" TextColor="#666"/>
-                        <Entry Text="{Binding LarguraInput}"
-                               Keyboard="Numeric"
-                               BackgroundColor="#F9F9F9"/>
-                    </VerticalStackLayout>
+                        <Button Text="SAIA" Command="{Binding MostrarAbaSaiaCommand}" BackgroundColor="Transparent"
+                                TextColor="{Binding IsAbaSaiaVisible, Converter={StaticResource BoolToColor}}"
+                                FontAttributes="{Binding IsAbaSaiaVisible, Converter={StaticResource BoolToBold}}"/>
 
-                    <VerticalStackLayout>
-                        <Label Text="Altura (m)" FontSize="14" TextColor="#666"/>
-                        <Entry Text="{Binding AlturaInput}"
-                               Keyboard="Numeric"
-                               BackgroundColor="#F9F9F9"/>
-                    </VerticalStackLayout>
-                </VerticalStackLayout>
-
-                <!-- VALOR METRO LINEAR -->
-                <VerticalStackLayout Spacing="5">
-                    <Label Text="Valor do Metro Linear (R$)"
-                           FontSize="14"
-                           TextColor="#666"/>
-                    <Entry Text="{Binding ValorMetroLinearInput}"
-                           Keyboard="Numeric"
-                           BackgroundColor="#F9F9F9"/>
-                </VerticalStackLayout>
-
-                <!-- MULTIPLICADOR -->
-                <Frame BackgroundColor="#F5F5F5" Padding="15" CornerRadius="10">
-                    <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
-                        <CheckBox IsChecked="{Binding UsarMultiplicador}" />
-                        <Label Text="Multiplicar peça principal"
-                               FontAttributes="Bold"
-                               VerticalOptions="Center"/>
-                        <Entry Text="{Binding QuantidadeInput}"
-                               Keyboard="Numeric"
-                               WidthRequest="60"
-                               BackgroundColor="White"
-                               IsEnabled="{Binding UsarMultiplicador}"/>
-                        <Label Text="vezes" 
-                               VerticalOptions="Center"
-                               IsVisible="{Binding UsarMultiplicador}"/>
-                    </HorizontalStackLayout>
+                        <Button Text="RECORTES" Command="{Binding MostrarAbaRecortesCommand}" BackgroundColor="Transparent"
+                                TextColor="{Binding IsAbaRecortesVisible, Converter={StaticResource BoolToColor}}"
+                                FontAttributes="{Binding IsAbaRecortesVisible, Converter={StaticResource BoolToBold}}"/>
+                    </FlexLayout>
                 </Frame>
 
-                <BoxView HeightRequest="1" Color="#DDD"/>
+                <BoxView HeightRequest="1" Color="#EEE"/>
 
-                <!-- ===== SISTEMA DE ABAS ===== -->
-                <FlexLayout JustifyContent="SpaceAround" Padding="5">
-                    <Button Text="PRINCIPAL"
-                            Command="{Binding MostrarAbaPrincipalCommand}"
-                            BackgroundColor="Transparent"
-                            TextColor="{Binding IsAbaPrincipalVisible, Converter={StaticResource BoolToColor}, ConverterParameter='#8B1A1A,#777'}"
-                            FontAttributes="{Binding IsAbaPrincipalVisible, Converter={StaticResource BoolToBold}}"/>
+                <VerticalStackLayout IsVisible="{Binding IsAbaPrincipalVisible}" Spacing="20">
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Ambiente" FontSize="14" TextColor="#666"/>
+                        <Entry Text="{Binding Peca.Ambiente}" BackgroundColor="#F9F9F9"/>
+                    </VerticalStackLayout>
 
-                    <Button Text="RODOBANCA"
-                            Command="{Binding MostrarAbaRodobancaCommand}"
-                            BackgroundColor="Transparent"
-                            TextColor="{Binding IsAbaRodobancaVisible, Converter={StaticResource BoolToColor}, ConverterParameter='#8B1A1A,#777'}"
-                            FontAttributes="{Binding IsAbaRodobancaVisible, Converter={StaticResource BoolToBold}}"/>
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Material / Pedra" FontSize="14" TextColor="#666"/>
+                        <Border StrokeShape="RoundRectangle 8" StrokeThickness="1" Stroke="#DDD">
+                            <Picker ItemsSource="{Binding ListaEstoque}" ItemDisplayBinding="{Binding DisplayInfo}" SelectedItem="{Binding PedraSelecionada}" HeightRequest="45"/>
+                        </Border>
+                    </VerticalStackLayout>
 
-                    <Button Text="SAIA"
-                            Command="{Binding MostrarAbaSaiaCommand}"
-                            BackgroundColor="Transparent"
-                            TextColor="{Binding IsAbaSaiaVisible, Converter={StaticResource BoolToColor}, ConverterParameter='#8B1A1A,#777'}"
-                            FontAttributes="{Binding IsAbaSaiaVisible, Converter={StaticResource BoolToBold}}"/>
-                </FlexLayout>
-
-                <!-- ===== ABA PRINCIPAL (BANCADAS L e U) ===== -->
-                <VerticalStackLayout IsVisible="{Binding IsAbaPrincipalVisible}">
-
-                    <!-- BANCADA EM L -->
-                    <Label Text="BANCADA EM L"
-                           FontSize="16"
-                           FontAttributes="Bold"
-                           TextColor="#8B1A1A"
-                           Margin="0,10,0,5"/>
-
-                    <Picker ItemsSource="{Binding LadosDisponiveis}"
-                            SelectedItem="{Binding LadoP2}" />
-                    
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
-                        <VerticalStackLayout Grid.Column="0">
-                            <Label Text="Largura (m)" FontSize="13" TextColor="#666"/>
-                            <Entry Text="{Binding Peca2.Largura}"
-                                   Keyboard="Numeric"
-                                   BackgroundColor="#F9F9F9"
-                                   Placeholder="0,00"/>
+                        <VerticalStackLayout Grid.Column="0" Spacing="5">
+                            <Label Text="Largura P1 (m)" FontSize="14" TextColor="#666"/>
+                            <Entry Text="{Binding LarguraInput}" Keyboard="Numeric" BackgroundColor="#F9F9F9">
+                                <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                            </Entry>
                         </VerticalStackLayout>
-                        <VerticalStackLayout Grid.Column="1">
-                            <Label Text="Altura (m)" FontSize="13" TextColor="#666"/>
-                            <Entry Text="{Binding Peca2.Altura}"
-                                   Keyboard="Numeric"
-                                   BackgroundColor="#F9F9F9"
-                                   Placeholder="0,00"/>
+                        <VerticalStackLayout Grid.Column="1" Spacing="5">
+                            <Label Text="Altura P1 (m)" FontSize="14" TextColor="#666"/>
+                            <Entry Text="{Binding AlturaInput}" Keyboard="Numeric" BackgroundColor="#F9F9F9">
+                                <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                            </Entry>
                         </VerticalStackLayout>
                     </Grid>
 
-                    <BoxView HeightRequest="1" Color="#DDD" Margin="0,15"/>
+                    <VerticalStackLayout Spacing="15">
+                        <Label Text="Valor Metro Linear (R$)" FontSize="14" TextColor="#666"/>
+                        <Entry Text="{Binding ValorMetroLinearInput}" Keyboard="Numeric" BackgroundColor="#F9F9F9"/>
+                        <Frame BackgroundColor="#F5F5F5" Padding="12" CornerRadius="10" HasShadow="False">
+                            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                                <CheckBox IsChecked="{Binding UsarMultiplicador}" />
+                                <Label Text="Multiplicar peça" VerticalOptions="Center" FontAttributes="Bold"/>
+                                <Entry Text="{Binding QuantidadeInput}" WidthRequest="50" IsEnabled="{Binding UsarMultiplicador}" Keyboard="Numeric" BackgroundColor="White"/>
+                                <Label Text="vezes" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Frame>
+                    </VerticalStackLayout>
 
-                    <!-- BANCADA EM U -->
-                    <Label Text="BANCADA EM U"
-                           FontSize="16"
-                           FontAttributes="Bold"
-                           TextColor="#8B1A1A"
-                           Margin="0,0,0,5"/>
+                    <Label Text="Bancadas em L e U" FontSize="16" FontAttributes="Bold" TextColor="#8B1A1A"/>
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Posição do L" FontSize="13" TextColor="#666"/>
+                        <Picker ItemsSource="{Binding LadosDisponiveis}" SelectedItem="{Binding LadoP2}" BackgroundColor="#F9F9F9"/>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
+                            <Entry Grid.Column="0" Text="{Binding LarguraP2Input}" Placeholder="Largura L" Keyboard="Numeric">
+                                <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                            </Entry>
+                            <Entry Grid.Column="1" Text="{Binding AlturaP2Input}" Placeholder="Altura L" Keyboard="Numeric">
+                                <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                            </Entry>
+                        </Grid>
+                    </VerticalStackLayout>
 
-                    <Picker ItemsSource="{Binding LadosDisponiveis}"
-                            SelectedItem="{Binding LadoP3}" />
-                    
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
-                        <VerticalStackLayout Grid.Column="0">
-                            <Label Text="Largura (m)" FontSize="13" TextColor="#666"/>
-                            <Entry Text="{Binding Peca3.Largura}"
-                                   Keyboard="Numeric"
-                                   BackgroundColor="#F9F9F9"
-                                   Placeholder="0,00"/>
-                        </VerticalStackLayout>
-                        <VerticalStackLayout Grid.Column="1">
-                            <Label Text="Altura (m)" FontSize="13" TextColor="#666"/>
-                            <Entry Text="{Binding Peca3.Altura}"
-                                   Keyboard="Numeric"
-                                   BackgroundColor="#F9F9F9"
-                                   Placeholder="0,00"/>
-                        </VerticalStackLayout>
-                    </Grid>
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Bancada em U (Oposta ao L)" FontSize="13" TextColor="#666"/>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
+                            <Entry Grid.Column="0" Text="{Binding LarguraP3Input}" Placeholder="Largura U" Keyboard="Numeric">
+                                <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                            </Entry>
+                            <Entry Grid.Column="1" Text="{Binding AlturaP3Input}" Placeholder="Altura U" Keyboard="Numeric">
+                                <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                            </Entry>
+                        </Grid>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
 
-                <!-- ===== ABA RODOBANCA ===== -->
                 <VerticalStackLayout IsVisible="{Binding IsAbaRodobancaVisible}" Spacing="20">
-
-                    <!-- PEÇA PRINCIPAL (P1) -->
-                    <Frame BackgroundColor="#F8F8F8" Padding="15" CornerRadius="12">
-                        <VerticalStackLayout Spacing="12">
-                            <Label Text="🏠 PEÇA PRINCIPAL" 
-                                FontSize="15" 
-                                FontAttributes="Bold" 
-                                TextColor="#8B1A1A"/>
-                            
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="15" RowSpacing="12">
-                                <!-- Esquerda -->
-                                <VerticalStackLayout Grid.Column="0" Grid.Row="0"
-                                                    IsEnabled="{Binding IsP1EsquerdaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                    Opacity="{Binding IsP1EsquerdaColada, Converter={StaticResource BoolToOpacity}}">
-                                    <Label Text="Esquerda (m)" FontSize="12" TextColor="{Binding IsP1EsquerdaColada, Converter={StaticResource BoolToGray}}"/>
-                                    <Entry Text="{Binding RodobancaP1Esquerda}" 
-                                        Keyboard="Numeric" 
-                                        Placeholder="0,10"
-                                        BackgroundColor="{Binding IsP1EsquerdaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                    <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                        IsVisible="{Binding IsP1EsquerdaColada}"/>
-                                </VerticalStackLayout>
-                                
-                                <!-- Direita -->
-                                <VerticalStackLayout Grid.Column="1" Grid.Row="0"
-                                                    IsEnabled="{Binding IsP1DireitaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                    Opacity="{Binding IsP1DireitaColada, Converter={StaticResource BoolToOpacity}}">
-                                    <Label Text="Direita (m)" FontSize="12" TextColor="{Binding IsP1DireitaColada, Converter={StaticResource BoolToGray}}"/>
-                                    <Entry Text="{Binding RodobancaP1Direita}" 
-                                        Keyboard="Numeric" 
-                                        Placeholder="0,10"
-                                        BackgroundColor="{Binding IsP1DireitaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                    <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                        IsVisible="{Binding IsP1DireitaColada}"/>
-                                </VerticalStackLayout>
-                                
-                                <!-- Frente (Inferior) -->
-                                <VerticalStackLayout Grid.Column="0" Grid.Row="1">
-                                    <Label Text="Frente (m)" FontSize="12"/>
-                                    <Entry Text="{Binding RodobancaP1Frente}" Keyboard="Numeric" Placeholder="0,10"/>
-                                </VerticalStackLayout>
-                                
-                                <!-- Trás (Superior) -->
-                                <VerticalStackLayout Grid.Column="1" Grid.Row="1">
-                                    <Label Text="Trás (m)" FontSize="12"/>
-                                    <Entry Text="{Binding RodobancaP1Tras}" Keyboard="Numeric" Placeholder="0,10"/>
-                                </VerticalStackLayout>
+                    <Label Text="Medidas de Rodobanca (m)" FontSize="18" FontAttributes="Bold" TextColor="#2E7D32"/>
+                    
+                    <Frame BackgroundColor="#F8F8F8" Padding="15" CornerRadius="12" BorderColor="#EEE">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="🏠 PEÇA PRINCIPAL" FontAttributes="Bold" TextColor="#8B1A1A"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding RodobancaP1Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding RodobancaP1Direita}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" FontSize="12"/><Entry Text="{Binding RodobancaP1Frente}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" FontSize="12"/><Entry Text="{Binding RodobancaP1Tras}" Keyboard="Numeric"/></VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
 
-                    <!-- BANCADA EM L (P2) - SÓ APARECE SE TIVER MEDIDAS -->
-                    <VerticalStackLayout IsVisible="{Binding Peca2.Largura, Converter={StaticResource DoubleMaiorQueZero}}">
-                        <Frame BackgroundColor="#F0F8FF" Padding="15" CornerRadius="12">
-                            <VerticalStackLayout Spacing="12">
-                                <Label Text="🔷 BANCADA EM L" 
-                                    FontSize="15" 
-                                    FontAttributes="Bold" 
-                                    TextColor="#0066CC"/>
-                                
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="15" RowSpacing="12">
-                                    <!-- Esquerda -->
-                                    <VerticalStackLayout Grid.Column="0" Grid.Row="0"
-                                                        IsEnabled="{Binding IsP2EsquerdaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                        Opacity="{Binding IsP2EsquerdaColada, Converter={StaticResource BoolToOpacity}}">
-                                        <Label Text="Esquerda (m)" FontSize="12" TextColor="{Binding IsP2EsquerdaColada, Converter={StaticResource BoolToGray}}"/>
-                                        <Entry Text="{Binding RodobancaP2Esquerda}" 
-                                            Keyboard="Numeric" 
-                                            Placeholder="0,10"
-                                            BackgroundColor="{Binding IsP2EsquerdaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                        <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                            IsVisible="{Binding IsP2EsquerdaColada}"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Direita -->
-                                    <VerticalStackLayout Grid.Column="1" Grid.Row="0"
-                                                        IsEnabled="{Binding IsP2DireitaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                        Opacity="{Binding IsP2DireitaColada, Converter={StaticResource BoolToOpacity}}">
-                                        <Label Text="Direita (m)" FontSize="12" TextColor="{Binding IsP2DireitaColada, Converter={StaticResource BoolToGray}}"/>
-                                        <Entry Text="{Binding RodobancaP2Direita}" 
-                                            Keyboard="Numeric" 
-                                            Placeholder="0,10"
-                                            BackgroundColor="{Binding IsP2DireitaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                        <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                            IsVisible="{Binding IsP2DireitaColada}"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Frente -->
-                                    <VerticalStackLayout Grid.Column="0" Grid.Row="1">
-                                        <Label Text="Frente (m)" FontSize="12"/>
-                                        <Entry Text="{Binding RodobancaP2Frente}" Keyboard="Numeric" Placeholder="0,10"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Trás -->
-                                    <VerticalStackLayout Grid.Column="1" Grid.Row="1">
-                                        <Label Text="Trás (m)" FontSize="12"/>
-                                        <Entry Text="{Binding RodobancaP2Tras}" Keyboard="Numeric" Placeholder="0,10"/>
-                                    </VerticalStackLayout>
-                                </Grid>
-                            </VerticalStackLayout>
-                        </Frame>
-                    </VerticalStackLayout>
+                    <Frame IsVisible="{Binding TemPernaEsquerda}" BackgroundColor="#F0F8FF" Padding="15" CornerRadius="12" BorderColor="#EEE">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="🔷 BANCADA EM L" FontAttributes="Bold" TextColor="#0066CC"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding RodobancaP2Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding RodobancaP2Direita}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" FontSize="12"/><Entry Text="{Binding RodobancaP2Frente}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" FontSize="12"/><Entry Text="{Binding RodobancaP2Tras}" Keyboard="Numeric"/></VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
 
-                    <!-- BANCADA EM U (P3) - SÓ APARECE SE TIVER MEDIDAS -->
-                    <VerticalStackLayout IsVisible="{Binding Peca3.Largura, Converter={StaticResource DoubleMaiorQueZero}}">
-                        <Frame BackgroundColor="#FFF0E0" Padding="15" CornerRadius="12">
-                            <VerticalStackLayout Spacing="12">
-                                <Label Text="🔶 BANCADA EM U" 
-                                    FontSize="15" 
-                                    FontAttributes="Bold" 
-                                    TextColor="#CC6600"/>
-                                
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="15" RowSpacing="12">
-                                    <!-- Esquerda -->
-                                    <VerticalStackLayout Grid.Column="0" Grid.Row="0"
-                                                        IsEnabled="{Binding IsP3EsquerdaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                        Opacity="{Binding IsP3EsquerdaColada, Converter={StaticResource BoolToOpacity}}">
-                                        <Label Text="Esquerda (m)" FontSize="12" TextColor="{Binding IsP3EsquerdaColada, Converter={StaticResource BoolToGray}}"/>
-                                        <Entry Text="{Binding RodobancaP3Esquerda}" 
-                                            Keyboard="Numeric" 
-                                            Placeholder="0,10"
-                                            BackgroundColor="{Binding IsP3EsquerdaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                        <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                            IsVisible="{Binding IsP3EsquerdaColada}"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Direita -->
-                                    <VerticalStackLayout Grid.Column="1" Grid.Row="0"
-                                                        IsEnabled="{Binding IsP3DireitaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                        Opacity="{Binding IsP3DireitaColada, Converter={StaticResource BoolToOpacity}}">
-                                        <Label Text="Direita (m)" FontSize="12" TextColor="{Binding IsP3DireitaColada, Converter={StaticResource BoolToGray}}"/>
-                                        <Entry Text="{Binding RodobancaP3Direita}" 
-                                            Keyboard="Numeric" 
-                                            Placeholder="0,10"
-                                            BackgroundColor="{Binding IsP3DireitaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                        <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                            IsVisible="{Binding IsP3DireitaColada}"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Frente -->
-                                    <VerticalStackLayout Grid.Column="0" Grid.Row="1">
-                                        <Label Text="Frente (m)" FontSize="12"/>
-                                        <Entry Text="{Binding RodobancaP3Frente}" Keyboard="Numeric" Placeholder="0,10"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Trás -->
-                                    <VerticalStackLayout Grid.Column="1" Grid.Row="1">
-                                        <Label Text="Trás (m)" FontSize="12"/>
-                                        <Entry Text="{Binding RodobancaP3Tras}" Keyboard="Numeric" Placeholder="0,10"/>
-                                    </VerticalStackLayout>
-                                </Grid>
-                            </VerticalStackLayout>
-                        </Frame>
-                    </VerticalStackLayout>
+                    <Frame IsVisible="{Binding TemPernaDireita}" BackgroundColor="#FFF9E6" Padding="15" CornerRadius="12" BorderColor="#EEE">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="🔶 BANCADA EM U" FontAttributes="Bold" TextColor="#E67E22"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding RodobancaP3Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding RodobancaP3Direita}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" FontSize="12"/><Entry Text="{Binding RodobancaP3Frente}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" FontSize="12"/><Entry Text="{Binding RodobancaP3Tras}" Keyboard="Numeric"/></VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
                 </VerticalStackLayout>
 
-                <!-- ===== ABA SAIA ===== -->
                 <VerticalStackLayout IsVisible="{Binding IsAbaSaiaVisible}" Spacing="20">
+                    <Label Text="Medidas de Saia (m)" FontSize="18" FontAttributes="Bold" TextColor="#B76E00"/>
+                    
+                    <Frame BackgroundColor="#F8F8F8" Padding="15" CornerRadius="12" BorderColor="#EEE">
+                        <VerticalStackLayout Spacing="15">
+                            <Label Text="🏠 PEÇA PRINCIPAL" FontAttributes="Bold" TextColor="#8B1A1A"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding SaiaP1Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding SaiaP1Direita}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" FontSize="12"/><Entry Text="{Binding SaiaP1Frente}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" FontSize="12"/><Entry Text="{Binding SaiaP1Tras}" Keyboard="Numeric"/></VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
 
-                    <!-- PEÇA PRINCIPAL (P1) -->
-                    <Frame BackgroundColor="#F8F8F8" Padding="15" CornerRadius="12">
-                        <VerticalStackLayout Spacing="12">
-                            <Label Text="🏠 PEÇA PRINCIPAL" 
-                                FontSize="15" 
-                                FontAttributes="Bold" 
-                                TextColor="#8B1A1A"/>
+                    <Frame IsVisible="{Binding TemPernaEsquerda}" BackgroundColor="#F0F8FF" Padding="15" CornerRadius="12" BorderColor="#EEE">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="🔷 BANCADA EM L" FontAttributes="Bold" TextColor="#0066CC"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding SaiaP2Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding SaiaP2Direita}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" FontSize="12"/><Entry Text="{Binding SaiaP2Frente}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" FontSize="12"/><Entry Text="{Binding SaiaP2Tras}" Keyboard="Numeric"/></VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame IsVisible="{Binding TemPernaDireita}" BackgroundColor="#FFF9E6" Padding="15" CornerRadius="12" BorderColor="#EEE">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="🔶 BANCADA EM U" FontAttributes="Bold" TextColor="#E67E22"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding SaiaP3Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding SaiaP3Direita}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" FontSize="12"/><Entry Text="{Binding SaiaP3Frente}" Keyboard="Numeric"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" FontSize="12"/><Entry Text="{Binding SaiaP3Tras}" Keyboard="Numeric"/></VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout IsVisible="{Binding IsAbaRecortesVisible}" Spacing="20">
+                    <Label Text="Configuração de Recortes" FontSize="18" FontAttributes="Bold" TextColor="#2C3E50"/>
+                    
+                    <Frame BackgroundColor="#F0F4F8" Padding="15" CornerRadius="12" BorderColor="#D1D9E6">
+                        <VerticalStackLayout Spacing="10">
+                            <HorizontalStackLayout Spacing="10">
+                                <CheckBox IsChecked="{Binding TemBojo}" />
+                                <Label Text="ADICIONAR BOJO / CUBA" FontAttributes="Bold" VerticalOptions="Center" TextColor="#2980B9"/>
+                            </HorizontalStackLayout>
                             
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="15" RowSpacing="12">
-                                <!-- Esquerda -->
-                                <VerticalStackLayout Grid.Column="0" Grid.Row="0"
-                                                    IsEnabled="{Binding IsP1EsquerdaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                    Opacity="{Binding IsP1EsquerdaColada, Converter={StaticResource BoolToOpacity}}">
-                                    <Label Text="Esquerda (m)" FontSize="12" TextColor="{Binding IsP1EsquerdaColada, Converter={StaticResource BoolToGray}}"/>
-                                    <Entry Text="{Binding SaiaP1Esquerda}" 
-                                        Keyboard="Numeric" 
-                                        Placeholder="0,10"
-                                        BackgroundColor="{Binding IsP1EsquerdaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                    <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                        IsVisible="{Binding IsP1EsquerdaColada}"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="15" RowSpacing="10" IsEnabled="{Binding TemBojo}">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+                                    <Label Text="Peça de Destino" FontSize="12"/>
+                                    <Picker ItemsSource="{Binding PecasDisponiveis}" SelectedItem="{Binding PecaDestinoBojo}" BackgroundColor="White"/>
                                 </VerticalStackLayout>
-                                
-                                <!-- Direita -->
-                                <VerticalStackLayout Grid.Column="1" Grid.Row="0"
-                                                    IsEnabled="{Binding IsP1DireitaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                    Opacity="{Binding IsP1DireitaColada, Converter={StaticResource BoolToOpacity}}">
-                                    <Label Text="Direita (m)" FontSize="12" TextColor="{Binding IsP1DireitaColada, Converter={StaticResource BoolToGray}}"/>
-                                    <Entry Text="{Binding SaiaP1Direita}" 
-                                        Keyboard="Numeric" 
-                                        Placeholder="0,10"
-                                        BackgroundColor="{Binding IsP1DireitaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                    <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                        IsVisible="{Binding IsP1DireitaColada}"/>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0">
+                                    <Label Text="Largura (m)" FontSize="12"/><Entry Text="{Binding LarguraBojoInput}" Keyboard="Numeric">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
                                 </VerticalStackLayout>
-                                
-                                <!-- Frente -->
-                                <VerticalStackLayout Grid.Column="0" Grid.Row="1">
-                                    <Label Text="Frente (m)" FontSize="12"/>
-                                    <Entry Text="{Binding SaiaP1Frente}" Keyboard="Numeric" Placeholder="0,10"/>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1">
+                                    <Label Text="Altura (m)" FontSize="12"/><Entry Text="{Binding AlturaBojoInput}" Keyboard="Numeric">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
                                 </VerticalStackLayout>
-                                
-                                <!-- Trás -->
-                                <VerticalStackLayout Grid.Column="1" Grid.Row="1">
-                                    <Label Text="Trás (m)" FontSize="12"/>
-                                    <Entry Text="{Binding SaiaP1Tras}" Keyboard="Numeric" Placeholder="0,10"/>
+                                <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
+                                    <Label Text="Distância da Esquerda (m)" FontSize="12"/><Entry Text="{Binding BojoXInput}" Keyboard="Numeric">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
                                 </VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
 
-                    <!-- BANCADA EM L (P2) -->
-                    <VerticalStackLayout IsVisible="{Binding Peca2.Largura, Converter={StaticResource DoubleMaiorQueZero}}">
-                        <Frame BackgroundColor="#F0F8FF" Padding="15" CornerRadius="12">
-                            <VerticalStackLayout Spacing="12">
-                                <Label Text="🔷 BANCADA EM L" 
-                                    FontSize="15" 
-                                    FontAttributes="Bold" 
-                                    TextColor="#0066CC"/>
-                                
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="15" RowSpacing="12">
-                                    <!-- Esquerda -->
-                                    <VerticalStackLayout Grid.Column="0" Grid.Row="0"
-                                                        IsEnabled="{Binding IsP2EsquerdaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                        Opacity="{Binding IsP2EsquerdaColada, Converter={StaticResource BoolToOpacity}}">
-                                        <Label Text="Esquerda (m)" FontSize="12" TextColor="{Binding IsP2EsquerdaColada, Converter={StaticResource BoolToGray}}"/>
-                                        <Entry Text="{Binding SaiaP2Esquerda}" 
-                                            Keyboard="Numeric" 
-                                            Placeholder="0,10"
-                                            BackgroundColor="{Binding IsP2EsquerdaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                        <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                            IsVisible="{Binding IsP2EsquerdaColada}"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Direita -->
-                                    <VerticalStackLayout Grid.Column="1" Grid.Row="0"
-                                                        IsEnabled="{Binding IsP2DireitaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                        Opacity="{Binding IsP2DireitaColada, Converter={StaticResource BoolToOpacity}}">
-                                        <Label Text="Direita (m)" FontSize="12" TextColor="{Binding IsP2DireitaColada, Converter={StaticResource BoolToGray}}"/>
-                                        <Entry Text="{Binding SaiaP2Direita}" 
-                                            Keyboard="Numeric" 
-                                            Placeholder="0,10"
-                                            BackgroundColor="{Binding IsP2DireitaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                        <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                            IsVisible="{Binding IsP2DireitaColada}"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Frente -->
-                                    <VerticalStackLayout Grid.Column="0" Grid.Row="1">
-                                        <Label Text="Frente (m)" FontSize="12"/>
-                                        <Entry Text="{Binding SaiaP2Frente}" Keyboard="Numeric" Placeholder="0,10"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Trás -->
-                                    <VerticalStackLayout Grid.Column="1" Grid.Row="1">
-                                        <Label Text="Trás (m)" FontSize="12"/>
-                                        <Entry Text="{Binding SaiaP2Tras}" Keyboard="Numeric" Placeholder="0,10"/>
-                                    </VerticalStackLayout>
-                                </Grid>
-                            </VerticalStackLayout>
-                        </Frame>
-                    </VerticalStackLayout>
-
-                    <!-- BANCADA EM U (P3) -->
-                    <VerticalStackLayout IsVisible="{Binding Peca3.Largura, Converter={StaticResource DoubleMaiorQueZero}}">
-                        <Frame BackgroundColor="#FFF0E0" Padding="15" CornerRadius="12">
-                            <VerticalStackLayout Spacing="12">
-                                <Label Text="🔶 BANCADA EM U" 
-                                    FontSize="15" 
-                                    FontAttributes="Bold" 
-                                    TextColor="#CC6600"/>
-                                
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="15" RowSpacing="12">
-                                    <!-- Esquerda -->
-                                    <VerticalStackLayout Grid.Column="0" Grid.Row="0"
-                                                        IsEnabled="{Binding IsP3EsquerdaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                        Opacity="{Binding IsP3EsquerdaColada, Converter={StaticResource BoolToOpacity}}">
-                                        <Label Text="Esquerda (m)" FontSize="12" TextColor="{Binding IsP3EsquerdaColada, Converter={StaticResource BoolToGray}}"/>
-                                        <Entry Text="{Binding SaiaP3Esquerda}" 
-                                            Keyboard="Numeric" 
-                                            Placeholder="0,10"
-                                            BackgroundColor="{Binding IsP3EsquerdaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                        <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                            IsVisible="{Binding IsP3EsquerdaColada}"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Direita -->
-                                    <VerticalStackLayout Grid.Column="1" Grid.Row="0"
-                                                        IsEnabled="{Binding IsP3DireitaColada, Converter={StaticResource InverseBoolConverter}}"
-                                                        Opacity="{Binding IsP3DireitaColada, Converter={StaticResource BoolToOpacity}}">
-                                        <Label Text="Direita (m)" FontSize="12" TextColor="{Binding IsP3DireitaColada, Converter={StaticResource BoolToGray}}"/>
-                                        <Entry Text="{Binding SaiaP3Direita}" 
-                                            Keyboard="Numeric" 
-                                            Placeholder="0,10"
-                                            BackgroundColor="{Binding IsP3DireitaColada, Converter={StaticResource BoolToLightGray}}"/>
-                                        <Label Text="🔒 Colado" FontSize="10" TextColor="#999" 
-                                            IsVisible="{Binding IsP3DireitaColada}"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Frente -->
-                                    <VerticalStackLayout Grid.Column="0" Grid.Row="1">
-                                        <Label Text="Frente (m)" FontSize="12"/>
-                                        <Entry Text="{Binding SaiaP3Frente}" Keyboard="Numeric" Placeholder="0,10"/>
-                                    </VerticalStackLayout>
-                                    
-                                    <!-- Trás -->
-                                    <VerticalStackLayout Grid.Column="1" Grid.Row="1">
-                                        <Label Text="Trás (m)" FontSize="12"/>
-                                        <Entry Text="{Binding SaiaP3Tras}" Keyboard="Numeric" Placeholder="0,10"/>
-                                    </VerticalStackLayout>
-                                </Grid>
-                            </VerticalStackLayout>
-                        </Frame>
-                    </VerticalStackLayout>
+                    <Frame BackgroundColor="#FFF5F5" Padding="15" CornerRadius="12" BorderColor="#FFDADA">
+                        <VerticalStackLayout Spacing="10">
+                            <HorizontalStackLayout Spacing="10">
+                                <CheckBox IsChecked="{Binding TemCooktop}" />
+                                <Label Text="ADICIONAR COOKTOP" FontAttributes="Bold" VerticalOptions="Center" TextColor="#C0392B"/>
+                            </HorizontalStackLayout>
+                            
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="15" RowSpacing="10" IsEnabled="{Binding TemCooktop}">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+                                    <Label Text="Peça de Destino" FontSize="12"/>
+                                    <Picker ItemsSource="{Binding PecasDisponiveis}" SelectedItem="{Binding PecaDestinoCooktop}" BackgroundColor="White"/>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0">
+                                    <Label Text="Largura (m)" FontSize="12"/><Entry Text="{Binding LarguraCooktopInput}" Keyboard="Numeric">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1">
+                                    <Label Text="Altura (m)" FontSize="12"/><Entry Text="{Binding AlturaCooktopInput}" Keyboard="Numeric">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
+                                    <Label Text="Distância da Esquerda (m)" FontSize="12"/><Entry Text="{Binding CooktopXInput}" Keyboard="Numeric">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
                 </VerticalStackLayout>
 
                 <BoxView HeightRequest="1" Color="#DDD"/>
 
-                <!-- TOTAL GERAL -->
-                <Frame BackgroundColor="#E3F2FD"
-                       BorderColor="#1565C0"
-                       Padding="15"
-                       CornerRadius="12">
-                    <VerticalStackLayout HorizontalOptions="Center">
-                        <Label Text="Total Geral"
-                               FontSize="14"
-                               TextColor="#0D47A1"/>
-                        <Label Text="{Binding TotalGeral, StringFormat='{0:C}'}"
-                               FontSize="26"
-                               FontAttributes="Bold"
-                               TextColor="#0D47A1"/>
-                    </VerticalStackLayout>
-                </Frame>
-
-                <!-- BOTÃO SALVAR -->
-                <Button Text="ADICIONAR AO ORÇAMENTO"
-                        Command="{Binding SalvarPecaCommand}"
-                        BackgroundColor="#8B1A1A"
-                        TextColor="White"
-                        HeightRequest="55"
-                        FontAttributes="Bold"
-                        CornerRadius="12"/>
+                <VerticalStackLayout Spacing="15">
+                    <Frame BackgroundColor="#E3F2FD" BorderColor="#1565C0" Padding="15" CornerRadius="12" HasShadow="False">
+                        <VerticalStackLayout HorizontalOptions="Center">
+                            <Label Text="Total Geral" FontSize="14" TextColor="#0D47A1"/>
+                            <Label Text="{Binding TotalGeral, StringFormat='{0:C}'}" FontSize="26" FontAttributes="Bold" TextColor="#0D47A1"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                    <Button Text="ADICIONAR AO ORÇAMENTO" Command="{Binding SalvarPecaCommand}" BackgroundColor="#8B1A1A" TextColor="White" HeightRequest="55" FontAttributes="Bold" CornerRadius="12"/>
+                </VerticalStackLayout>
 
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- COLUNA DIREITA (DESENHO) -->
-        <Grid Grid.Column="1"
-              BackgroundColor="#ECEFF1"
-              Padding="20">
-
-            <Frame BackgroundColor="White"
-                   CornerRadius="24"
-                   HasShadow="True"
-                   Padding="20"
-                   HorizontalOptions="Center"
-                   VerticalOptions="Center"
-                   WidthRequest="700"
-                   HeightRequest="650">
-
+        <Grid Grid.Column="1" BackgroundColor="#ECEFF1" Padding="20">
+            <Frame BackgroundColor="White" CornerRadius="24" HasShadow="True" Padding="20" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="750" HeightRequest="650">
                 <Grid RowDefinitions="Auto, *, Auto" RowSpacing="12">
-                    
-                    <Label Grid.Row="0"
-                           Text="Pré-visualização Técnica da Bancada"
-                           FontSize="20"
-                           FontAttributes="Bold"
-                           HorizontalOptions="Center"
-                           TextColor="#2C3E50"/>
-
-                    <Border Grid.Row="1"
-                            Stroke="#CCCCCC"
-                            StrokeThickness="1.5"
-                            StrokeShape="RoundRectangle 16"
-                            BackgroundColor="#FFFFFF"
-                            Margin="0,10,0,10">
-
-                        <GraphicsView x:Name="CanvasPeca"
-                                      Drawable="{Binding DesenhoPeca}"
-                                      InputTransparent="True"
-                                      HorizontalOptions="Fill"
-                                      VerticalOptions="Fill"/>
+                    <Label Grid.Row="0" Text="Projeto Técnico da Bancada" FontSize="20" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#2C3E50"/>
+                    <Border Grid.Row="1" Stroke="#CCCCCC" StrokeThickness="1.5" StrokeShape="RoundRectangle 16" BackgroundColor="#FFFFFF" Margin="0,10,0,10">
+                        <GraphicsView x:Name="CanvasPeca" Drawable="{Binding DesenhoPeca}" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill"/>
                     </Border>
-
                     <VerticalStackLayout Grid.Row="2" Spacing="8">
                         <HorizontalStackLayout HorizontalOptions="Center" Spacing="25">
-                            <Label Text="⬜ Principal" FontSize="12" TextColor="#555"/>
+                            <Label Text="⬜ P1" FontSize="12" TextColor="#555"/>
                             <Label Text="🟦 Perna" FontSize="12" TextColor="#555"/>
                             <Label Text="🟩 Rodobanca" FontSize="12" TextColor="#2E7D32"/>
                             <Label Text="🟨 Saia" FontSize="12" TextColor="#B76E00"/>
                         </HorizontalStackLayout>
-                        <Label Text="Medidas em metros - Desenho técnico ilustrativo"
-                               FontSize="11"
-                               TextColor="#888"
-                               HorizontalOptions="Center"/>
+                        <Label Text="Cotas expressas em metros (m). Desenho atualizado em tempo real." FontSize="11" TextColor="#888" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
                 </Grid>
             </Frame>
