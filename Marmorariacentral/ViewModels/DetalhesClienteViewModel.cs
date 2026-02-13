@@ -108,13 +108,27 @@ namespace Marmorariacentral.ViewModels
         }
 
         [RelayCommand]
-        private async Task IrParaCalculadora() => await Shell.Current.GoToAsync("CalculadoraPecaPage");
+        private async Task IrParaCalculadora()
+        {
+            var navigationParameter = new Dictionary<string, object>
+            {
+                { "ClienteSelecionado", ClienteSelecionado }
+            };
+            
+            // CORREÇÃO: Remover // e usar EXATAMENTE o mesmo nome do registro
+            await Shell.Current.GoToAsync("CalculadoraPecaPage", navigationParameter);
+        }
 
         [RelayCommand]
         private async Task EditarPeca(PecaOrcamento peca)
         {
             if (peca == null) return;
-            await Shell.Current.GoToAsync("CalculadoraPecaPage", new Dictionary<string, object> { ["PecaParaEditar"] = peca });
+            
+            // CORREÇÃO: Padrão consistente
+            await Shell.Current.GoToAsync("CalculadoraPecaPage", new Dictionary<string, object> 
+            { 
+                ["PecaParaEditar"] = peca 
+            });
         }
 
         [RelayCommand]

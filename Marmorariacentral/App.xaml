@@ -1,6 +1,8 @@
-﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8" ?>
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:converters="clr-namespace:Marmorariacentral.Converters"
              xmlns:local="clr-namespace:Marmorariacentral"
              x:Class="Marmorariacentral.App">
     <Application.Resources>
@@ -9,6 +11,36 @@
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- ========== TOOLKIT CONVERTERS ========== -->
+            
+            <!-- CONVERTER PARA BOOL TO COLOR (ABAS) -->
+            <toolkit:BoolToObjectConverter x:Key="BoolToColor"
+                                           TrueObject="#8B1A1A"
+                                           FalseObject="#777"/>
+            
+            <!-- CONVERTER PARA BOOL TO FONT ATTRIBUTES (ABAS) -->
+            <toolkit:BoolToObjectConverter x:Key="BoolToBold"
+                                           TrueObject="Bold"
+                                           FalseObject="None"/>
+            
+            <!-- ========== CONVERTERS PERSONALIZADOS ========== -->
+            
+            <!-- CONVERTER PARA DOUBLE > 0 (MOSTRA/ESCONDE PEÇAS) -->
+            <converters:DoubleMaiorQueZeroConverter x:Key="DoubleMaiorQueZero"/>
+            
+            <!-- CONVERTER PARA INVERTER BOOLEAN (USA EM ISENABLED) -->
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+            
+            <!-- CONVERTER PARA OPACIDADE DE LADOS COLADOS -->
+            <converters:BoolToOpacityConverter x:Key="BoolToOpacity"/>
+            
+            <!-- CONVERTER PARA COR DO TEXTO (CINZA QUANDO COLADO) -->
+            <converters:BoolToGrayConverter x:Key="BoolToGray"/>
+            
+            <!-- CONVERTER PARA COR DE FUNDO (CINZA CLARO QUANDO COLADO) -->
+            <converters:BoolToLightGrayConverter x:Key="BoolToLightGray"/>
+            
         </ResourceDictionary>
     </Application.Resources>
 </Application>

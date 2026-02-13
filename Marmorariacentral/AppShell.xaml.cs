@@ -1,5 +1,5 @@
 ﻿using Marmorariacentral.Views.Login;
-using Marmorariacentral.Views.Orcamentos; // Garante que o AppShell enxergue as páginas de orçamento
+using Marmorariacentral.Views.Orcamentos;
 using Microsoft.Maui.Controls;
 
 namespace Marmorariacentral;
@@ -10,8 +10,8 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        // --- REGISTRO DE ROTAS ---
-        // Ajustado para 'DetalhesClientePage' (com S) conforme o seu arquivo XAML
+        // --- REGISTRO DE ROTAS - PADRÃO UNIFICADO ---
+        // IMPORTANTE: Use o mesmo padrão em TODOS os lugares!
         Routing.RegisterRoute("DetalhesClientePage", typeof(DetalhesClientePage));
         Routing.RegisterRoute("CalculadoraPecaPage", typeof(CalculadoraPecaPage));
     }

@@ -1,33 +1,26 @@
 using Marmorariacentral.ViewModels;
-using System.ComponentModel;
 
 namespace Marmorariacentral.Views.Orcamentos;
 
 public partial class CalculadoraPecaPage : ContentPage
 {
+    private CalculadoraPecaViewModel? _viewModel;
+
     public CalculadoraPecaPage(CalculadoraPecaViewModel viewModel)
     {
         InitializeComponent();
         BindingContext = viewModel;
+        _viewModel = viewModel;
 
-        // Escuta qualquer mudança vinda da ViewModel
-        viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _viewModel.PropertyChanged += (s, e) => CanvasPeca?.Invalidate();
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected override void OnDisappearing()
     {
-        // Se a propriedade que mudou for o "DesenhoPeca", forçamos o Canvas a se redesenhar
-        if (e.PropertyName == nameof(CalculadoraPecaViewModel.DesenhoPeca))
+        base.OnDisappearing();
+        if (_viewModel != null)
         {
-            // O Invalidate() faz o Windows disparar o método Draw do PecaDrawable novamente
-            CanvasPeca.Invalidate();
+            _viewModel.PropertyChanged -= (s, e) => CanvasPeca?.Invalidate();
         }
-    }
-
-    protected override void OnNavigatedTo(NavigatedToEventArgs args)
-    {
-        base.OnNavigatedTo(args);
-        // Garante que o desenho apareça assim que a tela abrir
-        CanvasPeca.Invalidate();
     }
 }

@@ -150,6 +150,7 @@ namespace Marmorariacentral.ViewModels
                 { "Cliente", cliente }
             };
 
+            // CORREÇÃO: Remover o acento e usar EXATAMENTE o mesmo nome do registro
             await Shell.Current.GoToAsync("DetalhesClientePage", navigationParameter);
         }
     }
