@@ -34,6 +34,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddSingleton<FirebaseService>();
         builder.Services.AddSingleton<AuthService>();
+        builder.Services.AddSingleton<PdfService>();
+
 
         // ViewModels - Transients
         builder.Services.AddTransient<LoginViewModel>();
@@ -87,6 +89,8 @@ public static class MauiProgram
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
+
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
         return builder.Build();
     }

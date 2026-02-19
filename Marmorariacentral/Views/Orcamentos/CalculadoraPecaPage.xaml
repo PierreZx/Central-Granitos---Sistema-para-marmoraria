@@ -14,9 +14,33 @@
         <toolkit:BoolToObjectConverter x:Key="BoolToOpacity" TrueObject="1.0" FalseObject="0.4" />
     </ContentPage.Resources>
 
-    <Grid ColumnDefinitions="420, *">
-        
-        <ScrollView Grid.Column="0" BackgroundColor="White">
+    <Grid x:Name="MainGrid" ColumnDefinitions="420,*" RowDefinitions="*">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="AdaptiveLayout">
+                <VisualState x:Name="Large">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="900" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter TargetName="SidePanel" Property="Grid.Column" Value="1" />
+                        <Setter TargetName="SidePanel" Property="Grid.Row" Value="0" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Small">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter TargetName="SidePanel" Property="Grid.Column" Value="0" />
+                        <Setter TargetName="SidePanel" Property="Grid.Row" Value="1" />
+                        <Setter TargetName="PreviewFrame" Property="HeightRequest" Value="400" />
+                        <Setter TargetName="PreviewFrame" Property="WidthRequest" Value="-1" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <ScrollView x:Name="FormPanel" Grid.Column="0" Grid.Row="0" BackgroundColor="White">
             <VerticalStackLayout Padding="25" Spacing="20">
 
                 <Label Text="Dados da Peça" FontSize="22" FontAttributes="Bold" TextColor="#8B1A1A"/>
@@ -113,10 +137,9 @@
 
                 <VerticalStackLayout IsVisible="{Binding IsAbaRodobancaVisible}" Spacing="20">
                     <Label Text="Medidas de Rodobanca (m)" FontSize="18" FontAttributes="Bold" TextColor="#2E7D32"/>
-                    
                     <Frame BackgroundColor="#F8F8F8" Padding="15" CornerRadius="12" BorderColor="#EEE">
                         <VerticalStackLayout Spacing="10">
-                            <Label Text="🏠 PEÇA PRINCIPAL" FontAttributes="Bold" TextColor="#8B1A1A"/>
+                            <Label Text="🏠 PEÇA PRINCIPAL (P1)" FontAttributes="Bold" TextColor="#8B1A1A"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding RodobancaP1Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding RodobancaP1Direita}" Keyboard="Numeric"/></VerticalStackLayout>
@@ -125,10 +148,9 @@
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
-
                     <Frame IsVisible="{Binding TemPernaEsquerda}" BackgroundColor="#F0F8FF" Padding="15" CornerRadius="12" BorderColor="#EEE">
                         <VerticalStackLayout Spacing="10">
-                            <Label Text="🔷 BANCADA EM L" FontAttributes="Bold" TextColor="#0066CC"/>
+                            <Label Text="🔷 BANCADA EM L (P2)" FontAttributes="Bold" TextColor="#0066CC"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding RodobancaP2Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding RodobancaP2Direita}" Keyboard="Numeric"/></VerticalStackLayout>
@@ -137,10 +159,9 @@
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
-
                     <Frame IsVisible="{Binding TemPernaDireita}" BackgroundColor="#FFF9E6" Padding="15" CornerRadius="12" BorderColor="#EEE">
                         <VerticalStackLayout Spacing="10">
-                            <Label Text="🔶 BANCADA EM U" FontAttributes="Bold" TextColor="#E67E22"/>
+                            <Label Text="🔶 BANCADA EM U (P3)" FontAttributes="Bold" TextColor="#E67E22"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding RodobancaP3Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding RodobancaP3Direita}" Keyboard="Numeric"/></VerticalStackLayout>
@@ -153,10 +174,9 @@
 
                 <VerticalStackLayout IsVisible="{Binding IsAbaSaiaVisible}" Spacing="20">
                     <Label Text="Medidas de Saia (m)" FontSize="18" FontAttributes="Bold" TextColor="#B76E00"/>
-                    
                     <Frame BackgroundColor="#F8F8F8" Padding="15" CornerRadius="12" BorderColor="#EEE">
                         <VerticalStackLayout Spacing="15">
-                            <Label Text="🏠 PEÇA PRINCIPAL" FontAttributes="Bold" TextColor="#8B1A1A"/>
+                            <Label Text="🏠 PEÇA PRINCIPAL (P1)" FontAttributes="Bold" TextColor="#8B1A1A"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding SaiaP1Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding SaiaP1Direita}" Keyboard="Numeric"/></VerticalStackLayout>
@@ -165,10 +185,9 @@
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
-
                     <Frame IsVisible="{Binding TemPernaEsquerda}" BackgroundColor="#F0F8FF" Padding="15" CornerRadius="12" BorderColor="#EEE">
                         <VerticalStackLayout Spacing="10">
-                            <Label Text="🔷 BANCADA EM L" FontAttributes="Bold" TextColor="#0066CC"/>
+                            <Label Text="🔷 BANCADA EM L (P2)" FontAttributes="Bold" TextColor="#0066CC"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding SaiaP2Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding SaiaP2Direita}" Keyboard="Numeric"/></VerticalStackLayout>
@@ -177,10 +196,9 @@
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
-
                     <Frame IsVisible="{Binding TemPernaDireita}" BackgroundColor="#FFF9E6" Padding="15" CornerRadius="12" BorderColor="#EEE">
                         <VerticalStackLayout Spacing="10">
-                            <Label Text="🔶 BANCADA EM U" FontAttributes="Bold" TextColor="#E67E22"/>
+                            <Label Text="🔶 BANCADA EM U (P3)" FontAttributes="Bold" TextColor="#E67E22"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" FontSize="12"/><Entry Text="{Binding SaiaP3Esquerda}" Keyboard="Numeric"/></VerticalStackLayout>
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" FontSize="12"/><Entry Text="{Binding SaiaP3Direita}" Keyboard="Numeric"/></VerticalStackLayout>
@@ -193,14 +211,12 @@
 
                 <VerticalStackLayout IsVisible="{Binding IsAbaRecortesVisible}" Spacing="20">
                     <Label Text="Configuração de Recortes" FontSize="18" FontAttributes="Bold" TextColor="#2C3E50"/>
-                    
                     <Frame BackgroundColor="#F0F4F8" Padding="15" CornerRadius="12" BorderColor="#D1D9E6">
                         <VerticalStackLayout Spacing="10">
                             <HorizontalStackLayout Spacing="10">
                                 <CheckBox IsChecked="{Binding TemBojo}" />
                                 <Label Text="ADICIONAR BOJO / CUBA" FontAttributes="Bold" VerticalOptions="Center" TextColor="#2980B9"/>
                             </HorizontalStackLayout>
-                            
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="15" RowSpacing="10" IsEnabled="{Binding TemBojo}">
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
                                     <Label Text="Peça de Destino" FontSize="12"/>
@@ -224,14 +240,12 @@
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
-
                     <Frame BackgroundColor="#FFF5F5" Padding="15" CornerRadius="12" BorderColor="#FFDADA">
                         <VerticalStackLayout Spacing="10">
                             <HorizontalStackLayout Spacing="10">
                                 <CheckBox IsChecked="{Binding TemCooktop}" />
                                 <Label Text="ADICIONAR COOKTOP" FontAttributes="Bold" VerticalOptions="Center" TextColor="#C0392B"/>
                             </HorizontalStackLayout>
-                            
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="15" RowSpacing="10" IsEnabled="{Binding TemCooktop}">
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
                                     <Label Text="Peça de Destino" FontSize="12"/>
@@ -272,8 +286,8 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <Grid Grid.Column="1" BackgroundColor="#ECEFF1" Padding="20">
-            <Frame BackgroundColor="White" CornerRadius="24" HasShadow="True" Padding="20" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="750" HeightRequest="650">
+        <Grid x:Name="SidePanel" Grid.Column="1" Grid.Row="0" BackgroundColor="#ECEFF1" Padding="20">
+            <Frame x:Name="PreviewFrame" BackgroundColor="White" CornerRadius="24" HasShadow="True" Padding="20" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="750" HeightRequest="650">
                 <Grid RowDefinitions="Auto, *, Auto" RowSpacing="12">
                     <Label Grid.Row="0" Text="Projeto Técnico da Bancada" FontSize="20" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#2C3E50"/>
                     <Border Grid.Row="1" Stroke="#CCCCCC" StrokeThickness="1.5" StrokeShape="RoundRectangle 16" BackgroundColor="#FFFFFF" Margin="0,10,0,10">

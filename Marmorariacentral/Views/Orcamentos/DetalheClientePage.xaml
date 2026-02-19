@@ -62,7 +62,7 @@
                 
                 <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
                     <Button Grid.Column="0" Text="MANDAR P/ PRODUÇÃO" BackgroundColor="Green" TextColor="White" FontAttributes="Bold" HeightRequest="50" CornerRadius="10"/>
-                    <Button Grid.Column="1" Text="GERAR PDF" BackgroundColor="#444" TextColor="White" FontAttributes="Bold" HeightRequest="50" CornerRadius="10"/>
+                    <Button Grid.Column="1" Text="GERAR PDF" Command="{Binding GerarPdfCommand}" BackgroundColor="#444" TextColor="White" FontAttributes="Bold" HeightRequest="50" CornerRadius="10"/>
                 </Grid>
             </VerticalStackLayout>
         </Border>
