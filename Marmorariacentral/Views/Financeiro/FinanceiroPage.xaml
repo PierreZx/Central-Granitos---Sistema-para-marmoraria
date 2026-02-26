@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:Marmorariacentral.Models"
              xmlns:viewmodels="clr-namespace:Marmorariacentral.ViewModels"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="Marmorariacentral.Views.Financeiro.FinanceiroPage"
              x:DataType="viewmodels:FinanceiroViewModel"
              Title="Gestão Financeira"
@@ -10,230 +11,146 @@
 
     <Grid RowDefinitions="Auto, Auto, Auto, *">
 
-        <!-- SALDO -->
         <Border Grid.Row="0" Padding="20" BackgroundColor="#8B1A1A" StrokeThickness="0">
             <VerticalStackLayout>
-                <Label Text="Saldo em Caixa" TextColor="#FFCCCC" FontSize="12"/>
+                <Label Text="Saldo Total Disponível" TextColor="#FFCCCC" FontSize="12"/>
                 <Label Text="{Binding SaldoTotal, StringFormat='{0:C}'}"
-                       TextColor="White"
-                       FontSize="28"
-                       FontAttributes="Bold"/>
+                       TextColor="White" FontSize="28" FontAttributes="Bold"/>
             </VerticalStackLayout>
         </Border>
 
-        <!-- TABS -->
         <FlexLayout Grid.Row="1" JustifyContent="SpaceAround" Padding="5" BackgroundColor="White">
-            <Button x:Name="BtnTabContas" Text="Contas" FontAttributes="Bold"
-                    BackgroundColor="Transparent"
-                    TextColor="#8B1A1A"
-                    Clicked="OnTabClicked"
-                    CommandParameter="Contas"/>
-
-            <Button x:Name="BtnTabExtrato" Text="Extrato"
-                    BackgroundColor="Transparent"
-                    TextColor="#777"
-                    Clicked="OnTabClicked"
-                    CommandParameter="Extrato"/>
-
-            <Button Text="Produção"
-                    BackgroundColor="Transparent"
-                    TextColor="#CCC"
-                    Clicked="OnTabClicked"
-                    CommandParameter="Producao"/>
+            <Button x:Name="BtnTabContas" Text="CONTAS A PAGAR" FontAttributes="Bold"
+                    TextColor="#8B1A1A" BackgroundColor="Transparent" Clicked="OnTabClicked" CommandParameter="Contas"/>
+            <Button x:Name="BtnTabExtrato" Text="EXTRATO GERAL" 
+                    TextColor="#777" BackgroundColor="Transparent" Clicked="OnTabClicked" CommandParameter="Extrato"/>
         </FlexLayout>
 
-        <!-- AÇÕES -->
-        <VerticalStackLayout Grid.Row="2" Padding="15" Spacing="10" BackgroundColor="#F8F8F8">
-    
-            <Button x:Name="BtnLancar" 
-                    Text="+ CADASTRAR CONTA"
-                    BackgroundColor="#8B1A1A"
-                    TextColor="White"
-                    CornerRadius="10"
-                    HeightRequest="45"
-                    Command="{Binding AbrirCadastroCommand}"/>
-
-            <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
-                <SearchBar Grid.Column="0" 
-                        Placeholder="Filtrar..."
-                        HeightRequest="40"
-                        TextChanged="OnSearchTextChanged"
-                        BackgroundColor="White"/>
-
-                <Picker Grid.Column="1" 
-                        Title="Ordenar..."
-                        HeightRequest="40"
-                        SelectedIndexChanged="OnSortChanged"
-                        BackgroundColor="White">
-                    <Picker.ItemsSource>
-                        <x:Array Type="{x:Type x:String}">
-                            <x:String>Vencimento</x:String>
-                            <x:String>Maior Valor</x:String>
-                            <x:String>Menor Valor</x:String>
-                        </x:Array>
-                    </Picker.ItemsSource>
-                </Picker>
-            </Grid>
-        </VerticalStackLayout>
-
-        <!-- LISTAS -->
-        <Grid Grid.Row="3">
-
-            <!-- CONTAS -->
-            <CollectionView x:Name="ListContas"
-                            ItemsSource="{Binding ContasAtivas}"
-                            IsVisible="True">
-
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:FinanceiroRegistro">
-
-                        <ContentView Padding="15,5">
-
-                            <Border Padding="12"
-                                    StrokeShape="RoundRectangle 12"
-                                    BackgroundColor="White">
-
-                                <Grid ColumnDefinitions="Auto, *, Auto, Auto"
-                                      ColumnSpacing="8">
-
-                                    <Ellipse Grid.Column="0"
-                                             WidthRequest="12"
-                                             HeightRequest="12"
-                                             Fill="{Binding StatusColor}"
-                                             VerticalOptions="Center"/>
-
-                                    <VerticalStackLayout Grid.Column="1">
-                                        <Label Text="{Binding Descricao}"
-                                               FontAttributes="Bold"/>
-                                        <Label Text="{Binding DataVencimento, StringFormat='Vence: {0:dd/MM}'}"
-                                               FontSize="11"
-                                               TextColor="#777"/>
-                                    </VerticalStackLayout>
-
-                                    <VerticalStackLayout Grid.Column="2"
-                                                         HorizontalOptions="End">
-
-                                        <Label Text="{Binding Valor, StringFormat='{0:C}'}"
-                                               FontAttributes="Bold"/>
-
-                                        <HorizontalStackLayout Spacing="2">
-                                            <Label Text="Pagar?" FontSize="9"/>
-                                            <CheckBox IsChecked="{Binding FoiPago}"
-                                                      CheckedChanged="OnPagoChanged"
-                                                      Scale="0.8"/>
-                                        </HorizontalStackLayout>
-
-                                    </VerticalStackLayout>
-
-                                    <HorizontalStackLayout Grid.Column="3"
-                                                           Spacing="5">
-
-                                        <Button Text="✎"
-                                                WidthRequest="32"
-                                                HeightRequest="32"
-                                                BackgroundColor="#F0F0F0"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
-                                                CommandParameter="{Binding .}"/>
-
-                                        <Button Text="X"
-                                                WidthRequest="32"
-                                                HeightRequest="32"
-                                                BackgroundColor="#FFEBEB"
-                                                TextColor="Red"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=ExcluirRegistroCommand}"
-                                                CommandParameter="{Binding .}"/>
-                                    </HorizontalStackLayout>
-
-                                </Grid>
-                            </Border>
-                        </ContentView>
-
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-
-            <!-- EXTRATO -->
-            <CollectionView x:Name="ListExtrato"
-                            ItemsSource="{Binding ExtratoDia}"
-                            IsVisible="False">
-
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:FinanceiroRegistro">
-
-                        <ContentView Padding="15,5">
-
-                            <Border Padding="15"
-                                    StrokeShape="RoundRectangle 12">
-
-                                <Border.Triggers>
-                                    <DataTrigger TargetType="Border"
-                                                 Binding="{Binding Tipo}"
-                                                 Value="Entrada">
-                                        <Setter Property="BackgroundColor"
-                                                Value="#E8F5E9"/>
-                                    </DataTrigger>
-
-                                    <DataTrigger TargetType="Border"
-                                                 Binding="{Binding Tipo}"
-                                                 Value="Saida">
-                                        <Setter Property="BackgroundColor"
-                                                Value="#FFEBEB"/>
-                                    </DataTrigger>
-                                </Border.Triggers>
-
-                                <Grid ColumnDefinitions="*, Auto, Auto">
-
-                                    <VerticalStackLayout>
-                                        <Label Text="{Binding Descricao}"
-                                               FontAttributes="Bold"/>
-                                        <Label Text="{Binding DataVencimento, StringFormat='{0:dd/MM/yyyy}'}"
-                                               FontSize="11"/>
-                                    </VerticalStackLayout>
-
-                                    <Label Grid.Column="1"
-                                           Text="{Binding Valor, StringFormat='{0:C}'}"
-                                           FontAttributes="Bold"
-                                           VerticalOptions="Center"/>
-
-                                    <HorizontalStackLayout Grid.Column="2"
-                                                           Spacing="5">
-
-                                        <Button Text="✎"
-                                                WidthRequest="32"
-                                                HeightRequest="32"
-                                                BackgroundColor="#F0F0F0"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
-                                                CommandParameter="{Binding .}"/>
-
-                                        <Button Text="X"
-                                                WidthRequest="32"
-                                                HeightRequest="32"
-                                                BackgroundColor="#FFEBEB"
-                                                TextColor="Red"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=ExcluirRegistroCommand}"
-                                                CommandParameter="{Binding .}"/>
-                                    </HorizontalStackLayout>
-
-                                </Grid>
-                            </Border>
-
-                        </ContentView>
-
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-
-            <!-- PRODUÇÃO -->
-            <VerticalStackLayout x:Name="ViewProducao"
-                                 VerticalOptions="Center"
-                                 HorizontalOptions="Center"
-                                 IsVisible="False">
-
-                <Label Text="Aba em Construção 🏗️"
-                       FontSize="20"
-                       TextColor="#999"/>
-            </VerticalStackLayout>
-
+        <Grid Grid.Row="2" ColumnDefinitions="*, Auto" Padding="15" ColumnSpacing="10">
+            <SearchBar x:Name="SearchBarFinanceiro" Placeholder="Buscar registro..." 
+                       TextChanged="OnSearchTextChanged" BackgroundColor="White"/>
+            <Picker Grid.Column="1" Title="Ordenar" SelectedIndexChanged="OnSortChanged" WidthRequest="120">
+                <Picker.Items>
+                    <x:String>Vencimento</x:String>
+                    <x:String>Maior Valor</x:String>
+                    <x:String>Menor Valor</x:String>
+                </Picker.Items>
+            </Picker>
         </Grid>
+
+        <ScrollView Grid.Row="3">
+            <VerticalStackLayout Padding="10" Spacing="10">
+
+                <Button x:Name="BtnLancar" Text="+ CADASTRAR CONTA" BackgroundColor="#8B1A1A" 
+                        TextColor="White" Command="{Binding AbrirCadastroCommand}" Margin="5,0,5,10"/>
+
+                <VerticalStackLayout x:Name="LayoutContas" IsVisible="True">
+                    <CollectionView ItemsSource="{Binding ContasPendentes}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:FinanceiroRegistro">
+                                <SwipeView>
+                                    <SwipeView.RightItems>
+                                        <SwipeItems>
+                                            <SwipeItem Text="Editar" BackgroundColor="Orange" 
+                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
+                                                       CommandParameter="{Binding .}"/>
+                                            <SwipeItem Text="Excluir" BackgroundColor="Red" 
+                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=ExcluirRegistroCommand}"
+                                                       CommandParameter="{Binding .}"/>
+                                        </SwipeItems>
+                                    </SwipeView.RightItems>
+                                    <ContentView Padding="15,4">
+                                        <Border Padding="12" StrokeShape="RoundRectangle 12" BackgroundColor="White">
+                                            <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15">
+                                                <CheckBox Color="#8B1A1A" IsChecked="{Binding FoiPago}" CheckedChanged="OnPagoChanged"/>
+                                                <VerticalStackLayout Grid.Column="1">
+                                                    <Label Text="{Binding DescricaoDisplay}" FontAttributes="Bold" TextColor="#333"/>
+                                                    <Label Text="{Binding DataVencimento, StringFormat='Vence em: {0:dd/MM/yyyy}'}" FontSize="12" TextColor="{Binding StatusColor}"/>
+                                                </VerticalStackLayout>
+                                                <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" TextColor="#333"/>
+                                            </Grid>
+                                        </Border>
+                                    </ContentView>
+                                </SwipeView>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout x:Name="ListExtrato" IsVisible="False">
+                    <CollectionView ItemsSource="{Binding ExtratoGeral}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:FinanceiroRegistro">
+                                <SwipeView>
+                                    <SwipeView.RightItems>
+                                        <SwipeItems>
+                                            <SwipeItem Text="Editar" BackgroundColor="Orange" 
+                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
+                                                       CommandParameter="{Binding .}"/>
+                                            <SwipeItem Text="Excluir" BackgroundColor="Red" 
+                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=ExcluirRegistroCommand}"
+                                                       CommandParameter="{Binding .}"/>
+                                        </SwipeItems>
+                                    </SwipeView.RightItems>
+                                    
+                                    <ContentView Padding="15,4">
+                                        <Border x:Name="CardExtrato" Padding="12" StrokeShape="RoundRectangle 12" StrokeThickness="1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="BackgroundColor" Value="White"/>
+                                                    <Setter Property="Stroke" Value="#EEEEEE"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding Tipo}" Value="Entrada">
+                                                            <Setter Property="BackgroundColor" Value="#E8F5E9"/>
+                                                            <Setter Property="Stroke" Value="#A5D6A7"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding Tipo}" Value="Saida">
+                                                            <Setter Property="BackgroundColor" Value="#FFEBEE"/>
+                                                            <Setter Property="Stroke" Value="#EF9A9A"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+
+                                            <Grid ColumnDefinitions="*, Auto">
+                                                <VerticalStackLayout>
+                                                    <Label Text="{Binding Descricao}" FontSize="14" FontAttributes="Bold" TextColor="#333"/>
+                                                    <Label Text="{Binding DataVencimento, StringFormat='Pago em: {0:dd/MM/yyyy}'}" FontSize="11" TextColor="#666"/>
+                                                    <Label Text="{Binding Tipo}" FontSize="11" FontAttributes="Bold">
+                                                        <Label.Triggers>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Entrada">
+                                                                <Setter Property="TextColor" Value="#2E7D32"/>
+                                                                <Setter Property="Text" Value="↑ ENTRADA"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Saida">
+                                                                <Setter Property="TextColor" Value="#C62828"/>
+                                                                <Setter Property="Text" Value="↓ SAÍDA"/>
+                                                            </DataTrigger>
+                                                        </Label.Triggers>
+                                                    </Label>
+                                                </VerticalStackLayout>
+
+                                                <Label Grid.Column="1" Text="{Binding Valor, StringFormat='{0:C}'}" 
+                                                       FontAttributes="Bold" VerticalOptions="Center" FontSize="16">
+                                                    <Label.Triggers>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Entrada">
+                                                            <Setter Property="TextColor" Value="#2E7D32"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Saida">
+                                                            <Setter Property="TextColor" Value="#C62828"/>
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
+                                            </Grid>
+                                        </Border>
+                                    </ContentView>
+                                </SwipeView>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
     </Grid>
 </ContentPage>

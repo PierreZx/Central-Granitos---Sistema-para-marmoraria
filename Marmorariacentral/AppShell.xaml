@@ -3,74 +3,94 @@
     x:Class="Marmorariacentral.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:Marmorariacentral.Views.Dashboard"
-    xmlns:estoque="clr-namespace:Marmorariacentral.Views.Estoque"
-    xmlns:orcamentos="clr-namespace:Marmorariacentral.Views.Orcamentos"
-    xmlns:producao="clr-namespace:Marmorariacentral.Views.Producao"
+    xmlns:dashboard="clr-namespace:Marmorariacentral.Views.Dashboard"
     xmlns:financeiro="clr-namespace:Marmorariacentral.Views.Financeiro"
     Shell.FlyoutBehavior="Flyout"
     FlyoutBackgroundColor="White">
 
     <Shell.Resources>
         <ResourceDictionary>
-            <Style x:Key="BaseStyle" TargetType="Element">
+
+            <Style TargetType="Label" Class="FlyoutItemLabelStyle">
+                <Setter Property="TextColor" Value="#333333" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="VerticalOptions" Value="Center" />
+                <Setter Property="FontSize" Value="14" />
+            </Style>
+
+            <Style TargetType="Element">
                 <Setter Property="Shell.BackgroundColor" Value="#8B1A1A" />
                 <Setter Property="Shell.ForegroundColor" Value="White" />
                 <Setter Property="Shell.TitleColor" Value="White" />
-                <Setter Property="Shell.UnselectedColor" Value="#444444" />
+                <Setter Property="Shell.UnselectedColor" Value="#CCCCCC" />
             </Style>
 
-            <Style TargetType="Grid" x:Key="FlyoutItemLayoutStyle">
-                <Setter Property="VisualStateManager.VisualStateGroups">
-                    <VisualStateGroupList>
-                        <VisualStateGroup x:Name="CommonStates">
-                            <VisualState x:Name="Normal" />
-                            <VisualState x:Name="Selected">
-                                <VisualState.Setters>
-                                    <Setter Property="BackgroundColor" Value="#F2F2F7" />
-                                </VisualState.Setters>
-                            </VisualState>
-                        </VisualStateGroup>
-                    </VisualStateGroupList>
-                </Setter>
-            </Style>
         </ResourceDictionary>
     </Shell.Resources>
 
     <Shell.FlyoutHeader>
         <VerticalStackLayout Padding="20" BackgroundColor="#F8F8F8">
-            <Image Source="logo_central.png" 
-                   HeightRequest="80" 
+            <Image Source="logo_central.png"
+                   HeightRequest="80"
                    HorizontalOptions="Center" />
-            <Label Text="Central Granitos" 
-                   TextColor="#333" 
-                   FontAttributes="Bold" 
-                   HorizontalOptions="Center" 
+
+            <Label Text="Central Granitos"
+                   TextColor="#333333"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
                    Margin="0,10,0,0"/>
+
+            <Label Text="Gestão Financeira"
+                   TextColor="#8B1A1A"
+                   FontSize="12"
+                   HorizontalOptions="Center"/>
         </VerticalStackLayout>
     </Shell.FlyoutHeader>
 
+    <Shell.ItemTemplate>
+        <DataTemplate>
+            <Grid ColumnDefinitions="45, *" Padding="15,10">
+                <Image Source="{Binding Icon}" 
+                       HeightRequest="22" 
+                       WidthRequest="22" 
+                       VerticalOptions="Center" />
+                <Label Grid.Column="1" 
+                       Text="{Binding Title}" 
+                       StyleClass="FlyoutItemLabelStyle" />
+            </Grid>
+        </DataTemplate>
+    </Shell.ItemTemplate>
+
+    <Shell.MenuItemTemplate>
+        <DataTemplate>
+            <Grid ColumnDefinitions="45, *" Padding="15,10">
+                <Label Text="➔" 
+                       TextColor="#8B1A1A" 
+                       FontSize="18" 
+                       VerticalOptions="Center" 
+                       HorizontalOptions="Center"/>
+                <Label Grid.Column="1" 
+                       Text="{Binding Text}" 
+                       TextColor="#8B1A1A" 
+                       FontAttributes="Bold" 
+                       VerticalOptions="Center" />
+            </Grid>
+        </DataTemplate>
+    </Shell.MenuItemTemplate>
+
     <FlyoutItem Title="Dashboard" Icon="icon_dashboard.png">
-        <ShellContent Title="Dashboard" ContentTemplate="{DataTemplate local:DashboardPage}" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Estoque" Icon="icon_estoque.png">
-        <ShellContent Title="Estoque" ContentTemplate="{DataTemplate estoque:EstoquePage}" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Orçamentos" Icon="icon_orcamento.png">
-        <ShellContent Title="Orçamentos" ContentTemplate="{DataTemplate orcamentos:OrcamentosPage}" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Produção" Icon="icon_producao.png">
-        <ShellContent Title="Produção" ContentTemplate="{DataTemplate producao:ProducaoPage}" />
+        <ShellContent
+            Title="Dashboard"
+            ContentTemplate="{DataTemplate dashboard:DashboardPage}" />
     </FlyoutItem>
 
     <FlyoutItem Title="Financeiro" Icon="icon_financeiro.png">
-        <ShellContent Title="Financeiro" ContentTemplate="{DataTemplate financeiro:FinanceiroPage}" />
+        <ShellContent
+            Title="Financeiro"
+            ContentTemplate="{DataTemplate financeiro:FinanceiroPage}" />
     </FlyoutItem>
 
-    <MenuItem Text="Sair do Sistema" 
+    <MenuItem Text="Encerrar Sessão"
               Clicked="OnLogoutClicked" />
 
 </Shell>

@@ -12,42 +12,54 @@ public partial class FinanceiroPage : ContentPage
     }
 
     /// <summary>
-    /// Troca de abas (Contas, Extrato, Produção)
+    /// Gerencia a troca de abas entre Pendências e Extrato.
+    /// Utiliza referências diretas aos layouts reais para evitar erros de renderização.
     /// </summary>
     private void OnTabClicked(object sender, EventArgs e)
     {
-        if (sender is Button btn && btn.CommandParameter != null)
+        if (sender is Button btn)
         {
-            var tab = btn.CommandParameter.ToString();
+            var tab = btn.CommandParameter?.ToString() ?? "Contas";
 
-            ListContas.IsVisible = (tab == "Contas");
+            // CORREÇÃO DEFINITIVA: Referencia os containers reais do XAML
+            LayoutContas.IsVisible = (tab == "Contas");
             ListExtrato.IsVisible = (tab == "Extrato");
-            ViewProducao.IsVisible = (tab == "Producao");
 
-            // Ajuste do Botão de Lançamento
-            if (tab == "Extrato")
+            if (BindingContext is FinanceiroViewModel vm)
             {
-                BtnLancar.Text = "+ LANÇAR ENTRADA/SAÍDA";
-                BtnLancar.Command = ((FinanceiroViewModel)BindingContext).AbrirLancamentoExtratoCommand;
-            }
-            else
-            {
-                BtnLancar.Text = "+ CADASTRAR CONTA";
-                BtnLancar.Command = ((FinanceiroViewModel)BindingContext).AbrirCadastroCommand;
+                if (tab == "Extrato")
+                {
+                    BtnLancar.Text = "+ LANÇAR ENTRADA/SAÍDA";
+                    BtnLancar.Command = vm.AbrirLancamentoExtratoCommand;
+                }
+                else
+                {
+                    BtnLancar.Text = "+ CADASTRAR CONTA";
+                    BtnLancar.Command = vm.AbrirCadastroCommand;
+                }
             }
 
-            // Estética das Tabs
-            BtnTabContas.TextColor = (tab == "Contas") ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
-            BtnTabExtrato.TextColor = (tab == "Extrato") ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
+            AtualizarVisualTabs(tab);
         }
     }
 
+    private void AtualizarVisualTabs(string tabAtiva)
+    {
+        bool isContas = tabAtiva == "Contas";
+
+        // Estética das abas para feedback visual ao usuário
+        BtnTabContas.TextColor = isContas ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
+        BtnTabContas.FontAttributes = isContas ? FontAttributes.Bold : FontAttributes.None;
+
+        BtnTabExtrato.TextColor = !isContas ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
+        BtnTabExtrato.FontAttributes = !isContas ? FontAttributes.Bold : FontAttributes.None;
+    }
+
     /// <summary>
-    /// Popup de confirmação de pagamento
+    /// Dispara o comando de confirmação de pagamento ao marcar o CheckBox.
     /// </summary>
     private async void OnPagoChanged(object sender, CheckedChangedEventArgs e)
     {
-        // só dispara quando o usuário marca
         if (!e.Value) return;
 
         if (sender is CheckBox cb && cb.BindingContext is FinanceiroRegistro registro)
@@ -60,7 +72,7 @@ public partial class FinanceiroPage : ContentPage
     }
 
     /// <summary>
-    /// Filtro em tempo real enquanto digita
+    /// Filtro em tempo real enquanto o usuário digita.
     /// </summary>
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
     {
@@ -71,7 +83,7 @@ public partial class FinanceiroPage : ContentPage
     }
 
     /// <summary>
-    /// Ordenação da lista
+    /// Ordenação da lista através do seletor.
     /// </summary>
     private void OnSortChanged(object sender, EventArgs e)
     {
