@@ -5,6 +5,8 @@ using Marmorariacentral.ViewModels;
 using Marmorariacentral.Views.Dashboard;
 using Marmorariacentral.Views.Login;
 using Marmorariacentral.Views.Financeiro;
+using Marmorariacentral.Views.Estoque;
+using Marmorariacentral.Views.Orcamentos;
 using Microsoft.Maui.LifecycleEvents;
 using Shiny;
 using Shiny.Notifications;
@@ -26,45 +28,40 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        // ============================================================
-        // CONFIGURAÇÃO DE NOTIFICAÇÕES (Shiny 3.3.1)
-        // ============================================================
+        // Notificações Shiny
 #if !WINDOWS
-        // REGISTRO SIMPLES: Necessário para a versão 3.3.1 evitar o erro CS1660.
-        // A configuração do canal (AddChannel) foi movida para o App.xaml.cs.
         builder.Services.AddNotifications();
 #endif
 
-        // ==========================================
-        // REGISTRO DE SERVIÇOS (Singletons)
-        // ==========================================
+        // Serviços
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddSingleton<FirebaseService>();
         builder.Services.AddSingleton<AuthService>();
 
-        // ==========================================
-        // VIEWMODELS (Transients)
-        // ==========================================
+        // ViewModels
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<FinanceiroViewModel>();
+        builder.Services.AddTransient<EstoqueViewModel>();
+        builder.Services.AddTransient<OrcamentoViewModel>();
+        builder.Services.AddTransient<DetalhesClienteViewModel>();
+        builder.Services.AddTransient<CalculadoraPecaViewModel>();
 
-        // ==========================================
-        // PAGES / VIEWS (Transients)
-        // ==========================================
+        // Pages
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<FinanceiroPage>();
+        builder.Services.AddTransient<EstoquePage>();
+        builder.Services.AddTransient<OrcamentosPage>();
+        builder.Services.AddTransient<DetalhesClientePage>();
+        builder.Services.AddTransient<CalculadoraPecaPage>();
         builder.Services.AddTransient<AppShell>();
 
-        // ==========================================
-        // POPUPS (Financeiro apenas)
-        // ==========================================
+        // Popups
         builder.Services.AddTransient<CadastroFinanceiroPopup>();
+        builder.Services.AddTransient<CadastroChapaPopup>();
+        builder.Services.AddTransient<CadastroClientePopup>();
 
-        // ==========================================
-        // CONFIGURAÇÃO DA JANELA NO WINDOWS
-        // ==========================================
 #if WINDOWS
         builder.ConfigureLifecycleEvents(events =>
         {
@@ -78,7 +75,7 @@ public static class MauiProgram
                     var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id);
                     if (appWindow is not null)
                     {
-                        appWindow.Title = "Central Granitos - Gestão de Caixa";
+                        appWindow.Title = "Central Granitos - Gestão Integrada";
                         appWindow.MoveAndResize(new Windows.Graphics.RectInt32(100, 100, 1280, 800));
                     }
                 });

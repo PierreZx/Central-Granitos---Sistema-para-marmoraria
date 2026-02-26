@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mct:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+           xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+           xmlns:mct="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+           x:Class="Marmorariacentral.Views.Orcamentos.CadastroClientePopup"
+           Color="Transparent">
+
+    <Grid BackgroundColor="Transparent" Padding="20">
+        
+        <Border BackgroundColor="White" 
+                StrokeShape="RoundRectangle 20" 
+                Padding="25" 
+                WidthRequest="360" 
+                MaximumWidthRequest="500"
+                VerticalOptions="Center" 
+                HorizontalOptions="Center">
+            
+            <VerticalStackLayout Spacing="15" VerticalOptions="Center">
+                <Label Text="Cadastrar Novo Cliente" 
+                       FontSize="22" 
+                       FontAttributes="Bold" 
+                       TextColor="#8B1A1A" 
+                       HorizontalOptions="Center"
+                       Margin="0,0,0,10"/>
+
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Nome do Cliente" FontSize="12" TextColor="#666" Margin="5,0"/>
+                    <Entry x:Name="EntryNome" 
+                           Placeholder="Nome Completo" 
+                           TextColor="Black"
+                           BackgroundColor="#F9F9F9"/>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Contato" FontSize="12" TextColor="#666" Margin="5,0"/>
+                    <Entry x:Name="EntryContato" 
+                           Placeholder="(00) 00000-0000" 
+                           Keyboard="Telephone" 
+                           TextColor="Black"
+                           BackgroundColor="#F9F9F9"/>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Endereço da Obra" FontSize="12" TextColor="#666" Margin="5,0"/>
+                    <Entry x:Name="EntryEndereco" 
+                           Placeholder="Rua, Número, Bairro" 
+                           TextColor="Black"
+                           BackgroundColor="#F9F9F9"/>
+                </VerticalStackLayout>
+
+                <Button Text="SALVAR CLIENTE" 
+                        BackgroundColor="#8B1A1A" 
+                        TextColor="White" 
+                        Clicked="OnCadastrarClicked" 
+                        HeightRequest="55"
+                        FontAttributes="Bold"
+                        CornerRadius="12"
+                        Margin="0,15,0,0"/>
+                
+                <Button Text="Cancelar" 
+                        BackgroundColor="Transparent" 
+                        TextColor="#999" 
+                        Clicked="OnCancelarClicked"
+                        HeightRequest="45"/>
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</mct:Popup>

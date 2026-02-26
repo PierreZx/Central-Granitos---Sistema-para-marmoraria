@@ -5,6 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:dashboard="clr-namespace:Marmorariacentral.Views.Dashboard"
     xmlns:financeiro="clr-namespace:Marmorariacentral.Views.Financeiro"
+    xmlns:estoque="clr-namespace:Marmorariacentral.Views.Estoque"
+    xmlns:orcamentos="clr-namespace:Marmorariacentral.Views.Orcamentos"
     Shell.FlyoutBehavior="Flyout"
     FlyoutBackgroundColor="White">
 
@@ -40,7 +42,7 @@
                    HorizontalOptions="Center"
                    Margin="0,10,0,0"/>
 
-            <Label Text="Gestão Financeira"
+            <Label Text="Sistema de Gestão"
                    TextColor="#8B1A1A"
                    FontSize="12"
                    HorizontalOptions="Center"/>
@@ -88,6 +90,18 @@
         <ShellContent
             Title="Financeiro"
             ContentTemplate="{DataTemplate financeiro:FinanceiroPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Orçamentos" Icon="icon_orcamento.png">
+        <ShellContent
+            Title="Orçamentos"
+            ContentTemplate="{DataTemplate orcamentos:OrcamentosPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Estoque" Icon="icon_estoque.png">
+        <ShellContent
+            Title="Estoque"
+            ContentTemplate="{DataTemplate estoque:EstoquePage}" />
     </FlyoutItem>
 
     <MenuItem Text="Encerrar Sessão"

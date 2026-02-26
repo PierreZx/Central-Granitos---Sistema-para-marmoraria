@@ -10,7 +10,7 @@ namespace Marmorariacentral.Services
 
         public DatabaseService()
         {
-            // Mantivemos o nome do arquivo para preservar os registros financeiros que seu pai já lançou
+            // Mantendo o caminho definitivo para preservar os registros que seu pai já lançou
             _dbPath = Path.Combine(FileSystem.AppDataDirectory, "marmoraria_definitiva.db3");
         }
 
@@ -20,17 +20,20 @@ namespace Marmorariacentral.Services
 
             _database = new SQLiteAsyncConnection(_dbPath);
 
-            // Criamos apenas as tabelas necessárias para a nova fase do app:
-            // 1. Usuario: Para controle de acesso.
-            // 2. FinanceiroRegistro: Para todo o controle de entrada, saída e fluxo de caixa.
+            // Criamos todas as tabelas necessárias para o ecossistema completo da marmoraria.
+            // O SQLite não apaga dados existentes ao chamar este método, apenas cria o que falta.
             await _database.CreateTablesAsync(
                 CreateFlags.None, 
                 typeof(Usuario), 
-                typeof(FinanceiroRegistro));
+                typeof(FinanceiroRegistro),
+                typeof(EstoqueItem),
+                typeof(Cliente),
+                typeof(PecaOrcamento),
+                typeof(Orcamento));
         }
 
         /// <summary>
-        /// Busca todos os itens de uma tabela.
+        /// Busca todos os itens de uma tabela específica.
         /// </summary>
         public async Task<List<T>> GetItemsAsync<T>() where T : new()
         {
@@ -39,7 +42,7 @@ namespace Marmorariacentral.Services
         }
 
         /// <summary>
-        /// Salva ou atualiza um registro (Insert or Replace).
+        /// Salva ou atualiza um registro (Insert or Replace) baseado na Chave Primária [PrimaryKey].
         /// </summary>
         public async Task<int> SaveItemAsync<T>(T item) where T : new()
         {
@@ -57,16 +60,13 @@ namespace Marmorariacentral.Services
         }
 
         /// <summary>
-        /// Método extra para limpar dados antigos se necessário.
+        /// Método de utilidade para limpar tabelas específicas se necessário.
+        /// Use com cautela para não apagar dados importantes.
         /// </summary>
-        public async Task DropLegacyTablesAsync()
+        public async Task DropTableAsync<T>() where T : new()
         {
             await Init();
-            // Estes comandos removem as tabelas antigas do arquivo .db3 para liberar espaço
-            await _database!.ExecuteAsync("DROP TABLE IF EXISTS Orcamento");
-            await _database!.ExecuteAsync("DROP TABLE IF EXISTS EstoqueItem");
-            await _database!.ExecuteAsync("DROP TABLE IF EXISTS Cliente");
-            await _database!.ExecuteAsync("DROP TABLE IF EXISTS PecaOrcamento");
+            await _database!.DropTableAsync<T>();
         }
     }
 }
