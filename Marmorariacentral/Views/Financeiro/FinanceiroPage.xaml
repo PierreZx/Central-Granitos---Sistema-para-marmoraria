@@ -13,23 +13,27 @@
 
         <Border Grid.Row="0" Padding="20" BackgroundColor="#8B1A1A" StrokeThickness="0">
             <VerticalStackLayout>
-                <Label Text="Saldo Total Disponível" TextColor="#FFCCCC" FontSize="12"/>
+                <Label Text="Saldo Total Disponível (Pago)" TextColor="#FFCCCC" FontSize="12"/>
                 <Label Text="{Binding SaldoTotal, StringFormat='{0:C}'}"
                        TextColor="White" FontSize="28" FontAttributes="Bold"/>
             </VerticalStackLayout>
         </Border>
 
         <FlexLayout Grid.Row="1" JustifyContent="SpaceAround" Padding="5" BackgroundColor="White">
-            <Button x:Name="BtnTabContas" Text="CONTAS A PAGAR" FontAttributes="Bold"
+            <Button x:Name="BtnTabContas" Text="CONTAS" FontAttributes="Bold"
                     TextColor="#8B1A1A" BackgroundColor="Transparent" Clicked="OnTabClicked" CommandParameter="Contas"/>
-            <Button x:Name="BtnTabExtrato" Text="EXTRATO GERAL" 
+            
+            <Button x:Name="BtnTabOrcamentos" Text="ORÇAMENTOS" 
+                    TextColor="#777" BackgroundColor="Transparent" Clicked="OnTabClicked" CommandParameter="Orcamentos"/>
+            
+            <Button x:Name="BtnTabExtrato" Text="EXTRATO" 
                     TextColor="#777" BackgroundColor="Transparent" Clicked="OnTabClicked" CommandParameter="Extrato"/>
         </FlexLayout>
 
         <Grid Grid.Row="2" ColumnDefinitions="*, Auto" Padding="15" ColumnSpacing="10">
             <SearchBar x:Name="SearchBarFinanceiro" Placeholder="Buscar registro..." 
-                       TextChanged="OnSearchTextChanged" BackgroundColor="White"/>
-            <Picker Grid.Column="1" Title="Ordenar" SelectedIndexChanged="OnSortChanged" WidthRequest="120">
+                       TextChanged="OnSearchTextChanged" BackgroundColor="White" TextColor="Black"/>
+            <Picker Grid.Column="1" Title="Ordenar" SelectedIndexChanged="OnSortChanged" WidthRequest="120" TextColor="Black">
                 <Picker.Items>
                     <x:String>Vencimento</x:String>
                     <x:String>Maior Valor</x:String>
@@ -64,10 +68,10 @@
                                             <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15">
                                                 <CheckBox Color="#8B1A1A" IsChecked="{Binding FoiPago}" CheckedChanged="OnPagoChanged"/>
                                                 <VerticalStackLayout Grid.Column="1">
-                                                    <Label Text="{Binding DescricaoDisplay}" FontAttributes="Bold" TextColor="#333"/>
+                                                    <Label Text="{Binding DescricaoDisplay}" FontAttributes="Bold" TextColor="Black"/>
                                                     <Label Text="{Binding DataVencimento, StringFormat='Vence em: {0:dd/MM/yyyy}'}" FontSize="12" TextColor="{Binding StatusColor}"/>
                                                 </VerticalStackLayout>
-                                                <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" TextColor="#333"/>
+                                                <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" TextColor="Black"/>
                                             </Grid>
                                         </Border>
                                     </ContentView>
@@ -77,74 +81,80 @@
                     </CollectionView>
                 </VerticalStackLayout>
 
+                <VerticalStackLayout x:Name="LayoutOrcamentos" IsVisible="False">
+                    <CollectionView ItemsSource="{Binding OrcamentosPendentes}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:FinanceiroRegistro">
+                                <ContentView Padding="15,4">
+                                    <Border Padding="12" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#0D47A1" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="10">
+                                            <CheckBox Color="#0D47A1" IsChecked="{Binding FoiPago}" CheckedChanged="OnPagoChanged" VerticalOptions="Center"/>
+                                            
+                                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                                <Label Text="{Binding DescricaoDisplay}" FontAttributes="Bold" TextColor="Black" FontSize="14"/>
+                                                <Label Text="{Binding DataVencimento, StringFormat='Data: {0:dd/MM/yyyy}'}" FontSize="11" TextColor="{Binding StatusColor}"/>
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" TextColor="#2E7D32" FontSize="14"/>
+
+                                            <Button Grid.Column="3" Text="⚙️" 
+                                                    BackgroundColor="#F0F0F0" 
+                                                    TextColor="Black" 
+                                                    WidthRequest="40" 
+                                                    HeightRequest="40" 
+                                                    CornerRadius="20"
+                                                    Padding="0"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
+                                                    CommandParameter="{Binding .}"/>
+                                        </Grid>
+                                    </Border>
+                                </ContentView>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
                 <VerticalStackLayout x:Name="ListExtrato" IsVisible="False">
                     <CollectionView ItemsSource="{Binding ExtratoGeral}">
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="models:FinanceiroRegistro">
-                                <SwipeView>
-                                    <SwipeView.RightItems>
-                                        <SwipeItems>
-                                            <SwipeItem Text="Editar" BackgroundColor="Orange" 
-                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
-                                                       CommandParameter="{Binding .}"/>
-                                            <SwipeItem Text="Excluir" BackgroundColor="Red" 
-                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=ExcluirRegistroCommand}"
-                                                       CommandParameter="{Binding .}"/>
-                                        </SwipeItems>
-                                    </SwipeView.RightItems>
-                                    
-                                    <ContentView Padding="15,4">
-                                        <Border x:Name="CardExtrato" Padding="12" StrokeShape="RoundRectangle 12" StrokeThickness="1">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="BackgroundColor" Value="White"/>
-                                                    <Setter Property="Stroke" Value="#EEEEEE"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger TargetType="Border" Binding="{Binding Tipo}" Value="Entrada">
-                                                            <Setter Property="BackgroundColor" Value="#E8F5E9"/>
-                                                            <Setter Property="Stroke" Value="#A5D6A7"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger TargetType="Border" Binding="{Binding Tipo}" Value="Saida">
-                                                            <Setter Property="BackgroundColor" Value="#FFEBEE"/>
-                                                            <Setter Property="Stroke" Value="#EF9A9A"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-
-                                            <Grid ColumnDefinitions="*, Auto">
-                                                <VerticalStackLayout>
-                                                    <Label Text="{Binding Descricao}" FontSize="14" FontAttributes="Bold" TextColor="#333"/>
-                                                    <Label Text="{Binding DataVencimento, StringFormat='Pago em: {0:dd/MM/yyyy}'}" FontSize="11" TextColor="#666"/>
-                                                    <Label Text="{Binding Tipo}" FontSize="11" FontAttributes="Bold">
-                                                        <Label.Triggers>
-                                                            <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Entrada">
-                                                                <Setter Property="TextColor" Value="#2E7D32"/>
-                                                                <Setter Property="Text" Value="↑ ENTRADA"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Saida">
-                                                                <Setter Property="TextColor" Value="#C62828"/>
-                                                                <Setter Property="Text" Value="↓ SAÍDA"/>
-                                                            </DataTrigger>
-                                                        </Label.Triggers>
-                                                    </Label>
-                                                </VerticalStackLayout>
-
-                                                <Label Grid.Column="1" Text="{Binding Valor, StringFormat='{0:C}'}" 
-                                                       FontAttributes="Bold" VerticalOptions="Center" FontSize="16">
-                                                    <Label.Triggers>
-                                                        <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Entrada">
-                                                            <Setter Property="TextColor" Value="#2E7D32"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Saida">
-                                                            <Setter Property="TextColor" Value="#C62828"/>
-                                                        </DataTrigger>
-                                                    </Label.Triggers>
-                                                </Label>
-                                            </Grid>
-                                        </Border>
-                                    </ContentView>
-                                </SwipeView>
+                                <Border Margin="15,4" Padding="12" StrokeShape="RoundRectangle 12" StrokeThickness="1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BackgroundColor" Value="White"/>
+                                            <Setter Property="Stroke" Value="#EEEEEE"/>
+                                            <Style.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding Tipo}" Value="Entrada">
+                                                    <Setter Property="BackgroundColor" Value="#E8F5E9"/>
+                                                    <Setter Property="Stroke" Value="#A5D6A7"/>
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Border" Binding="{Binding Tipo}" Value="Saida">
+                                                    <Setter Property="BackgroundColor" Value="#FFEBEE"/>
+                                                    <Setter Property="Stroke" Value="#EF9A9A"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid ColumnDefinitions="*, Auto">
+                                        <VerticalStackLayout>
+                                            <Label Text="{Binding DescricaoDisplay}" FontSize="14" FontAttributes="Bold" TextColor="Black"/>
+                                            <Label Text="{Binding DataVencimento, StringFormat='Pago em: {0:dd/MM/yyyy}'}" FontSize="11" TextColor="#444"/>
+                                            <Label Text="{Binding Tipo}" FontSize="11" FontAttributes="Bold">
+                                                <Label.Triggers>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Entrada">
+                                                        <Setter Property="TextColor" Value="#2E7D32"/>
+                                                        <Setter Property="Text" Value="↑ RECEBIDO"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding Tipo}" Value="Saida">
+                                                        <Setter Property="TextColor" Value="#C62828"/>
+                                                        <Setter Property="Text" Value="↓ PAGO"/>
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="1" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" FontSize="16" TextColor="Black"/>
+                                    </Grid>
+                                </Border>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                     </CollectionView>

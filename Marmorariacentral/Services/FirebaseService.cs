@@ -21,10 +21,19 @@ namespace Marmorariacentral.Services
             if (_db != null) return;
             try
             {
-                using var stream = await FileSystem.OpenAppPackageFileAsync(_keyFileName);
-                using var reader = new StreamReader(stream);
-                var jsonContents = await reader.ReadToEndAsync();
-                
+                string jsonContents;
+                try 
+                {
+                    using var stream = await FileSystem.OpenAppPackageFileAsync(_keyFileName);
+                    using var reader = new StreamReader(stream);
+                    jsonContents = await reader.ReadToEndAsync();
+                }
+                catch (FileNotFoundException)
+                {
+                    System.Diagnostics.Debug.WriteLine("AVISO: firebase_key.json não encontrado. Firebase desativado.");
+                    return;
+                }
+
                 string tempPath = Path.Combine(FileSystem.CacheDirectory, _keyFileName);
                 File.WriteAllText(tempPath, jsonContents);
                 
@@ -73,9 +82,9 @@ namespace Marmorariacentral.Services
 
             var data = new Dictionary<string, object>
             {
-                { "nome", cliente.Nome },
-                { "contato", cliente.Contato },
-                { "endereco", cliente.Endereco },
+                { "nome", cliente.Nome ?? "" },
+                { "contato", cliente.Contato ?? "" },
+                { "endereco", cliente.Endereco ?? "" },
                 { "data_cadastro", Timestamp.FromDateTime(cliente.DataCadastro.ToUniversalTime()) }
             };
             await _db.Collection("clientes").Document(cliente.Id).SetAsync(data);
@@ -94,9 +103,32 @@ namespace Marmorariacentral.Services
                 { "ambiente", peca.Ambiente ?? "" },
                 { "pedra_nome", peca.PedraNome ?? "" },
                 { "valor_m2", peca.ValorM2 },
+                { "valor_ml", peca.ValorMetroLinear },
+                { "quantidade", peca.Quantidade },
+                { "usar_multiplicador", peca.UsarMultiplicador },
+                { "valor_total", peca.ValorTotalPeca },
                 { "largura", peca.Largura },
                 { "altura", peca.Altura },
-                { "valor_total", peca.ValorTotalPeca }
+                { "largura_p2", peca.LarguraP2 },
+                { "altura_p2", peca.AlturaP2 },
+                { "lado_p2", peca.LadoP2 ?? "Esquerda" },
+                { "largura_p3", peca.LarguraP3 },
+                { "altura_p3", peca.AlturaP3 },
+                { "lado_p3", peca.LadoP3 ?? "Direita" },
+                { "rb_p1_e", peca.RodobancaP1Esquerda }, { "rb_p1_d", peca.RodobancaP1Direita },
+                { "rb_p1_f", peca.RodobancaP1Frente }, { "rb_p1_t", peca.RodobancaP1Tras },
+                { "rb_p2_e", peca.RodobancaP2Esquerda }, { "rb_p2_d", peca.RodobancaP2Direita },
+                { "rb_p2_f", peca.RodobancaP2Frente }, { "rb_p2_t", peca.RodobancaP2Tras },
+                { "rb_p3_e", peca.RodobancaP3Esquerda }, { "rb_p3_d", peca.RodobancaP3Direita },
+                { "rb_p3_f", peca.RodobancaP3Frente }, { "rb_p3_t", peca.RodobancaP3Tras },
+                { "saia_p1_e", peca.SaiaP1Esquerda }, { "saia_p1_d", peca.SaiaP1Direita },
+                { "saia_p1_f", peca.SaiaP1Frente }, { "saia_p1_t", peca.SaiaP1Tras },
+                { "saia_p2_e", peca.SaiaP2Esquerda }, { "saia_p2_d", peca.SaiaP2Direita },
+                { "saia_p2_f", peca.SaiaP2Frente }, { "saia_p2_t", peca.SaiaP2Tras },
+                { "saia_p3_e", peca.SaiaP3Esquerda }, { "saia_p3_d", peca.SaiaP3Direita },
+                { "saia_p3_f", peca.SaiaP3Frente }, { "saia_p3_t", peca.SaiaP3Tras },
+                { "tem_bojo", peca.TemBojo }, { "bojo_larg", peca.LarguraBojo }, { "bojo_alt", peca.AlturaBojo }, { "bojo_x", peca.BojoX }, { "bojo_dest", peca.PecaDestinoBojo ?? "P1" },
+                { "tem_cook", peca.TemCooktop }, { "cook_larg", peca.LarguraCooktop }, { "cook_alt", peca.AlturaCooktop }, { "cook_x", peca.CooktopX }, { "cook_dest", peca.PecaDestinoCooktop ?? "P1" }
             };
             await _db.Collection("orcamentos_detalhes").Document(peca.Id).SetAsync(data);
         }
@@ -114,17 +146,60 @@ namespace Marmorariacentral.Services
                 foreach (var doc in snapshot.Documents)
                 {
                     if (!doc.Exists) continue;
-                    var dict = doc.ToDictionary();
+                    var d = doc.ToDictionary();
                     lista.Add(new PecaOrcamento
                     {
                         Id = doc.Id,
                         ClienteId = clienteId,
-                        Ambiente = dict.ContainsKey("ambiente") ? dict["ambiente"]?.ToString() ?? "" : "",
-                        PedraNome = dict.ContainsKey("pedra_nome") ? dict["pedra_nome"]?.ToString() ?? "" : "",
-                        ValorM2 = dict.ContainsKey("valor_m2") ? Convert.ToDouble(dict["valor_m2"]) : 0,
-                        Largura = dict.ContainsKey("largura") ? Convert.ToDouble(dict["largura"]) : 0,
-                        Altura = dict.ContainsKey("altura") ? Convert.ToDouble(dict["altura"]) : 0,
-                        ValorTotalPeca = dict.ContainsKey("valor_total") ? Convert.ToDouble(dict["valor_total"]) : 0
+                        Ambiente = d.ContainsKey("ambiente") ? d["ambiente"]?.ToString() ?? "" : "",
+                        PedraNome = d.ContainsKey("pedra_nome") ? d["pedra_nome"]?.ToString() ?? "" : "",
+                        ValorM2 = d.ContainsKey("valor_m2") ? Convert.ToDouble(d["valor_m2"]) : 0,
+                        ValorMetroLinear = d.ContainsKey("valor_ml") ? Convert.ToDouble(d["valor_ml"]) : 0,
+                        Quantidade = d.ContainsKey("quantidade") ? Convert.ToInt32(d["quantidade"]) : 1,
+                        UsarMultiplicador = d.ContainsKey("usar_multiplicador") && Convert.ToBoolean(d["usar_multiplicador"]),
+                        ValorTotalPeca = d.ContainsKey("valor_total") ? Convert.ToDouble(d["valor_total"]) : 0,
+                        Largura = d.ContainsKey("largura") ? Convert.ToDouble(d["largura"]) : 0,
+                        Altura = d.ContainsKey("altura") ? Convert.ToDouble(d["altura"]) : 0,
+                        LarguraP2 = d.ContainsKey("largura_p2") ? Convert.ToDouble(d["largura_p2"]) : 0,
+                        AlturaP2 = d.ContainsKey("altura_p2") ? Convert.ToDouble(d["altura_p2"]) : 0,
+                        LadoP2 = d.ContainsKey("lado_p2") ? d["lado_p2"]?.ToString() ?? "Esquerda" : "Esquerda",
+                        LarguraP3 = d.ContainsKey("largura_p3") ? Convert.ToDouble(d["largura_p3"]) : 0,
+                        AlturaP3 = d.ContainsKey("altura_p3") ? Convert.ToDouble(d["altura_p3"]) : 0,
+                        LadoP3 = d.ContainsKey("lado_p3") ? d["lado_p3"]?.ToString() ?? "Direita" : "Direita",
+                        RodobancaP1Esquerda = d.ContainsKey("rb_p1_e") ? Convert.ToDouble(d["rb_p1_e"]) : 0,
+                        RodobancaP1Direita = d.ContainsKey("rb_p1_d") ? Convert.ToDouble(d["rb_p1_d"]) : 0,
+                        RodobancaP1Frente = d.ContainsKey("rb_p1_f") ? Convert.ToDouble(d["rb_p1_f"]) : 0,
+                        RodobancaP1Tras = d.ContainsKey("rb_p1_t") ? Convert.ToDouble(d["rb_p1_t"]) : 0,
+                        RodobancaP2Esquerda = d.ContainsKey("rb_p2_e") ? Convert.ToDouble(d["rb_p2_e"]) : 0,
+                        RodobancaP2Direita = d.ContainsKey("rb_p2_d") ? Convert.ToDouble(d["rb_p2_d"]) : 0,
+                        RodobancaP2Frente = d.ContainsKey("rb_p2_f") ? Convert.ToDouble(d["rb_p2_f"]) : 0,
+                        RodobancaP2Tras = d.ContainsKey("rb_p2_t") ? Convert.ToDouble(d["rb_p2_t"]) : 0,
+                        RodobancaP3Esquerda = d.ContainsKey("rb_p3_e") ? Convert.ToDouble(d["rb_p3_e"]) : 0,
+                        RodobancaP3Direita = d.ContainsKey("rb_p3_d") ? Convert.ToDouble(d["rb_p3_d"]) : 0,
+                        RodobancaP3Frente = d.ContainsKey("rb_p3_f") ? Convert.ToDouble(d["rb_p3_f"]) : 0,
+                        RodobancaP3Tras = d.ContainsKey("rb_p3_t") ? Convert.ToDouble(d["rb_p3_t"]) : 0,
+                        SaiaP1Esquerda = d.ContainsKey("saia_p1_e") ? Convert.ToDouble(d["saia_p1_e"]) : 0,
+                        SaiaP1Direita = d.ContainsKey("saia_p1_d") ? Convert.ToDouble(d["saia_p1_d"]) : 0,
+                        SaiaP1Frente = d.ContainsKey("saia_p1_f") ? Convert.ToDouble(d["saia_p1_f"]) : 0,
+                        SaiaP1Tras = d.ContainsKey("saia_p1_t") ? Convert.ToDouble(d["saia_p1_t"]) : 0,
+                        SaiaP2Esquerda = d.ContainsKey("saia_p2_e") ? Convert.ToDouble(d["saia_p2_e"]) : 0,
+                        SaiaP2Direita = d.ContainsKey("saia_p2_d") ? Convert.ToDouble(d["saia_p2_d"]) : 0,
+                        SaiaP2Frente = d.ContainsKey("saia_p2_f") ? Convert.ToDouble(d["saia_p2_f"]) : 0,
+                        SaiaP2Tras = d.ContainsKey("saia_p2_t") ? Convert.ToDouble(d["saia_p2_t"]) : 0,
+                        SaiaP3Esquerda = d.ContainsKey("saia_p3_e") ? Convert.ToDouble(d["saia_p3_e"]) : 0,
+                        SaiaP3Direita = d.ContainsKey("saia_p3_d") ? Convert.ToDouble(d["saia_p3_d"]) : 0,
+                        SaiaP3Frente = d.ContainsKey("saia_p3_f") ? Convert.ToDouble(d["saia_p3_f"]) : 0,
+                        SaiaP3Tras = d.ContainsKey("saia_p3_t") ? Convert.ToDouble(d["saia_p3_t"]) : 0,
+                        TemBojo = d.ContainsKey("tem_bojo") && Convert.ToBoolean(d["tem_bojo"]),
+                        PecaDestinoBojo = d.ContainsKey("bojo_dest") ? d["bojo_dest"]?.ToString() ?? "P1" : "P1",
+                        LarguraBojo = d.ContainsKey("bojo_larg") ? Convert.ToDouble(d["bojo_larg"]) : 0,
+                        AlturaBojo = d.ContainsKey("bojo_alt") ? Convert.ToDouble(d["bojo_alt"]) : 0,
+                        BojoX = d.ContainsKey("bojo_x") ? Convert.ToDouble(d["bojo_x"]) : 0,
+                        TemCooktop = d.ContainsKey("tem_cook") && Convert.ToBoolean(d["tem_cook"]),
+                        PecaDestinoCooktop = d.ContainsKey("cook_dest") ? d["cook_dest"]?.ToString() ?? "P1" : "P1",
+                        LarguraCooktop = d.ContainsKey("cook_larg") ? Convert.ToDouble(d["cook_larg"]) : 0,
+                        AlturaCooktop = d.ContainsKey("cook_alt") ? Convert.ToDouble(d["cook_alt"]) : 0,
+                        CooktopX = d.ContainsKey("cook_x") ? Convert.ToDouble(d["cook_x"]) : 0
                     });
                 }
             }
@@ -138,7 +213,6 @@ namespace Marmorariacentral.Services
         {
             await Init();
             if (_db == null) return;
-
             var data = new Dictionary<string, object>
             {
                 { "nome_chapa", estoque.NomeChapa ?? "" },
@@ -149,13 +223,12 @@ namespace Marmorariacentral.Services
             await _db.Collection("estoque").Document(estoque.Id).SetAsync(data);
         }
 
-        // ---------------- FINANCEIRO (PRESERVADO) ----------------
+        // ---------------- FINANCEIRO (CORREÇÃO DE PARCELAS) ----------------
 
         public async Task SaveFinanceiroAsync(FinanceiroRegistro financeiro)
         {
             await Init();
             if (_db == null) return;
-
             var data = new Dictionary<string, object>
             {
                 { "descricao", financeiro.Descricao ?? "" },
@@ -170,6 +243,40 @@ namespace Marmorariacentral.Services
                 { "dia_vencimento_fixo", financeiro.DiaVencimentoFixo }
             };
             await _db.Collection("financeiro").Document(financeiro.Id).SetAsync(data);
+        }
+
+        // NOVA FUNÇÃO: GetFinanceiroAsync para o sistema recuperar as parcelas corretamente
+        public async Task<List<FinanceiroRegistro>> GetFinanceiroAsync()
+        {
+            await Init();
+            var lista = new List<FinanceiroRegistro>();
+            if (_db == null) return lista;
+
+            try
+            {
+                var snapshot = await _db.Collection("financeiro").GetSnapshotAsync();
+                foreach (var doc in snapshot.Documents)
+                {
+                    if (!doc.Exists) continue;
+                    var d = doc.ToDictionary();
+                    lista.Add(new FinanceiroRegistro
+                    {
+                        Id = doc.Id,
+                        Descricao = d.ContainsKey("descricao") ? d["descricao"]?.ToString() ?? "" : "",
+                        Valor = d.ContainsKey("valor") ? Convert.ToDouble(d["valor"]) : 0,
+                        Tipo = d.ContainsKey("tipo") ? d["tipo"]?.ToString() ?? "Saida" : "Saida",
+                        DataVencimento = d.ContainsKey("data_vencimento") && d["data_vencimento"] is Timestamp ts ? ts.ToDateTime() : DateTime.Now,
+                        FoiPago = d.ContainsKey("foi_pago") && Convert.ToBoolean(d["foi_pago"]),
+                        IsFixo = d.ContainsKey("is_fixo") && Convert.ToBoolean(d["is_fixo"]),
+                        IsParcelado = d.ContainsKey("is_parcelado") && Convert.ToBoolean(d["is_parcelado"]),
+                        ParcelaAtual = d.ContainsKey("parcela_atual") ? Convert.ToInt32(d["parcela_atual"]) : 1,
+                        TotalParcelas = d.ContainsKey("total_parcelas") ? Convert.ToInt32(d["total_parcelas"]) : 1,
+                        DiaVencimentoFixo = d.ContainsKey("dia_vencimento_fixo") ? Convert.ToInt32(d["dia_vencimento_fixo"]) : 0
+                    });
+                }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Erro Get Financeiro: {ex.Message}"); }
+            return lista;
         }
 
         public async Task DeleteFinanceiroAsync(string id)

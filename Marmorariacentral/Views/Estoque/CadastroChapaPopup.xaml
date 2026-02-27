@@ -3,14 +3,16 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:mct="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-    x:Class="Marmorariacentral.Views.Estoque.CadastroChapaPopup">
+    x:Class="Marmorariacentral.Views.Estoque.CadastroChapaPopup"
+    Color="Transparent">
 
-    <Grid BackgroundColor="#80000000">
+    <Grid BackgroundColor="#80000000" Padding="20">
 
         <Border
             BackgroundColor="White"
             Padding="25"
-            WidthRequest="400"
+            WidthRequest="360"
+            MaximumWidthRequest="500"
             HorizontalOptions="Center"
             VerticalOptions="Center">
 
@@ -23,42 +25,70 @@
                 <Label
                     x:Name="LblTitulo"
                     Text="Nova Chapa"
-                    FontSize="20"
+                    FontSize="22"
                     FontAttributes="Bold"
                     TextColor="#8B1A1A"
-                    HorizontalOptions="Center"/>
+                    HorizontalOptions="Center"
+                    Margin="0,0,0,10"/>
 
-                <Entry x:Name="EntryNome" Placeholder="Nome da Pedra" />
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Nome da Pedra" FontSize="12" TextColor="#666" Margin="5,0"/>
+                    <Entry x:Name="EntryNome" 
+                           Placeholder="Ex: Granito Preto Absoluto" 
+                           PlaceholderColor="#999"
+                           TextColor="Black" 
+                           BackgroundColor="#F9F9F9"/>
+                </VerticalStackLayout>
 
-                <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
 
                     <VerticalStackLayout Grid.Column="0" Spacing="5">
-                        <Label Text="M² Total" FontSize="12" TextColor="#666"/>
-                        <Entry x:Name="EntryMetro" Placeholder="0.00" Keyboard="Numeric"/>
+                        <Label Text="M² Total" FontSize="12" TextColor="#666" Margin="5,0"/>
+                        <Entry x:Name="EntryMetro" 
+                               Placeholder="0.00" 
+                               Keyboard="Numeric" 
+                               TextColor="Black"
+                               PlaceholderColor="#999"
+                               BackgroundColor="#F9F9F9"/>
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Grid.Column="1" Spacing="5">
-                        <Label Text="Qtd Chapas" FontSize="12" TextColor="#666"/>
-                        <Entry x:Name="EntryQtd" Placeholder="0" Keyboard="Numeric"/>
+                        <Label Text="Qtd Chapas" FontSize="12" TextColor="#666" Margin="5,0"/>
+                        <Entry x:Name="EntryQtd" 
+                               Placeholder="0" 
+                               Keyboard="Numeric" 
+                               TextColor="Black"
+                               PlaceholderColor="#999"
+                               BackgroundColor="#F9F9F9"/>
                     </VerticalStackLayout>
 
                 </Grid>
 
                 <VerticalStackLayout Spacing="5">
-                    <Label Text="Valor por M² (R$)" FontSize="12" TextColor="#666"/>
-                    <Entry x:Name="EntryValor" Placeholder="0.00" Keyboard="Numeric"/>
+                    <Label Text="Valor por M² (R$)" FontSize="12" TextColor="#666" Margin="5,0"/>
+                    <Entry x:Name="EntryValor" 
+                           Placeholder="0.00" 
+                           Keyboard="Numeric" 
+                           TextColor="Black"
+                           PlaceholderColor="#999"
+                           BackgroundColor="#F9F9F9"/>
                 </VerticalStackLayout>
 
                 <Button
                     Text="SALVAR NO ESTOQUE"
                     BackgroundColor="#8B1A1A"
                     TextColor="White"
+                    FontAttributes="Bold"
+                    HeightRequest="55"
+                    CornerRadius="12"
+                    Margin="0,15,0,0"
                     Clicked="OnSalvarClicked"/>
 
                 <Button
                     Text="Cancelar"
                     BackgroundColor="Transparent"
-                    TextColor="#999"
+                    TextColor="#777"
+                    HeightRequest="45"
                     Clicked="OnCancelarClicked"/>
 
             </VerticalStackLayout>

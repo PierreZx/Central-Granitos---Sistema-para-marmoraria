@@ -12,8 +12,7 @@ public partial class FinanceiroPage : ContentPage
     }
 
     /// <summary>
-    /// Gerencia a troca de abas entre Pendências e Extrato.
-    /// Utiliza referências diretas aos layouts reais para evitar erros de renderização.
+    /// Gerencia a troca de abas entre Contas, Orçamentos e Extrato.
     /// </summary>
     private void OnTabClicked(object sender, EventArgs e)
     {
@@ -21,21 +20,29 @@ public partial class FinanceiroPage : ContentPage
         {
             var tab = btn.CommandParameter?.ToString() ?? "Contas";
 
-            // CORREÇÃO DEFINITIVA: Referencia os containers reais do XAML
+            // Gerencia a visibilidade dos 3 containers do XAML para as abas
             LayoutContas.IsVisible = (tab == "Contas");
+            LayoutOrcamentos.IsVisible = (tab == "Orcamentos");
             ListExtrato.IsVisible = (tab == "Extrato");
 
             if (BindingContext is FinanceiroViewModel vm)
             {
+                // Ajusta a função do botão de lançamento principal dependendo da aba
                 if (tab == "Extrato")
                 {
                     BtnLancar.Text = "+ LANÇAR ENTRADA/SAÍDA";
                     BtnLancar.Command = vm.AbrirLancamentoExtratoCommand;
+                    BtnLancar.IsVisible = true;
                 }
-                else
+                else if (tab == "Contas")
                 {
                     BtnLancar.Text = "+ CADASTRAR CONTA";
                     BtnLancar.Command = vm.AbrirCadastroCommand;
+                    BtnLancar.IsVisible = true;
+                }
+                else // Na aba de orçamentos o botão principal some (pois eles vêm da outra tela)
+                {
+                    BtnLancar.IsVisible = false;
                 }
             }
 
@@ -45,14 +52,15 @@ public partial class FinanceiroPage : ContentPage
 
     private void AtualizarVisualTabs(string tabAtiva)
     {
-        bool isContas = tabAtiva == "Contas";
+        // Define as cores baseadas na aba ativa para feedback visual
+        BtnTabContas.TextColor = tabAtiva == "Contas" ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
+        BtnTabContas.FontAttributes = tabAtiva == "Contas" ? FontAttributes.Bold : FontAttributes.None;
 
-        // Estética das abas para feedback visual ao usuário
-        BtnTabContas.TextColor = isContas ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
-        BtnTabContas.FontAttributes = isContas ? FontAttributes.Bold : FontAttributes.None;
+        BtnTabOrcamentos.TextColor = tabAtiva == "Orcamentos" ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
+        BtnTabOrcamentos.FontAttributes = tabAtiva == "Orcamentos" ? FontAttributes.Bold : FontAttributes.None;
 
-        BtnTabExtrato.TextColor = !isContas ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
-        BtnTabExtrato.FontAttributes = !isContas ? FontAttributes.Bold : FontAttributes.None;
+        BtnTabExtrato.TextColor = tabAtiva == "Extrato" ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
+        BtnTabExtrato.FontAttributes = tabAtiva == "Extrato" ? FontAttributes.Bold : FontAttributes.None;
     }
 
     /// <summary>
@@ -60,19 +68,22 @@ public partial class FinanceiroPage : ContentPage
     /// </summary>
     private async void OnPagoChanged(object sender, CheckedChangedEventArgs e)
     {
+        // Se desmarcar o checkbox, não faz nada (proteção contra cliques acidentais)
         if (!e.Value) return;
 
         if (sender is CheckBox cb && cb.BindingContext is FinanceiroRegistro registro)
         {
-            if (BindingContext is FinanceiroViewModel vm)
+            // Verificação de segurança para o BindingContext
+            if (BindingContext is FinanceiroViewModel vm && registro != null)
             {
+                // Envia para a lógica de confirmação e geração de histórico
                 await vm.ConfirmarPagamentoCommand.ExecuteAsync(registro);
             }
         }
     }
 
     /// <summary>
-    /// Filtro em tempo real enquanto o usuário digita.
+    /// Filtro em tempo real enquanto o usuário digita na SearchBar.
     /// </summary>
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
     {
@@ -83,7 +94,7 @@ public partial class FinanceiroPage : ContentPage
     }
 
     /// <summary>
-    /// Ordenação da lista através do seletor.
+    /// Ordenação da lista através do seletor (Picker).
     /// </summary>
     private void OnSortChanged(object sender, EventArgs e)
     {

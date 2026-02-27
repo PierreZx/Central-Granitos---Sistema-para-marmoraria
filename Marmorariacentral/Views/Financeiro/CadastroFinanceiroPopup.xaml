@@ -7,140 +7,125 @@
 
     <Border BackgroundColor="White"
             StrokeShape="RoundRectangle 20"
-            Padding="20"
-            WidthRequest="450"
-            HeightRequest="550"
-            VerticalOptions="Center">
+            Padding="25"
+            WidthRequest="400"
+            VerticalOptions="Center"
+            HorizontalOptions="Center">
 
-        <Grid RowDefinitions="Auto, *, Auto" RowSpacing="10">
+        <Grid RowDefinitions="Auto, *, Auto" RowSpacing="15">
 
             <Label x:Name="LblTitulo" 
                     Grid.Row="0"
-                    Text="Novo Lançamento"
+                    Text="Configurar Pagamento"
                     FontSize="20"
                     FontAttributes="Bold"
                     TextColor="#8B1A1A"
-                    HorizontalOptions="Center"
-                    Margin="0,0,0,10"/>
+                    HorizontalOptions="Center"/>
 
-            <ScrollView Grid.Row="1">
-                <VerticalStackLayout Spacing="15">
+            <ScrollView Grid.Row="1" MaximumHeightRequest="550">
+                <VerticalStackLayout Spacing="18">
 
-                    <Entry x:Name="EntryDesc"
-                           Placeholder="Descrição (Ex: Aluguel, Café)"
-                           TextColor="#333333"
-                           PlaceholderColor="#999999"
-                           BackgroundColor="#F5F5F5" />
-
-                    <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
-
-                        <VerticalStackLayout Grid.Column="0">
-                            <Label Text="Valor (R$)" FontSize="12" TextColor="#666666"/>
-                            <Entry x:Name="EntryValor" 
-                                   Placeholder="0.00" 
-                                   Keyboard="Numeric"
-                                   TextColor="#333333"
-                                   PlaceholderColor="#999999"
-                                   BackgroundColor="#F5F5F5"/>
-                        </VerticalStackLayout>
-
-                        <VerticalStackLayout x:Name="LayoutData" Grid.Column="1">
-                            <Label Text="Data Vencimento" FontSize="12" TextColor="#666666"/>
-
-                            <DatePicker x:Name="PickerData" 
-                                        Format="dd/MM/yyyy"
-                                        TextColor="#333333"
-                                        BackgroundColor="#F5F5F5">
-                                <DatePicker.Triggers>
-                                    <DataTrigger TargetType="DatePicker"
-                                                 Binding="{Binding IsChecked, Source={x:Reference CheckMensal}}"
-                                                 Value="True">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                        <Setter Property="Opacity" Value="0.5"/>
-                                    </DataTrigger>
-                                </DatePicker.Triggers>
-                            </DatePicker>
-                        </VerticalStackLayout>
-
-                    </Grid>
-
-                    <HorizontalStackLayout x:Name="LayoutTipo" Spacing="15" HorizontalOptions="Center" Margin="0,5">
-                        <Label Text="Saída" 
-                               VerticalOptions="Center" 
-                               TextColor="#FF0000" 
-                               FontAttributes="Bold" 
-                               FontSize="14"/>
-                        
-                        <Switch x:Name="SwitchTipo" 
-                                OnColor="#2E8B57" 
-                                ThumbColor="White"
-                                BackgroundColor="#D3D3D3" /> <Label Text="Entrada" 
-                               VerticalOptions="Center" 
-                               TextColor="#008000" 
-                               FontAttributes="Bold" 
-                               FontSize="14"/>
-                    </HorizontalStackLayout>
-
-                    <VerticalStackLayout x:Name="LayoutOpcoesFinanceiras" Spacing="15">
-                        
-                        <HorizontalStackLayout Spacing="20" HorizontalOptions="Center">
-                            <HorizontalStackLayout Spacing="5">
-                                <CheckBox x:Name="CheckMensal" 
-                                          CheckedChanged="OnCheckMensalChanged"
-                                          Color="#8B1A1A"/>
-                                <Label Text="Mensal (Fixo)" VerticalOptions="Center" TextColor="#333333"/>
-                            </HorizontalStackLayout>
-
-                            <HorizontalStackLayout Spacing="5">
-                                <CheckBox x:Name="CheckParcelado" 
-                                          CheckedChanged="OnCheckParceladoChanged"
-                                          Color="#8B1A1A"/>
-                                <Label Text="Parcelado" VerticalOptions="Center" TextColor="#333333"/>
-                            </HorizontalStackLayout>
-                        </HorizontalStackLayout>
-
-                        <VerticalStackLayout Spacing="5"
-                                             IsVisible="{Binding IsChecked, Source={x:Reference CheckMensal}}">
-                            <Label Text="Dia de Vencimento Todo Mês"
-                                   FontSize="12"
-                                   TextColor="#8B1A1A"
-                                   FontAttributes="Bold"/>
-                            <Entry x:Name="EntryDiaFixo"
-                                   Placeholder="Ex: 10"
-                                   Keyboard="Numeric"
-                                   MaxLength="2"
-                                   TextColor="#333333"
-                                   PlaceholderColor="#999999"
-                                   BackgroundColor="#F5F5F5"/>
-                        </VerticalStackLayout>
-
-                        <VerticalStackLayout Spacing="5"
-                                             IsVisible="{Binding IsChecked, Source={x:Reference CheckParcelado}}">
-                            <Label Text="Quantidade de Parcelas" FontSize="12" TextColor="#666666"/>
-                            <Entry x:Name="EntryParcelas"
-                                   Placeholder="Ex: 12"
-                                   Keyboard="Numeric"
-                                   TextColor="#333333"
-                                   PlaceholderColor="#999999"
-                                   BackgroundColor="#F5F5F5"/>
-                        </VerticalStackLayout>
-                        
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Descrição do Lançamento" FontSize="12" TextColor="#666" Margin="5,0"/>
+                        <Entry x:Name="EntryDesc"
+                               Placeholder="Ex: Orçamento Hugo"
+                               TextColor="Black"
+                               FontAttributes="Bold"
+                               BackgroundColor="#F5F5F5" />
                     </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Valor Total (R$)" FontSize="12" TextColor="#666" Margin="5,0"/>
+                        <Entry x:Name="EntryValor" 
+                               Placeholder="0.00" 
+                               Keyboard="Numeric"
+                               TextColor="#2E7D32"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               BackgroundColor="#F5F5F5"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout x:Name="LayoutData" Spacing="2">
+                        <Label Text="Data para Recebimento/Pagamento" FontSize="12" TextColor="#666" Margin="5,0"/>
+                        <DatePicker x:Name="PickerData" 
+                                    Format="dd/MM/yyyy"
+                                    TextColor="Black"
+                                    BackgroundColor="#F5F5F5"
+                                    HeightRequest="45"/>
+                    </VerticalStackLayout>
+
+                    <Frame x:Name="FrameTipo" Padding="10" CornerRadius="10" HasShadow="False" BorderColor="#DDD">
+                        <Frame.Style>
+                            <Style TargetType="Frame">
+                                <Setter Property="BackgroundColor" Value="#FFEBEE"/>
+                                <Style.Triggers>
+                                    <DataTrigger TargetType="Frame" Binding="{Binding IsToggled, Source={x:Reference SwitchTipo}}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="#E8F5E9"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Frame.Style>
+                        <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
+                            <Label Text="SAÍDA" VerticalOptions="Center" TextColor="Red" FontAttributes="Bold" FontSize="12"/>
+                            <Switch x:Name="SwitchTipo" OnColor="#2E7D32" ThumbColor="White" VerticalOptions="Center" Scale="1.2"/>
+                            <Label Text="ENTRADA" VerticalOptions="Center" TextColor="Green" FontAttributes="Bold" FontSize="12"/>
+                        </HorizontalStackLayout>
+                    </Frame>
+
+                    <Border BackgroundColor="#F9F9F9" Padding="15" StrokeShape="RoundRectangle 12" StrokeThickness="0">
+                        <VerticalStackLayout x:Name="LayoutOpcoesFinanceiras" Spacing="12">
+                            
+                            <Label Text="FORMA DE COBRANÇA" FontSize="12" FontAttributes="Bold" TextColor="#444" HorizontalOptions="Center"/>
+
+                            <HorizontalStackLayout Spacing="25" HorizontalOptions="Center">
+                                <HorizontalStackLayout Spacing="5" x:Name="ContainerCheckMensal">
+                                    <CheckBox x:Name="CheckMensal" CheckedChanged="OnCheckMensalChanged" Color="#8B1A1A"/>
+                                    <Label Text="Mensal Fixo" VerticalOptions="Center" TextColor="Black"/>
+                                </HorizontalStackLayout>
+
+                                <HorizontalStackLayout Spacing="5">
+                                    <CheckBox x:Name="CheckParcelado" CheckedChanged="OnCheckParceladoChanged" Color="#8B1A1A"/>
+                                    <Label Text="Parcelar" VerticalOptions="Center" TextColor="Black"/>
+                                </HorizontalStackLayout>
+                            </HorizontalStackLayout>
+
+                            <VerticalStackLayout Spacing="10">
+                                <Grid ColumnDefinitions="*, *" IsVisible="{Binding IsChecked, Source={x:Reference CheckParcelado}}">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                        <Label Text="Qtd. Parcelas" FontSize="11" TextColor="#666"/>
+                                        <Entry x:Name="EntryParcelas" Placeholder="Ex: 5" Keyboard="Numeric" TextColor="Black" BackgroundColor="White"/>
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2" Margin="10,0,0,0">
+                                        <Label Text="Valor Parcela" FontSize="11" TextColor="#666"/>
+                                        <Label x:Name="LblValorParcela" Text="R$ 0,00" FontAttributes="Bold" TextColor="#2E7D32" VerticalOptions="Center" HeightRequest="45"/>
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <VerticalStackLayout Spacing="2" IsVisible="{Binding IsChecked, Source={x:Reference CheckMensal}}">
+                                    <Label Text="Dia Fixo de Vencimento" FontSize="11" TextColor="#666"/>
+                                    <Entry x:Name="EntryDiaFixo" Placeholder="10" Keyboard="Numeric" MaxLength="2" TextColor="Black" BackgroundColor="White"/>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
 
                 </VerticalStackLayout>
             </ScrollView>
 
             <VerticalStackLayout Grid.Row="2" Spacing="5">
                 <Button x:Name="BtnSalvar"
-                        Text="LANÇAR NO FINANCEIRO"
+                        Text="CONFIRMAR CONFIGURAÇÃO"
                         BackgroundColor="#8B1A1A"
                         TextColor="White"
-                        HeightRequest="50"
-                        CornerRadius="10"
+                        HeightRequest="55"
+                        FontAttributes="Bold"
+                        CornerRadius="12"
                         Clicked="OnSalvarClicked"/>
+                
                 <Button Text="Cancelar"
                         BackgroundColor="Transparent"
-                        TextColor="#666666"
+                        TextColor="#666"
+                        HeightRequest="40"
                         Clicked="OnCancelarClicked"/>
             </VerticalStackLayout>
 

@@ -27,6 +27,9 @@ namespace Marmorariacentral.ViewModels
         private ObservableCollection<FinanceiroRegistro> extratoGeral = new();
 
         [ObservableProperty]
+        private ObservableCollection<FinanceiroRegistro> orcamentosPendentes = new();
+
+        [ObservableProperty]
         private double saldoTotal;
 
         public FinanceiroViewModel(DatabaseService dbService, FirebaseService firebaseService, INotificationManager? notificationManager = null)
@@ -47,6 +50,7 @@ namespace Marmorariacentral.ViewModels
                     try { await _notificationManager.RequestAccess(); } catch { }
                 }
 
+                // Busca local e atualiza a lista interna
                 var lista = await _dbService.GetItemsAsync<FinanceiroRegistro>();
                 _todasAsContas = lista?.ToList() ?? new List<FinanceiroRegistro>();
 
@@ -66,21 +70,40 @@ namespace Marmorariacentral.ViewModels
         {
             ContasPendentes.Clear();
             ExtratoGeral.Clear();
+            OrcamentosPendentes.Clear();
 
             var ordenados = lista.OrderBy(x => x.DataVencimento).ToList();
 
             foreach (var item in ordenados)
             {
+                // LÓGICA DE CORES (SEMÁFORO):
                 item.StatusColor = CalcularCorStatus(item.DataVencimento);
                 
-                item.DescricaoDisplay = item.TotalParcelas > 1
-                    ? $"{item.Descricao} ({item.ParcelaAtual}/{item.TotalParcelas})"
-                    : item.Descricao;
+                string descSegura = item.Descricao ?? "Sem Descrição";
+
+                // EXIBIÇÃO DE PARCELAS (0/5, 1/5 etc):
+                if (item.IsParcelado || item.TotalParcelas > 1)
+                {
+                    item.DescricaoDisplay = $"{descSegura} ({item.ParcelaAtual}/{item.TotalParcelas})";
+                }
+                else
+                {
+                    item.DescricaoDisplay = descSegura;
+                }
 
                 if (!item.FoiPago)
                 {
-                    ContasPendentes.Add(item);
-                    if (item.Tipo == "Saida") { _ = DispararAlertaSeguro(item); }
+                    // LÓGICA DE DISTRIBUIÇÃO: Separa orçamentos de contas normais
+                    if (!string.IsNullOrEmpty(item.Descricao) && item.Descricao.StartsWith("Orçamento:"))
+                    {
+                        OrcamentosPendentes.Add(item);
+                    }
+                    else
+                    {
+                        ContasPendentes.Add(item);
+                        // Alerta apenas para saídas (contas a pagar)
+                        if (item.Tipo == "Saida") { _ = DispararAlertaSeguro(item); }
+                    }
                 }
                 else
                 {
@@ -103,11 +126,9 @@ namespace Marmorariacentral.ViewModels
 
                 int baseId = conta.Id.GetHashCode() & 0x3FFFFFFF; 
 
-                // Alerta 1: Manhã (08:30)
                 DateTime horarioManha = vencimento.AddHours(8).AddMinutes(30);
                 await ProcessarEnvioIndividual(baseId + 100, horarioManha, conta, diasRestantes);
 
-                // Alerta 2: Tarde (17:00)
                 DateTime horarioTarde = vencimento.AddHours(17).AddMinutes(0);
                 await ProcessarEnvioIndividual(baseId + 200, horarioTarde, conta, diasRestantes);
             }
@@ -122,7 +143,7 @@ namespace Marmorariacentral.ViewModels
             {
                 Id = id,
                 Title = diasRestantes < 0 ? "🚨 CONTA VENCIDA!" : "⚠️ LEMBRETE DE PAGAMENTO",
-                Message = $"{conta.Descricao} no valor de {conta.Valor:C} (Vence: {conta.DataVencimento:dd/MM})",
+                Message = $"{(conta.Descricao ?? "Conta")} no valor de {conta.Valor:C} (Vence: {conta.DataVencimento:dd/MM})",
                 BadgeCount = 1,
                 Channel = "CentralAlerta"
             };
@@ -141,7 +162,6 @@ namespace Marmorariacentral.ViewModels
             }
         }
 
-        // MÉTODO RESTAURADO PARA CORRIGIR O ERRO CS1061
         public void OrdenarLista(string criterio)
         {
             List<FinanceiroRegistro> ordenado = criterio switch
@@ -159,7 +179,7 @@ namespace Marmorariacentral.ViewModels
         {
             if (registro == null || string.IsNullOrEmpty(registro.Id)) return;
 
-            bool confirmar = await Shell.Current.DisplayAlert("Confirmar", $"Pagar '{registro.Descricao}'?", "Sim", "Não");
+            bool confirmar = await Shell.Current.DisplayAlert("Confirmar", $"Registrar pagamento de '{registro.DescricaoDisplay}'?", "Sim", "Não");
             if (!confirmar) return;
 
             if (_notificationManager != null)
@@ -171,25 +191,29 @@ namespace Marmorariacentral.ViewModels
                 } catch { }
             }
 
+            string descricaoParaHistorico = registro.Descricao ?? "Lançamento";
+
+            // Gera o registro no extrato (dinheiro entra/sai de verdade agora)
             var historico = new FinanceiroRegistro
             {
                 Id = Guid.NewGuid().ToString(),
                 Descricao = registro.TotalParcelas > 1 
-                    ? $"{registro.Descricao} ({registro.ParcelaAtual}/{registro.TotalParcelas})"
-                    : registro.Descricao,
+                    ? $"{descricaoParaHistorico} ({registro.ParcelaAtual}/{registro.TotalParcelas})"
+                    : descricaoParaHistorico,
                 Valor = registro.Valor,
                 Tipo = registro.Tipo,
-                DataVencimento = registro.DataVencimento,
+                DataVencimento = DateTime.Now, 
                 FoiPago = true
             };
             await _dbService.SaveItemAsync(historico);
             _ = _firebaseService.SaveFinanceiroAsync(historico);
 
-            if (registro.TotalParcelas > 1 && registro.ParcelaAtual < registro.TotalParcelas)
+            // GERENCIAMENTO DE PARCELAS E RECORRÊNCIA:
+            if (registro.IsParcelado && registro.ParcelaAtual < registro.TotalParcelas)
             {
                 registro.ParcelaAtual++;
                 registro.DataVencimento = registro.DataVencimento.AddMonths(1);
-                registro.FoiPago = false; 
+                registro.FoiPago = false; // Continua pendente para a próxima parcela
             }
             else if (registro.IsFixo)
             {
@@ -211,7 +235,7 @@ namespace Marmorariacentral.ViewModels
         {
             if (registro == null || string.IsNullOrEmpty(registro.Id)) return;
             
-            bool confirmar = await Shell.Current.DisplayAlert("Excluir", $"Excluir '{registro.Descricao}'?", "Sim", "Não");
+            bool confirmar = await Shell.Current.DisplayAlert("Excluir", $"Excluir '{registro.Descricao ?? "esta conta"}'?", "Sim", "Não");
             if (!confirmar) return;
 
             if (_notificationManager != null)
@@ -224,7 +248,7 @@ namespace Marmorariacentral.ViewModels
             }
 
             await _dbService.DeleteItemAsync(registro);
-            _ = _firebaseService.DeleteFinanceiroAsync(registro.Id ?? string.Empty);
+            _ = _firebaseService.DeleteFinanceiroAsync(registro.Id);
             await CarregarDados();
         }
 
@@ -281,9 +305,15 @@ namespace Marmorariacentral.ViewModels
         private Color CalcularCorStatus(DateTime vencimento)
         {
             var hoje = DateTime.Today;
-            if (vencimento.Date < hoje) return Color.FromArgb("#FF0000");
-            if (vencimento.Date == hoje || (vencimento - hoje).TotalDays <= 4) return Color.FromArgb("#FFD700");
-            return Color.FromArgb("#008000");
+            var diasParaVencer = (vencimento.Date - hoje).TotalDays;
+
+            if (vencimento.Date < hoje) 
+                return Color.FromArgb("#FF0000"); // VERMELHO: Vencido ou hoje atrasado
+
+            if (diasParaVencer <= 3) 
+                return Color.FromArgb("#FFD700"); // AMARELO: Entre hoje e 3 dias (Perto)
+
+            return Color.FromArgb("#008000"); // VERDE: Mais de 3 dias para o vencimento
         }
     }
 }
