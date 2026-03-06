@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using System.IO;
+using System.Diagnostics; 
 
 namespace Marmorariacentral.Services
 {
@@ -30,7 +31,7 @@ namespace Marmorariacentral.Services
                 }
                 catch (FileNotFoundException)
                 {
-                    System.Diagnostics.Debug.WriteLine("AVISO: firebase_key.json não encontrado. Firebase desativado.");
+                    Debug.WriteLine("AVISO: firebase_key.json não encontrado. Firebase desativado.");
                     return;
                 }
 
@@ -42,8 +43,14 @@ namespace Marmorariacentral.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Erro ao inicializar Firebase: {ex.Message}");
+                Debug.WriteLine($"Erro ao inicializar Firebase: {ex.Message}");
             }
+        }
+
+        public async Task<FirestoreDb> GetFirestoreDb()
+        {
+            await Init();
+            return _db ?? throw new Exception("Não foi possível inicializar o Firestore.");
         }
 
         // ---------------- CLIENTES ----------------
@@ -71,12 +78,13 @@ namespace Marmorariacentral.Services
                     });
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Erro Get Clientes: {ex.Message}"); }
+            catch (Exception ex) { Debug.WriteLine($"Erro Get Clientes: {ex.Message}"); }
             return lista;
         }
 
         public async Task SaveClienteAsync(Cliente cliente)
         {
+            if (cliente == null) return;
             await Init();
             if (_db == null) return;
 
@@ -94,6 +102,7 @@ namespace Marmorariacentral.Services
 
         public async Task SavePecaOrcamentoAsync(PecaOrcamento peca)
         {
+            if (peca == null) return;
             await Init();
             if (_db == null) return;
 
@@ -115,20 +124,40 @@ namespace Marmorariacentral.Services
                 { "largura_p3", peca.LarguraP3 },
                 { "altura_p3", peca.AlturaP3 },
                 { "lado_p3", peca.LadoP3 ?? "Direita" },
-                { "rb_p1_e", peca.RodobancaP1Esquerda }, { "rb_p1_d", peca.RodobancaP1Direita },
-                { "rb_p1_f", peca.RodobancaP1Frente }, { "rb_p1_t", peca.RodobancaP1Tras },
-                { "rb_p2_e", peca.RodobancaP2Esquerda }, { "rb_p2_d", peca.RodobancaP2Direita },
-                { "rb_p2_f", peca.RodobancaP2Frente }, { "rb_p2_t", peca.RodobancaP2Tras },
-                { "rb_p3_e", peca.RodobancaP3Esquerda }, { "rb_p3_d", peca.RodobancaP3Direita },
-                { "rb_p3_f", peca.RodobancaP3Frente }, { "rb_p3_t", peca.RodobancaP3Tras },
-                { "saia_p1_e", peca.SaiaP1Esquerda }, { "saia_p1_d", peca.SaiaP1Direita },
-                { "saia_p1_f", peca.SaiaP1Frente }, { "saia_p1_t", peca.SaiaP1Tras },
-                { "saia_p2_e", peca.SaiaP2Esquerda }, { "saia_p2_d", peca.SaiaP2Direita },
-                { "saia_p2_f", peca.SaiaP2Frente }, { "saia_p2_t", peca.SaiaP2Tras },
-                { "saia_p3_e", peca.SaiaP3Esquerda }, { "saia_p3_d", peca.SaiaP3Direita },
-                { "saia_p3_f", peca.SaiaP3Frente }, { "saia_p3_t", peca.SaiaP3Tras },
-                { "tem_bojo", peca.TemBojo }, { "bojo_larg", peca.LarguraBojo }, { "bojo_alt", peca.AlturaBojo }, { "bojo_x", peca.BojoX }, { "bojo_dest", peca.PecaDestinoBojo ?? "P1" },
-                { "tem_cook", peca.TemCooktop }, { "cook_larg", peca.LarguraCooktop }, { "cook_alt", peca.AlturaCooktop }, { "cook_x", peca.CooktopX }, { "cook_dest", peca.PecaDestinoCooktop ?? "P1" }
+                { "rb_p1_e", peca.RodobancaP1Esquerda }, 
+                { "rb_p1_d", peca.RodobancaP1Direita },
+                { "rb_p1_f", peca.RodobancaP1Frente }, 
+                { "rb_p1_t", peca.RodobancaP1Tras },
+                { "rb_p2_e", peca.RodobancaP2Esquerda }, 
+                { "rb_p2_d", peca.RodobancaP2Direita },
+                { "rb_p2_f", peca.RodobancaP2Frente }, 
+                { "rb_p2_t", peca.RodobancaP2Tras },
+                { "rb_p3_e", peca.RodobancaP3Esquerda }, 
+                { "rb_p3_d", peca.RodobancaP3Direita },
+                { "rb_p3_f", peca.RodobancaP3Frente }, 
+                { "rb_p3_t", peca.RodobancaP3Tras },
+                { "saia_p1_e", peca.SaiaP1Esquerda }, 
+                { "saia_p1_d", peca.SaiaP1Direita },
+                { "saia_p1_f", peca.SaiaP1Frente }, 
+                { "saia_p1_t", peca.SaiaP1Tras },
+                { "saia_p2_e", peca.SaiaP2Esquerda }, 
+                { "saia_p2_d", peca.SaiaP2Direita },
+                { "saia_p2_f", peca.SaiaP2Frente }, 
+                { "saia_p2_t", peca.SaiaP2Tras },
+                { "saia_p3_e", peca.SaiaP3Esquerda }, 
+                { "saia_p3_d", peca.SaiaP3Direita },
+                { "saia_p3_f", peca.SaiaP3Frente }, 
+                { "saia_p3_t", peca.SaiaP3Tras },
+                { "tem_bojo", peca.TemBojo }, 
+                { "bojo_larg", peca.LarguraBojo }, 
+                { "bojo_alt", peca.AlturaBojo }, 
+                { "bojo_x", peca.BojoX }, 
+                { "bojo_dest", peca.PecaDestinoBojo ?? "P1" },
+                { "tem_cook", peca.TemCooktop }, 
+                { "cook_larg", peca.LarguraCooktop }, 
+                { "cook_alt", peca.AlturaCooktop }, 
+                { "cook_x", peca.CooktopX }, 
+                { "cook_dest", peca.PecaDestinoCooktop ?? "P1" }
             };
             await _db.Collection("orcamentos_detalhes").Document(peca.Id).SetAsync(data);
         }
@@ -203,7 +232,7 @@ namespace Marmorariacentral.Services
                     });
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Erro Get Pecas: {ex.Message}"); }
+            catch (Exception ex) { Debug.WriteLine($"Erro Get Pecas: {ex.Message}"); }
             return lista;
         }
 
@@ -211,6 +240,7 @@ namespace Marmorariacentral.Services
 
         public async Task SaveEstoqueAsync(EstoqueItem estoque)
         {
+            if (estoque == null) return;
             await Init();
             if (_db == null) return;
             var data = new Dictionary<string, object>
@@ -223,12 +253,14 @@ namespace Marmorariacentral.Services
             await _db.Collection("estoque").Document(estoque.Id).SetAsync(data);
         }
 
-        // ---------------- FINANCEIRO (CORREÇÃO DE PARCELAS) ----------------
+        // ---------------- FINANCEIRO ----------------
 
         public async Task SaveFinanceiroAsync(FinanceiroRegistro financeiro)
         {
+            if (financeiro == null || string.IsNullOrEmpty(financeiro.Id)) return;
             await Init();
             if (_db == null) return;
+
             var data = new Dictionary<string, object>
             {
                 { "descricao", financeiro.Descricao ?? "" },
@@ -242,10 +274,11 @@ namespace Marmorariacentral.Services
                 { "total_parcelas", financeiro.TotalParcelas },
                 { "dia_vencimento_fixo", financeiro.DiaVencimentoFixo }
             };
-            await _db.Collection("financeiro").Document(financeiro.Id).SetAsync(data);
+            
+            // CORREÇÃO CRÍTICA: SetOptions.MergeAll impede a criação de duplicatas na nuvem
+            await _db.Collection("financeiro").Document(financeiro.Id).SetAsync(data, SetOptions.MergeAll);
         }
 
-        // NOVA FUNÇÃO: GetFinanceiroAsync para o sistema recuperar as parcelas corretamente
         public async Task<List<FinanceiroRegistro>> GetFinanceiroAsync()
         {
             await Init();
@@ -275,16 +308,51 @@ namespace Marmorariacentral.Services
                     });
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Erro Get Financeiro: {ex.Message}"); }
+            catch (Exception ex) { Debug.WriteLine($"Erro Get Financeiro: {ex.Message}"); }
             return lista;
+        }
+
+        // ---------------- SINCRONIZAÇÃO OFFLINE ----------------
+
+        public async Task SincronizarTudoOfflineAsync(List<Cliente> clientes, List<PecaOrcamento> pecas, List<FinanceiroRegistro> financeiro)
+        {
+            await Init();
+            if (_db == null) return;
+
+            if (clientes != null)
+            {
+                foreach (var cliente in clientes)
+                {
+                    await SaveClienteAsync(cliente);
+                }
+            }
+
+            if (pecas != null)
+            {
+                foreach (var peca in pecas)
+                {
+                    await SavePecaOrcamentoAsync(peca);
+                }
+            }
+
+            if (financeiro != null)
+            {
+                foreach (var registro in financeiro)
+                {
+                    await SaveFinanceiroAsync(registro);
+                }
+            }
+            
+            Debug.WriteLine("Sincronização com Firebase concluída com sucesso.");
         }
 
         public async Task DeleteFinanceiroAsync(string id)
         {
+            if (string.IsNullOrEmpty(id)) return;
             await Init();
             if (_db == null) return;
             try { await _db.Collection("financeiro").Document(id).DeleteAsync(); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Erro Delete Financeiro: {ex.Message}"); }
+            catch (Exception ex) { Debug.WriteLine($"Erro Delete Financeiro: {ex.Message}"); }
         }
     }
 }

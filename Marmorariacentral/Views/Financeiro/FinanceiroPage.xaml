@@ -42,83 +42,89 @@
             </Picker>
         </Grid>
 
-        <ScrollView Grid.Row="3">
-            <VerticalStackLayout Padding="10" Spacing="10">
+        <Grid Grid.Row="3" RowDefinitions="Auto, *">
+            
+            <Button x:Name="BtnLancar" Grid.Row="0" Text="+ CADASTRAR CONTA" BackgroundColor="#8B1A1A" 
+                    TextColor="White" Command="{Binding AbrirCadastroCommand}" Margin="15,0,15,10" HeightRequest="50" CornerRadius="10"/>
 
-                <Button x:Name="BtnLancar" Text="+ CADASTRAR CONTA" BackgroundColor="#8B1A1A" 
-                        TextColor="White" Command="{Binding AbrirCadastroCommand}" Margin="5,0,5,10"/>
+            <CollectionView x:Name="LayoutContas" Grid.Row="1" ItemsSource="{Binding ContasPendentes}" IsVisible="True">
+                <CollectionView.EmptyView>
+                    <Label Text="Nenhuma conta pendente." HorizontalOptions="Center" VerticalOptions="Center" Margin="0,50" TextColor="#666"/>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:FinanceiroRegistro">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems Mode="Reveal">
+                                    <SwipeItem Text="Editar" BackgroundColor="Orange" 
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
+                                               CommandParameter="{Binding .}"/>
+                                    <SwipeItem Text="Excluir" BackgroundColor="Red" 
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=ExcluirRegistroCommand}"
+                                               CommandParameter="{Binding .}"/>
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+                            <ContentView Padding="15,4">
+                                <Border Padding="12" StrokeShape="RoundRectangle 12" BackgroundColor="White">
+                                    <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15">
+                                        <CheckBox Color="#8B1A1A" IsChecked="{Binding FoiPago}" CheckedChanged="OnPagoChanged"/>
+                                        <VerticalStackLayout Grid.Column="1">
+                                            <Label Text="{Binding DescricaoDisplay}" FontAttributes="Bold" TextColor="Black"/>
+                                            <Label Text="{Binding DataVencimento, StringFormat='Vence em: {0:dd/MM/yyyy}'}" FontSize="12" TextColor="{Binding StatusColor}"/>
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" TextColor="Black"/>
+                                    </Grid>
+                                </Border>
+                            </ContentView>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
-                <VerticalStackLayout x:Name="LayoutContas" IsVisible="True">
-                    <CollectionView ItemsSource="{Binding ContasPendentes}">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:FinanceiroRegistro">
-                                <SwipeView>
-                                    <SwipeView.RightItems>
-                                        <SwipeItems>
-                                            <SwipeItem Text="Editar" BackgroundColor="Orange" 
-                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
-                                                       CommandParameter="{Binding .}"/>
-                                            <SwipeItem Text="Excluir" BackgroundColor="Red" 
-                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=ExcluirRegistroCommand}"
-                                                       CommandParameter="{Binding .}"/>
-                                        </SwipeItems>
-                                    </SwipeView.RightItems>
-                                    <ContentView Padding="15,4">
-                                        <Border Padding="12" StrokeShape="RoundRectangle 12" BackgroundColor="White">
-                                            <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15">
-                                                <CheckBox Color="#8B1A1A" IsChecked="{Binding FoiPago}" CheckedChanged="OnPagoChanged"/>
-                                                <VerticalStackLayout Grid.Column="1">
-                                                    <Label Text="{Binding DescricaoDisplay}" FontAttributes="Bold" TextColor="Black"/>
-                                                    <Label Text="{Binding DataVencimento, StringFormat='Vence em: {0:dd/MM/yyyy}'}" FontSize="12" TextColor="{Binding StatusColor}"/>
-                                                </VerticalStackLayout>
-                                                <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" TextColor="Black"/>
-                                            </Grid>
-                                        </Border>
-                                    </ContentView>
-                                </SwipeView>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
+            <CollectionView x:Name="LayoutOrcamentos" Grid.Row="1" ItemsSource="{Binding OrcamentosPendentes}" IsVisible="False">
+                <CollectionView.EmptyView>
+                    <Label Text="Nenhum orçamento pendente." HorizontalOptions="Center" VerticalOptions="Center" Margin="0,50" TextColor="#666"/>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:FinanceiroRegistro">
+                        <ContentView Padding="15,4">
+                            <Border Padding="12" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#0D47A1" StrokeThickness="1">
+                                <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="10">
+                                    <CheckBox Color="#0D47A1" IsChecked="{Binding FoiPago}" CheckedChanged="OnPagoChanged" VerticalOptions="Center"/>
+                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                        <Label Text="{Binding DescricaoDisplay}" FontAttributes="Bold" TextColor="Black" FontSize="14"/>
+                                        <Label Text="{Binding DataVencimento, StringFormat='Data: {0:dd/MM/yyyy}'}" FontSize="11" TextColor="{Binding StatusColor}"/>
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" TextColor="#2E7D32" FontSize="14"/>
+                                    <Button Grid.Column="3" Text="⚙️" BackgroundColor="#F0F0F0" TextColor="Black" WidthRequest="40" HeightRequest="40" CornerRadius="20" Padding="0"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
+                                            CommandParameter="{Binding .}"/>
+                                </Grid>
+                            </Border>
+                        </ContentView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
-                <VerticalStackLayout x:Name="LayoutOrcamentos" IsVisible="False">
-                    <CollectionView ItemsSource="{Binding OrcamentosPendentes}">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:FinanceiroRegistro">
-                                <ContentView Padding="15,4">
-                                    <Border Padding="12" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#0D47A1" StrokeThickness="1">
-                                        <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="10">
-                                            <CheckBox Color="#0D47A1" IsChecked="{Binding FoiPago}" CheckedChanged="OnPagoChanged" VerticalOptions="Center"/>
-                                            
-                                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
-                                                <Label Text="{Binding DescricaoDisplay}" FontAttributes="Bold" TextColor="Black" FontSize="14"/>
-                                                <Label Text="{Binding DataVencimento, StringFormat='Data: {0:dd/MM/yyyy}'}" FontSize="11" TextColor="{Binding StatusColor}"/>
-                                            </VerticalStackLayout>
-
-                                            <Label Grid.Column="2" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" TextColor="#2E7D32" FontSize="14"/>
-
-                                            <Button Grid.Column="3" Text="⚙️" 
-                                                    BackgroundColor="#F0F0F0" 
-                                                    TextColor="Black" 
-                                                    WidthRequest="40" 
-                                                    HeightRequest="40" 
-                                                    CornerRadius="20"
-                                                    Padding="0"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
-                                                    CommandParameter="{Binding .}"/>
-                                        </Grid>
-                                    </Border>
-                                </ContentView>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
-
-                <VerticalStackLayout x:Name="ListExtrato" IsVisible="False">
-                    <CollectionView ItemsSource="{Binding ExtratoGeral}">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:FinanceiroRegistro">
-                                <Border Margin="15,4" Padding="12" StrokeShape="RoundRectangle 12" StrokeThickness="1">
+            <CollectionView x:Name="ListExtrato" Grid.Row="1" ItemsSource="{Binding ExtratoGeral}" IsVisible="False">
+                <CollectionView.EmptyView>
+                    <Label Text="O extrato está vazio." HorizontalOptions="Center" VerticalOptions="Center" Margin="0,50" TextColor="#666"/>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:FinanceiroRegistro">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems Mode="Reveal">
+                                    <SwipeItem Text="Editar" BackgroundColor="Orange" 
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=EditarRegistroCommand}"
+                                               CommandParameter="{Binding .}"/>
+                                    <SwipeItem Text="Excluir" BackgroundColor="Red" 
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FinanceiroViewModel}}, Path=ExcluirRegistroCommand}"
+                                               CommandParameter="{Binding .}"/>
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+                            <ContentView Padding="15,4">
+                                <Border Padding="12" StrokeShape="RoundRectangle 12" StrokeThickness="1">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="BackgroundColor" Value="White"/>
@@ -155,12 +161,24 @@
                                         <Label Grid.Column="1" Text="{Binding Valor, StringFormat='{0:C}'}" FontAttributes="Bold" VerticalOptions="Center" FontSize="16" TextColor="Black"/>
                                     </Grid>
                                 </Border>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
+                            </ContentView>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
-            </VerticalStackLayout>
-        </ScrollView>
+            <Grid Grid.RowSpan="4" x:Name="OverlayFeedback" IsVisible="False" BackgroundColor="#80000000">
+                <Border VerticalOptions="Center" HorizontalOptions="Center" 
+                        Padding="30" StrokeShape="RoundRectangle 20" 
+                        BackgroundColor="White" WidthRequest="250">
+                    <VerticalStackLayout Spacing="15" HorizontalOptions="Center">
+                        <Label x:Name="IconFeedback" FontSize="60" HorizontalOptions="Center"/>
+                        <Label x:Name="TxtFeedback" FontSize="16" FontAttributes="Bold" 
+                               TextColor="Black" HorizontalTextAlignment="Center"/>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+        </Grid>
     </Grid>
 </ContentPage>

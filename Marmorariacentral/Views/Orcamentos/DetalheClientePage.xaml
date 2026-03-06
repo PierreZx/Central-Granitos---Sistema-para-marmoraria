@@ -7,7 +7,7 @@
              x:DataType="viewmodels:DetalhesClienteViewModel"
              Title="Detalhes do Orçamento">
 
-    <Grid RowDefinitions="Auto, *, Auto" BackgroundColor="#F2F2F7">
+    <Grid x:Name="ContainerPrincipal" RowDefinitions="Auto, *, Auto" BackgroundColor="#F2F2F7">
         
         <Border Grid.Row="0" Padding="20" BackgroundColor="White" StrokeThickness="0">
             <Grid ColumnDefinitions="*, Auto">
@@ -63,17 +63,18 @@
                 <Button Text="LANÇAR NO FINANCEIRO" 
                         Command="{Binding LancarNoFinanceiroCommand}"
                         BackgroundColor="#0D47A1" TextColor="White" 
-                        FontAttributes="Bold" HeightRequest="50" CornerRadius="10" 
-                        Margin="0,0,0,5"/>
+                        FontAttributes="Bold" HeightRequest="50" CornerRadius="10"/>
 
                 <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
-                    <Button Grid.Column="0" Text="PDF PRODUÇÃO" 
-                            BackgroundColor="#1B5E20" TextColor="White" 
-                            FontAttributes="Bold" HeightRequest="50" CornerRadius="10"/>
+                    <Button Text="PDF TÉCNICO"
+                            Clicked="GerarPdfTecnico_Clicked"
+                            BackgroundColor="#2C3E50" TextColor="White" 
+                            HeightRequest="50" CornerRadius="12" FontAttributes="Bold"/>
                     
                     <Button Grid.Column="1" Text="PDF CLIENTE" 
+                            Clicked="GerarOrcamentoPdf_Clicked"
                             BackgroundColor="#444" TextColor="White" 
-                            FontAttributes="Bold" HeightRequest="50" CornerRadius="10"/>
+                            HeightRequest="50" CornerRadius="10" FontAttributes="Bold"/>
                 </Grid>
             </VerticalStackLayout>
         </Border>

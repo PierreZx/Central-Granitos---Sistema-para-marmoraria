@@ -12,6 +12,19 @@ public partial class FinanceiroPage : ContentPage
     }
 
     /// <summary>
+    /// Força a atualização dos dados e reconexão com o Firebase ao abrir a página.
+    /// </summary>
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        if (BindingContext is FinanceiroViewModel vm)
+        {
+            // Garante que a lista não esteja vazia ao entrar
+            await vm.CarregarDados();
+        }
+    }
+
+    /// <summary>
     /// Gerencia a troca de abas entre Contas, Orçamentos e Extrato.
     /// </summary>
     private void OnTabClicked(object sender, EventArgs e)
@@ -20,14 +33,13 @@ public partial class FinanceiroPage : ContentPage
         {
             var tab = btn.CommandParameter?.ToString() ?? "Contas";
 
-            // Gerencia a visibilidade dos 3 containers do XAML para as abas
+            // Gerencia a visibilidade dos 3 containers do XAML
             LayoutContas.IsVisible = (tab == "Contas");
             LayoutOrcamentos.IsVisible = (tab == "Orcamentos");
             ListExtrato.IsVisible = (tab == "Extrato");
 
             if (BindingContext is FinanceiroViewModel vm)
             {
-                // Ajusta a função do botão de lançamento principal dependendo da aba
                 if (tab == "Extrato")
                 {
                     BtnLancar.Text = "+ LANÇAR ENTRADA/SAÍDA";
@@ -40,7 +52,7 @@ public partial class FinanceiroPage : ContentPage
                     BtnLancar.Command = vm.AbrirCadastroCommand;
                     BtnLancar.IsVisible = true;
                 }
-                else // Na aba de orçamentos o botão principal some (pois eles vêm da outra tela)
+                else 
                 {
                     BtnLancar.IsVisible = false;
                 }
@@ -52,7 +64,6 @@ public partial class FinanceiroPage : ContentPage
 
     private void AtualizarVisualTabs(string tabAtiva)
     {
-        // Define as cores baseadas na aba ativa para feedback visual
         BtnTabContas.TextColor = tabAtiva == "Contas" ? Color.FromArgb("#8B1A1A") : Color.FromArgb("#777");
         BtnTabContas.FontAttributes = tabAtiva == "Contas" ? FontAttributes.Bold : FontAttributes.None;
 
@@ -63,28 +74,23 @@ public partial class FinanceiroPage : ContentPage
         BtnTabExtrato.FontAttributes = tabAtiva == "Extrato" ? FontAttributes.Bold : FontAttributes.None;
     }
 
-    /// <summary>
-    /// Dispara o comando de confirmação de pagamento ao marcar o CheckBox.
-    /// </summary>
     private async void OnPagoChanged(object sender, CheckedChangedEventArgs e)
-    {
-        // Se desmarcar o checkbox, não faz nada (proteção contra cliques acidentais)
-        if (!e.Value) return;
-
-        if (sender is CheckBox cb && cb.BindingContext is FinanceiroRegistro registro)
         {
-            // Verificação de segurança para o BindingContext
-            if (BindingContext is FinanceiroViewModel vm && registro != null)
+            // Removida a trava IsFocused que estava bloqueando o clique em alguns aparelhos
+            // A nova trava verifica se o valor mudou para "True" (Marcado)
+            if (sender is CheckBox cb && e.Value) 
             {
-                // Envia para a lógica de confirmação e geração de histórico
-                await vm.ConfirmarPagamentoCommand.ExecuteAsync(registro);
+                if (cb.BindingContext is FinanceiroRegistro registro && BindingContext is FinanceiroViewModel vm)
+                {
+                    // Dispara o comando de confirmação no ViewModel
+                    await vm.ConfirmarPagamentoCommand.ExecuteAsync(registro);
+                    
+                    // Se o usuário cancelar no meio do caminho, o CarregarDados do ViewModel 
+                    // resetará o checkbox para desmarcado automaticamente.
+                }
             }
         }
-    }
 
-    /// <summary>
-    /// Filtro em tempo real enquanto o usuário digita na SearchBar.
-    /// </summary>
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
     {
         if (BindingContext is FinanceiroViewModel vm)
@@ -93,9 +99,32 @@ public partial class FinanceiroPage : ContentPage
         }
     }
 
-    /// <summary>
-    /// Ordenação da lista através do seletor (Picker).
-    /// </summary>
+    public async Task MostrarFeedback(bool sucesso, string mensagem)
+    {
+        // Configura as cores e ícones
+        IconFeedback.Text = sucesso ? "✅" : "❌";
+        IconFeedback.TextColor = sucesso ? Colors.Green : Colors.Red;
+        TxtFeedback.Text = mensagem;
+
+        // Inicia animação
+        OverlayFeedback.IsVisible = true;
+        OverlayFeedback.Opacity = 0;
+        OverlayFeedback.Scale = 0.5;
+
+        // Animação de entrada (Fade in + Zoom)
+        await Task.WhenAll(
+            OverlayFeedback.FadeTo(1, 250),
+            OverlayFeedback.ScaleTo(1, 250, Easing.SpringOut)
+        );
+
+        // Espera 2 segundos para o usuário ler
+        await Task.Delay(2000);
+
+        // Animação de saída
+        await OverlayFeedback.FadeTo(0, 250);
+        OverlayFeedback.IsVisible = false;
+    }
+
     private void OnSortChanged(object sender, EventArgs e)
     {
         if (sender is Picker picker && BindingContext is FinanceiroViewModel vm)

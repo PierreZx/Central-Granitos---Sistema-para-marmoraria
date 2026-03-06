@@ -4,9 +4,17 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" /> <application 
-        android:allowBackup="true" 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> 
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> 
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <application 
+        android:allowBackup="false" 
+        android:fullBackupOnly="false"
+        android:fullBackupContent="@null"
+        android:dataExtractionRules="@null"
         android:icon="@mipmap/appicon" 
         android:roundIcon="@mipmap/appicon_round" 
         android:supportsRtl="true" 

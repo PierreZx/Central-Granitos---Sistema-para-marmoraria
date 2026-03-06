@@ -5,6 +5,7 @@
              xmlns:viewmodels="clr-namespace:Marmorariacentral.ViewModels"
              x:Class="Marmorariacentral.Views.Orcamentos.OrcamentosPage"
              x:DataType="viewmodels:OrcamentoViewModel"
+             x:Name="PaginaOrcamentos"
              Title="Orçamentos"
              BackgroundColor="#F2F2F7">
 
@@ -36,16 +37,17 @@
                     <Border Margin="0,0,0,12"
                             Padding="15"
                             StrokeShape="RoundRectangle 15"
-                            BackgroundColor="White">
+                            BackgroundColor="White"
+                            InputTransparent="False">
 
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer
-                                Command="{Binding BindingContext.AbrirDetalhesClienteCommand, Source={RelativeSource AncestorType={x:Type ContentPage}}}"
+                                Command="{Binding BindingContext.AbrirDetalhesClienteCommand, Source={x:Reference PaginaOrcamentos}}"
                                 CommandParameter="{Binding .}" />
                         </Border.GestureRecognizers>
 
                         <Grid ColumnDefinitions="*, Auto">
-                            <VerticalStackLayout Grid.Column="0" Spacing="5">
+                            <VerticalStackLayout Grid.Column="0" Spacing="5" InputTransparent="True">
                                 <Label Text="{Binding Nome}"
                                        FontSize="18"
                                        FontAttributes="Bold"
@@ -60,7 +62,7 @@
                                                    VerticalOptions="Center">
 
                                 <Button Text="✎"
-                                        Command="{Binding BindingContext.EditarClienteCommand, Source={RelativeSource AncestorType={x:Type ContentPage}}}"
+                                        Command="{Binding BindingContext.EditarClienteCommand, Source={x:Reference PaginaOrcamentos}}"
                                         CommandParameter="{Binding .}"
                                         BackgroundColor="#F0F0F0"
                                         TextColor="Black"
@@ -69,7 +71,7 @@
                                         CornerRadius="10"/>
 
                                 <Button Text="🗑"
-                                        Command="{Binding BindingContext.ExcluirClienteCommand, Source={RelativeSource AncestorType={x:Type ContentPage}}}"
+                                        Command="{Binding BindingContext.ExcluirClienteCommand, Source={x:Reference PaginaOrcamentos}}"
                                         CommandParameter="{Binding .}"
                                         BackgroundColor="#FFEBEB"
                                         TextColor="Red"

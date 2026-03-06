@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Marmorariacentral.Models;
 using Marmorariacentral.Services;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Marmorariacentral.ViewModels
@@ -12,27 +13,11 @@ namespace Marmorariacentral.ViewModels
     {
         private readonly DatabaseService _dbService;
         private readonly FirebaseService _firebaseService;
+        private readonly PdfService _pdfService = new();
 
-        private Cliente _clienteSelecionado = new();
-        public Cliente ClienteSelecionado 
-        { 
-            get => _clienteSelecionado; 
-            set => SetProperty(ref _clienteSelecionado, value); 
-        }
-
-        private ObservableCollection<PecaOrcamento> _listaPecas = new();
-        public ObservableCollection<PecaOrcamento> ListaPecas 
-        { 
-            get => _listaPecas; 
-            set => SetProperty(ref _listaPecas, value); 
-        }
-
-        private double _valorTotalGeral;
-        public double ValorTotalGeral 
-        { 
-            get => _valorTotalGeral; 
-            set => SetProperty(ref _valorTotalGeral, value); 
-        }
+        [ObservableProperty] private Cliente clienteSelecionado = new();
+        [ObservableProperty] private ObservableCollection<PecaOrcamento> listaPecas = new();
+        [ObservableProperty] private double valorTotalGeral;
 
         public DetalhesClienteViewModel(DatabaseService dbService, FirebaseService firebaseService)
         {
@@ -55,7 +40,7 @@ namespace Marmorariacentral.ViewModels
                 
                 _ = Task.Run(async () => {
                     try { await _firebaseService.SavePecaOrcamentoAsync(pecaRetornada); }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Erro Firebase Peca: {ex.Message}"); }
+                    catch (Exception ex) { Debug.WriteLine($"Erro Firebase Peca: {ex.Message}"); }
                 });
 
                 await CarregarPecasDoBanco();
@@ -91,22 +76,19 @@ namespace Marmorariacentral.ViewModels
                     AtualizarTotal();
                 });
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Erro ao carregar peças: {ex.Message}"); }
+            catch (Exception ex) { Debug.WriteLine($"Erro ao carregar peças: {ex.Message}"); }
         }
 
         private void AtualizarTotal() 
         {
-            ValorTotalGeral = ListaPecas.Sum(p => p.ValorTotalPeca);
-            OnPropertyChanged(nameof(ValorTotalGeral));
+             ValorTotalGeral = ListaPecas.Sum(p => p.ValorTotalPeca);
+             OnPropertyChanged(nameof(ValorTotalGeral));
         }
 
         [RelayCommand]
         private async Task IrParaCalculadora()
         {
-            await Shell.Current.GoToAsync("CalculadoraPecaPage", new Dictionary<string, object>
-            {
-                { "ClienteSelecionado", ClienteSelecionado }
-            });
+            await Shell.Current.GoToAsync("CalculadoraPecaPage", new Dictionary<string, object> { { "ClienteSelecionado", ClienteSelecionado } });
         }
 
         [RelayCommand]
@@ -120,8 +102,7 @@ namespace Marmorariacentral.ViewModels
         private async Task RemoverPeca(PecaOrcamento peca)
         {
             if (peca == null) return;
-            bool confirmar = await Shell.Current.DisplayAlert("Excluir", $"Deseja remover a peça '{peca.Ambiente}'?", "Sim", "Não");
-            if (confirmar)
+            if (await Shell.Current.DisplayAlert("Excluir", $"Remover '{peca.Ambiente}'?", "Sim", "Não"))
             {
                 await _dbService.DeleteItemAsync(peca);
                 ListaPecas.Remove(peca);
@@ -129,48 +110,76 @@ namespace Marmorariacentral.ViewModels
             }
         }
 
-        // ==========================================
-        // LÓGICA DE LANÇAMENTO FINANCEIRO (CORRIGIDA)
-        // ==========================================
         [RelayCommand]
-        private async Task LancarNoFinanceiro()
+        public async Task GerarPdfTecnico(View viewParaCapturar) // Alterado de GraphicsView para View
         {
             if (ListaPecas.Count == 0)
             {
-                await Shell.Current.DisplayAlert("Aviso", "Adicione peças ao orçamento antes de lançar!", "OK");
+                await Shell.Current.DisplayAlert("Aviso", "Não há peças no orçamento.", "OK");
                 return;
             }
 
-            bool confirmar = await Shell.Current.DisplayAlert("Confirmar", 
-                $"Deseja lançar {ValorTotalGeral:C} no financeiro?", "Sim", "Não");
+            if (ClienteSelecionado == null || viewParaCapturar == null)
+                return;
 
-            if (!confirmar) return;
-
-            var novoLancamento = new FinanceiroRegistro
+            try
             {
-                Id = Guid.NewGuid().ToString(),
+                await _pdfService.GerarPdfTecnicoAsync(
+                    ClienteSelecionado,
+                    ListaPecas.ToList(),
+                    viewParaCapturar
+                );
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Erro ao gerar PDF Técnico: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        public async Task GerarOrcamentoPdf(View viewParaCapturar) // Alterado de GraphicsView para View
+        {
+            if (ListaPecas.Count == 0)
+            {
+                await Shell.Current.DisplayAlert("Aviso", "Não há peças no orçamento.", "OK");
+                return;
+            }
+
+            if (ClienteSelecionado == null || viewParaCapturar == null)
+                return;
+
+            try
+            {
+                await _pdfService.GerarPdfClienteAsync(
+                    ClienteSelecionado,
+                    ListaPecas.ToList(),
+                    viewParaCapturar
+                );
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Erro ao gerar PDF Cliente: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private async Task LancarNoFinanceiro()
+        {
+            if (ListaPecas.Count == 0) return;
+            if (!await Shell.Current.DisplayAlert("Confirmar", $"Lançar {ValorTotalGeral:C}?", "Sim", "Não")) return;
+
+            var lancamento = new FinanceiroRegistro {
                 Descricao = $"Orçamento: {ClienteSelecionado.Nome}",
                 Valor = ValorTotalGeral,
                 Tipo = "Entrada",
                 DataVencimento = DateTime.Now,
-                FoiPago = false,
-                IsParcelado = false
+                FoiPago = false
             };
 
-            try
-            {
-                await _dbService.SaveItemAsync(novoLancamento);
-                await _firebaseService.SaveFinanceiroAsync(novoLancamento);
-
-                await Shell.Current.DisplayAlert("Sucesso", "Orçamento enviado para a aba 'ORÇAMENTOS' no Financeiro.", "OK");
-                
-                // CORREÇÃO: Voltamos uma tela em vez de tentar pular para a aba absoluta
-                await Shell.Current.GoToAsync(".."); 
-            }
-            catch (Exception ex)
-            {
-                await Shell.Current.DisplayAlert("Erro", "Erro ao salvar: " + ex.Message, "OK");
-            }
+            await _dbService.SaveItemAsync(lancamento);
+            await _firebaseService.SaveFinanceiroAsync(lancamento);
+            await Shell.Current.DisplayAlert("Sucesso", "Enviado ao Financeiro!", "OK");
+            await Shell.Current.GoToAsync(".."); 
         }
     }
 }

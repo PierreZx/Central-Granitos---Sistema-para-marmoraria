@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Maui.Graphics;
+using SkiaSharp;
 
 namespace Marmorariacentral.ViewModels
 {
@@ -15,11 +16,12 @@ namespace Marmorariacentral.ViewModels
     public partial class CalculadoraPecaViewModel : ObservableObject, IQueryAttributable
     {
         private readonly DatabaseService _dbService;
+        private readonly PdfService _pdfService;
 
         // ==========================================
         // OBJETOS DE DADOS E ESTADO
         // ==========================================
-        [ObservableProperty] private Cliente clienteSelecionado;
+        [ObservableProperty] private Cliente? clienteSelecionado;
         [ObservableProperty] private PecaOrcamento peca = new();
         [ObservableProperty] private PecaOrcamento pecaParaEditar;
 
@@ -33,18 +35,17 @@ namespace Marmorariacentral.ViewModels
         public List<string> LadosDisponiveis { get; } = new() { "Esquerda", "Direita" };
         public List<string> PecasDisponiveis { get; } = new() { "P1", "P2", "P3" };
 
-        // INPUTS DE TEXTO COM INTERCEPTADORES
+        // INPUTS DE TEXTO
         [ObservableProperty] private string larguraInput = "0,00";
         [ObservableProperty] private string alturaInput = "0,00";
         [ObservableProperty] private string larguraP2Input = "0,00";
         [ObservableProperty] private string alturaP2Input = "0,00";
         [ObservableProperty] private string larguraP3Input = "0,00";
         [ObservableProperty] private string alturaP3Input = "0,00";
-        [ObservableProperty] private string valorMetroLinearInput = "130";
+        [ObservableProperty] private string valorMetroLinearInput = "130,00";
         [ObservableProperty] private string quantidadeInput = "1";
         [ObservableProperty] private bool usarMultiplicador = false;
 
-        // Ganchos de interceptação (Sincronização em Tempo Real)
         partial void OnLarguraInputChanged(string value) { Peca.Largura = ConverterParaDouble(value); NotificarMudanca(); }
         partial void OnAlturaInputChanged(string value) { Peca.Altura = ConverterParaDouble(value); NotificarMudanca(); }
         partial void OnLarguraP2InputChanged(string value) { Peca.LarguraP2 = ConverterParaDouble(value); NotificarMudanca(); }
@@ -53,13 +54,12 @@ namespace Marmorariacentral.ViewModels
         partial void OnAlturaP3InputChanged(string value) { Peca.AlturaP3 = ConverterParaDouble(value); NotificarMudanca(); }
         partial void OnValorMetroLinearInputChanged(string value) { Peca.ValorMetroLinear = ConverterParaDouble(value); NotificarMudanca(); }
         partial void OnQuantidadeInputChanged(string value) => NotificarMudanca();
+        partial void OnPedraSelecionadaChanged(EstoqueItem? value) => NotificarMudanca();
 
         public int Quantidade => int.TryParse(QuantidadeInput, out int q) ? Math.Max(q, 1) : 1;
         public double ValorTotalPeca => TotalGeral;
 
-        // ==========================================
-        // RECORTES (BOJO E COOKTOP)
-        // ==========================================
+        // RECORTES
         [ObservableProperty] private bool temBojo = false;
         [ObservableProperty] private string pecaDestinoBojo = "P1";
         [ObservableProperty] private string larguraBojoInput = "0,60";
@@ -72,9 +72,7 @@ namespace Marmorariacentral.ViewModels
         [ObservableProperty] private string alturaCooktopInput = "0,45";
         [ObservableProperty] private string cooktopXInput = "1,50";
 
-        // ==========================================
-        // RODOBANCA (VALORES PADRÃO PARA NOVAS PEÇAS)
-        // ==========================================
+        // RODOBANCA
         [ObservableProperty] private double rodobancaP1Esquerda = 0.10;
         [ObservableProperty] private double rodobancaP1Direita = 0.10;
         [ObservableProperty] private double rodobancaP1Frente = 0.00;
@@ -88,9 +86,7 @@ namespace Marmorariacentral.ViewModels
         [ObservableProperty] private double rodobancaP3Frente = 0.00;
         [ObservableProperty] private double rodobancaP3Tras = 0.10;
 
-        // ==========================================
-        // SAIA (VALORES PADRÃO PARA NOVAS PEÇAS)
-        // ==========================================
+        // SAIA
         [ObservableProperty] private double saiaP1Esquerda = 0.00;
         [ObservableProperty] private double saiaP1Direita = 0.00;
         [ObservableProperty] private double saiaP1Frente = 0.04;
@@ -108,11 +104,36 @@ namespace Marmorariacentral.ViewModels
         public bool TemPernaDireita => (Peca.LarguraP2 > 0.01 && LadoP2 == "Direita") || (Peca.LarguraP3 > 0.01);
         public IDrawable DesenhoPeca { get; }
 
-        public CalculadoraPecaViewModel(DatabaseService dbService)
+        public CalculadoraPecaViewModel(DatabaseService dbService, PdfService pdfService)
         {
             _dbService = dbService;
+            _pdfService = pdfService;
             DesenhoPeca = new PecaDrawable(this);
             _ = CarregarEstoque();
+        }
+
+        [RelayCommand]
+        public async Task GerarDocumentoTecnicoAsync(View viewParaCapturar) 
+        {
+            if (ClienteSelecionado == null) return;
+            try
+            {
+                await _pdfService.GerarDocumentoTecnico(viewParaCapturar, ClienteSelecionado.Nome ?? "Não informado",
+                    PedraSelecionada?.NomeChapa ?? "Não selecionada", Quantidade);
+            }
+            catch (Exception ex) { Debug.WriteLine($"Erro PDF técnico: {ex.Message}"); }
+        }
+
+        [RelayCommand]
+        public async Task GerarOrcamentoClienteAsync(View viewParaCapturar) 
+        {
+            if (ClienteSelecionado == null) return;
+            try
+            {
+                await _pdfService.GerarOrcamentoCliente(viewParaCapturar, ClienteSelecionado.Nome ?? "Cliente",
+                    PedraSelecionada?.NomeChapa ?? "Não selecionada", Quantidade, TotalGeral);
+            }
+            catch (Exception ex) { Debug.WriteLine($"Erro PDF cliente: {ex.Message}"); }
         }
 
         [RelayCommand]
@@ -137,14 +158,14 @@ namespace Marmorariacentral.ViewModels
 
         private void CalcularTotal()
         {
-            if (PedraSelecionada == null) return;
+            if (PedraSelecionada == null) { TotalGeral = 0; return; }
             double areaTotal = (Peca.Largura * Peca.Altura) + (Peca.LarguraP2 * Peca.AlturaP2) + (Peca.LarguraP3 * Peca.AlturaP3);
-            TotalGeral = ((areaTotal * PedraSelecionada.ValorPorMetro) + ((Peca.Largura + Peca.LarguraP2 + Peca.LarguraP3) * ConverterParaDouble(ValorMetroLinearInput))) * Quantidade;
+            double metrosLineares = Peca.Largura + (Peca.LarguraP2 > 0.01 ? Peca.LarguraP2 : 0) + (Peca.LarguraP3 > 0.01 ? Peca.LarguraP3 : 0);
+            double custoMaterial = areaTotal * PedraSelecionada.ValorPorMetro;
+            double custoMaoObra = metrosLineares * ConverterParaDouble(ValorMetroLinearInput);
+            TotalGeral = (custoMaterial + custoMaoObra) * Quantidade;
         }
 
-        // ==========================================
-        // NAVEGAÇÃO DE ABAS
-        // ==========================================
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsAbaPrincipalVisible))]
         [NotifyPropertyChangedFor(nameof(IsAbaRodobancaVisible))]
@@ -171,19 +192,18 @@ namespace Marmorariacentral.ViewModels
                 if (!string.IsNullOrEmpty(edicao.PedraNome))
                     PedraSelecionada = ListaEstoque.FirstOrDefault(p => p.NomeChapa == edicao.PedraNome);
 
-                LarguraInput = edicao.Largura.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
-                AlturaInput = edicao.Altura.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
-                LarguraP2Input = edicao.LarguraP2.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
-                AlturaP2Input = edicao.AlturaP2.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
+                LarguraInput = edicao.Largura.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                AlturaInput = edicao.Altura.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                LarguraP2Input = edicao.LarguraP2.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                AlturaP2Input = edicao.AlturaP2.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 LadoP2 = edicao.LadoP2 ?? "Esquerda";
-                LarguraP3Input = edicao.LarguraP3.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
-                AlturaP3Input = edicao.AlturaP3.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
+                LarguraP3Input = edicao.LarguraP3.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                AlturaP3Input = edicao.AlturaP3.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 LadoP3 = edicao.LadoP3 ?? "Direita";
-                ValorMetroLinearInput = edicao.ValorMetroLinear.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
+                ValorMetroLinearInput = edicao.ValorMetroLinear.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 QuantidadeInput = edicao.Quantidade.ToString();
                 UsarMultiplicador = edicao.UsarMultiplicador;
 
-                // CORREÇÃO: Sobrescreve os valores padrão com o que está no banco (resolve o bug do "0" voltar a ser "0.10")
                 RodobancaP1Esquerda = edicao.RodobancaP1Esquerda; RodobancaP1Direita = edicao.RodobancaP1Direita;
                 RodobancaP1Frente = edicao.RodobancaP1Frente; RodobancaP1Tras = edicao.RodobancaP1Tras;
                 RodobancaP2Esquerda = edicao.RodobancaP2Esquerda; RodobancaP2Direita = edicao.RodobancaP2Direita;
@@ -199,13 +219,13 @@ namespace Marmorariacentral.ViewModels
                 SaiaP3Frente = edicao.SaiaP3Frente; SaiaP3Tras = edicao.SaiaP3Tras;
 
                 TemBojo = edicao.TemBojo; PecaDestinoBojo = edicao.PecaDestinoBojo ?? "P1";
-                LarguraBojoInput = edicao.LarguraBojo.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
-                AlturaBojoInput = edicao.AlturaBojo.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
-                BojoXInput = edicao.BojoX.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
+                LarguraBojoInput = edicao.LarguraBojo.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                AlturaBojoInput = edicao.AlturaBojo.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                BojoXInput = edicao.BojoX.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 TemCooktop = edicao.TemCooktop; PecaDestinoCooktop = edicao.PecaDestinoCooktop ?? "P1";
-                LarguraCooktopInput = edicao.LarguraCooktop.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
-                AlturaCooktopInput = edicao.AlturaCooktop.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
-                CooktopXInput = edicao.CooktopX.ToString("N2", CultureInfo.InvariantCulture).Replace('.', ',');
+                LarguraCooktopInput = edicao.LarguraCooktop.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                AlturaCooktopInput = edicao.AlturaCooktop.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                CooktopXInput = edicao.CooktopX.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
 
                 await Task.Delay(150);
                 NotificarMudanca();
@@ -215,16 +235,28 @@ namespace Marmorariacentral.ViewModels
         [RelayCommand]
         private async Task SalvarPeca()
         {
-            if (PedraSelecionada == null) { await Shell.Current.DisplayAlert("Aviso", "Selecione o material!", "OK"); return; }
-            
-            // SINCRONIZAÇÃO FINAL: Garante que os acabamentos editados sejam salvos na Peça
+            if (PedraSelecionada == null) return;
             Peca.PedraNome = PedraSelecionada.NomeChapa; Peca.ValorM2 = PedraSelecionada.ValorPorMetro;
-            Peca.Largura = ConverterParaDouble(LarguraInput); Peca.Altura = ConverterParaDouble(AlturaInput);
             Peca.RodobancaP1Esquerda = RodobancaP1Esquerda; Peca.RodobancaP1Direita = RodobancaP1Direita;
             Peca.RodobancaP1Frente = RodobancaP1Frente; Peca.RodobancaP1Tras = RodobancaP1Tras;
-            Peca.SaiaP1Frente = SaiaP1Frente; // Sincroniza a saia frontal padrão
-            
-            Peca.Quantidade = Quantidade; Peca.ValorTotalPeca = TotalGeral;
+            Peca.RodobancaP2Esquerda = RodobancaP2Esquerda; Peca.RodobancaP2Direita = RodobancaP2Direita;
+            Peca.RodobancaP2Frente = RodobancaP2Frente; Peca.RodobancaP2Tras = RodobancaP2Tras;
+            Peca.RodobancaP3Esquerda = RodobancaP3Esquerda; Peca.RodobancaP3Direita = RodobancaP3Direita;
+            Peca.RodobancaP3Frente = RodobancaP3Frente; Peca.RodobancaP3Tras = RodobancaP3Tras;
+
+            Peca.SaiaP1Esquerda = SaiaP1Esquerda; Peca.SaiaP1Direita = SaiaP1Direita;
+            Peca.SaiaP1Frente = SaiaP1Frente; Peca.SaiaP1Tras = SaiaP1Tras;
+            Peca.SaiaP2Esquerda = SaiaP2Esquerda; Peca.SaiaP2Direita = SaiaP2Direita;
+            Peca.SaiaP2Frente = SaiaP2Frente; Peca.SaiaP2Tras = SaiaP2Tras;
+            Peca.SaiaP3Esquerda = SaiaP3Esquerda; Peca.SaiaP3Direita = SaiaP3Direita;
+            Peca.SaiaP3Frente = SaiaP3Frente; Peca.SaiaP3Tras = SaiaP3Tras;
+
+            Peca.LarguraBojo = ConverterParaDouble(LarguraBojoInput); Peca.AlturaBojo = ConverterParaDouble(AlturaBojoInput);
+            Peca.BojoX = ConverterParaDouble(BojoXInput); Peca.TemBojo = TemBojo; Peca.PecaDestinoBojo = PecaDestinoBojo;
+            Peca.LarguraCooktop = ConverterParaDouble(LarguraCooktopInput); Peca.AlturaCooktop = ConverterParaDouble(AlturaCooktopInput);
+            Peca.CooktopX = ConverterParaDouble(CooktopXInput); Peca.TemCooktop = TemCooktop; Peca.PecaDestinoCooktop = PecaDestinoCooktop;
+
+            Peca.Quantidade = Quantidade; Peca.ValorTotalPeca = TotalGeral; Peca.ValorMetroLinear = ConverterParaDouble(ValorMetroLinearInput);
             await Shell.Current.GoToAsync("..", new Dictionary<string, object> { { "NovaPeca", Peca } });
         }
 

@@ -33,12 +33,15 @@ public static class MauiProgram
         builder.Services.AddNotifications();
 #endif
 
-        // Serviços
+        // SERVIÇOS (Motores do sistema)
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddSingleton<FirebaseService>();
         builder.Services.AddSingleton<AuthService>();
+        
+        // Registro do PdfService para geração de orçamentos e guias técnicas
+        builder.Services.AddSingleton<PdfService>();
 
-        // ViewModels
+        // VIEWMODELS (Lógica de tela)
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<FinanceiroViewModel>();
@@ -47,7 +50,7 @@ public static class MauiProgram
         builder.Services.AddTransient<DetalhesClienteViewModel>();
         builder.Services.AddTransient<CalculadoraPecaViewModel>();
 
-        // Pages
+        // PAGES (Interface visual)
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<FinanceiroPage>();
@@ -57,7 +60,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CalculadoraPecaPage>();
         builder.Services.AddTransient<AppShell>();
 
-        // Popups
+        // POPUPS
         builder.Services.AddTransient<CadastroFinanceiroPopup>();
         builder.Services.AddTransient<CadastroChapaPopup>();
         builder.Services.AddTransient<CadastroClientePopup>();

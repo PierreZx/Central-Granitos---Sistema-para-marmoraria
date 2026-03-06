@@ -45,7 +45,8 @@
                                BackgroundColor="#F5F5F5"/>
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout x:Name="LayoutData" Spacing="2">
+                    <VerticalStackLayout x:Name="LayoutData" Spacing="2" 
+                                         IsVisible="{Binding IsChecked, Source={x:Reference CheckMensal}, Converter={StaticResource InvertedBoolConverter}}">
                         <Label Text="Data para Recebimento/Pagamento" FontSize="12" TextColor="#666" Margin="5,0"/>
                         <DatePicker x:Name="PickerData" 
                                     Format="dd/MM/yyyy"
@@ -54,7 +55,8 @@
                                     HeightRequest="45"/>
                     </VerticalStackLayout>
 
-                    <Frame x:Name="FrameTipo" Padding="10" CornerRadius="10" HasShadow="False" BorderColor="#DDD">
+                    <Frame x:Name="FrameTipo" Padding="10" CornerRadius="10" HasShadow="False" BorderColor="#DDD"
+                           IsVisible="{Binding IsChecked, Source={x:Reference CheckMensal}, Converter={StaticResource InvertedBoolConverter}}">
                         <Frame.Style>
                             <Style TargetType="Frame">
                                 <Setter Property="BackgroundColor" Value="#FFEBEE"/>
@@ -102,9 +104,14 @@
                                 </Grid>
 
                                 <VerticalStackLayout Spacing="2" IsVisible="{Binding IsChecked, Source={x:Reference CheckMensal}}">
-                                    <Label Text="Dia Fixo de Vencimento" FontSize="11" TextColor="#666"/>
+                                    <Label Text="Dia Fixo de Vencimento (Todo mês)" FontSize="11" TextColor="#666"/>
                                     <Entry x:Name="EntryDiaFixo" Placeholder="10" Keyboard="Numeric" MaxLength="2" TextColor="Black" BackgroundColor="White"/>
                                 </VerticalStackLayout>
+
+                                <HorizontalStackLayout Spacing="10" Margin="0,5" IsVisible="{Binding IsChecked, Source={x:Reference CheckMensal}}">
+                                    <Switch x:Name="SwitchPularMes" OnColor="#2E7D32" />
+                                    <Label Text="Já pago este mês? (Pular para o próximo)" VerticalOptions="Center" FontSize="11" TextColor="Black"/>
+                                </HorizontalStackLayout>
                             </VerticalStackLayout>
                         </VerticalStackLayout>
                     </Border>

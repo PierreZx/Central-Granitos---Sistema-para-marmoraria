@@ -19,6 +19,8 @@ public partial class OrcamentosPage : ContentPage
     {
         base.OnAppearing();
 
+        // O comando de carregar dados é essencial para atualizar a lista 
+        // sempre que você volta de uma tela de cadastro ou detalhes.
         _viewModel?.CarregarDadosCommand?.Execute(null);
     }
 }
