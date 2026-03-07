@@ -7,6 +7,7 @@ using Marmorariacentral.Views.Login;
 using Marmorariacentral.Views.Financeiro;
 using Marmorariacentral.Views.Estoque;
 using Marmorariacentral.Views.Orcamentos;
+using Marmorariacentral.Drawables;
 using Microsoft.Maui.LifecycleEvents;
 using Shiny;
 using Shiny.Notifications;
@@ -18,30 +19,42 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
+
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
-            .UseShiny() 
+            .UseShiny()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        // Notificações Shiny
+        // ==========================================
+        // NOTIFICAÇÕES
+        // ==========================================
 #if !WINDOWS
         builder.Services.AddNotifications();
 #endif
 
-        // SERVIÇOS (Motores do sistema)
+        // ==========================================
+        // SERVIÇOS
+        // ==========================================
+
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddSingleton<FirebaseService>();
         builder.Services.AddSingleton<AuthService>();
-        
-        // Registro do PdfService para geração de orçamentos e guias técnicas
+
+        // Serviço de geração de PDF
         builder.Services.AddSingleton<PdfService>();
 
-        // VIEWMODELS (Lógica de tela)
+        // Adapter de canvas usado para desenhar no PDF
+        builder.Services.AddTransient<SkiaCanvasAdapter>();
+
+        // ==========================================
+        // VIEWMODELS
+        // ==========================================
+
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<FinanceiroViewModel>();
@@ -50,7 +63,10 @@ public static class MauiProgram
         builder.Services.AddTransient<DetalhesClienteViewModel>();
         builder.Services.AddTransient<CalculadoraPecaViewModel>();
 
-        // PAGES (Interface visual)
+        // ==========================================
+        // PAGES
+        // ==========================================
+
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<FinanceiroPage>();
@@ -60,7 +76,10 @@ public static class MauiProgram
         builder.Services.AddTransient<CalculadoraPecaPage>();
         builder.Services.AddTransient<AppShell>();
 
+        // ==========================================
         // POPUPS
+        // ==========================================
+
         builder.Services.AddTransient<CadastroFinanceiroPopup>();
         builder.Services.AddTransient<CadastroChapaPopup>();
         builder.Services.AddTransient<CadastroClientePopup>();
@@ -73,13 +92,23 @@ public static class MauiProgram
                 windows.OnWindowCreated(window =>
                 {
                     window.ExtendsContentIntoTitleBar = false;
+
                     var handle = WinRT.Interop.WindowNative.GetWindowHandle(window);
                     var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
                     var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id);
+
                     if (appWindow is not null)
                     {
                         appWindow.Title = "Central Granitos - Gestão Integrada";
-                        appWindow.MoveAndResize(new Windows.Graphics.RectInt32(100, 100, 1280, 800));
+
+                        appWindow.MoveAndResize(
+                            new Windows.Graphics.RectInt32(
+                                100,
+                                100,
+                                1280,
+                                800
+                            )
+                        );
                     }
                 });
             });

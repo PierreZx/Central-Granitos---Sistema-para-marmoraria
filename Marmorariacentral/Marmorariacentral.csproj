@@ -13,7 +13,7 @@
         <Nullable>enable</Nullable>
 
         <ApplicationTitle>Central Financeiro</ApplicationTitle>
-        <ApplicationId>com.centralgranitos.financeiro.v3</ApplicationId>
+        <ApplicationId>com.centralgranitos.financeiro.v4</ApplicationId>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
 

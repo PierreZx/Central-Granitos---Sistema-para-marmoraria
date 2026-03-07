@@ -228,6 +228,18 @@
                     </Frame>
                 </VerticalStackLayout>
 
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Quantidade de Peças" FontSize="14" TextColor="#666"/>
+                    <Entry Text="{Binding QuantidadeInput}" Keyboard="Numeric"
+                        BackgroundColor="#F9F9F9"
+                        TextColor="Black">
+                        <Entry.Behaviors>
+                            <toolkit:EventToCommandBehavior EventName="TextChanged"
+                                                            Command="{Binding NotificarMudancaCommand}" />
+                        </Entry.Behaviors>
+                    </Entry>
+                </VerticalStackLayout>
+
                 <BoxView HeightRequest="1" Color="#DDD"/>
 
                 <VerticalStackLayout Spacing="15">

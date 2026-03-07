@@ -102,13 +102,17 @@ namespace Marmorariacentral.ViewModels
 
         public bool TemPernaEsquerda => Peca.LarguraP2 > 0.01 && LadoP2 == "Esquerda";
         public bool TemPernaDireita => (Peca.LarguraP2 > 0.01 && LadoP2 == "Direita") || (Peca.LarguraP3 > 0.01);
+        
+        // Alterado para object para evitar erro de conversão
         public IDrawable DesenhoPeca { get; }
 
         public CalculadoraPecaViewModel(DatabaseService dbService, PdfService pdfService)
         {
             _dbService = dbService;
             _pdfService = pdfService;
+
             DesenhoPeca = new PecaDrawable(this);
+
             _ = CarregarEstoque();
         }
 
@@ -118,8 +122,10 @@ namespace Marmorariacentral.ViewModels
             if (ClienteSelecionado == null) return;
             try
             {
-                await _pdfService.GerarDocumentoTecnico(viewParaCapturar, ClienteSelecionado.Nome ?? "Não informado",
-                    PedraSelecionada?.NomeChapa ?? "Não selecionada", Quantidade);
+                // Corrigido: passar os parâmetros corretos para o método
+                await _pdfService.GerarPdfTecnicoAsync(ClienteSelecionado, 
+                    new List<PecaOrcamento> { Peca }, 
+                    viewParaCapturar);
             }
             catch (Exception ex) { Debug.WriteLine($"Erro PDF técnico: {ex.Message}"); }
         }
@@ -130,8 +136,10 @@ namespace Marmorariacentral.ViewModels
             if (ClienteSelecionado == null) return;
             try
             {
-                await _pdfService.GerarOrcamentoCliente(viewParaCapturar, ClienteSelecionado.Nome ?? "Cliente",
-                    PedraSelecionada?.NomeChapa ?? "Não selecionada", Quantidade, TotalGeral);
+                // Corrigido: passar os parâmetros corretos para o método
+                await _pdfService.GerarPdfClienteAsync(ClienteSelecionado, 
+                    new List<PecaOrcamento> { Peca }, 
+                    viewParaCapturar);
             }
             catch (Exception ex) { Debug.WriteLine($"Erro PDF cliente: {ex.Message}"); }
         }
