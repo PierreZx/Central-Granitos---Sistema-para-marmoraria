@@ -96,8 +96,8 @@ namespace Marmorariacentral.Drawables
     public class PecaDrawable : IDrawable
     {
         private readonly CalculadoraPecaViewModel vm;
-        private const float MARGEM = 60;
-        private const float ESPACO_EXPLODIDO = 45; // Espaço para as setas entre peças
+        private const float PERCENTUAL_APROVEITAMENTO = 0.95f; 
+        private const float ESPACO_EXPLODIDO = 45; 
         private const float LIMIAR_ACABAMENTO = 0.001f; // Valor mínimo para considerar acabamento presente
 
         private readonly Color CorRodobanca = Color.FromArgb("#2E7D32"); // Verde
@@ -123,6 +123,9 @@ namespace Marmorariacentral.Drawables
             canvas.FillColor = Colors.White;
             canvas.FillRectangle(dirtyRect.X, dirtyRect.Y, dirtyRect.Width, dirtyRect.Height);
 
+            if (dirtyRect.Width < 50 || dirtyRect.Height < 50)
+            return;
+
             if (IsVistaExplodida)
             {
                 DesenharVistaExplodida(canvas, dirtyRect);
@@ -136,65 +139,146 @@ namespace Marmorariacentral.Drawables
         // Método de compatibilidade para manter a interface IDrawable original
         public void Draw(ICanvas canvas, RectF dirtyRect)
         {
+            canvas.FillColor = Colors.White;
+            canvas.FillRectangle(dirtyRect);
+
+            if (dirtyRect.Width < 1 || dirtyRect.Height < 1)
+                return;
 
             canvas.StrokeDashPattern = null;
+
             var adapter = new MauiCanvasAdapter(canvas);
             Draw(adapter, dirtyRect);
         }
 
         private void DesenharPecaUnida(IDrawingCanvas canvas, RectF dirtyRect)
         {
-            double largEsq = vm.TemPernaEsquerda ? vm.Peca.LarguraP2 : 0;
-            double largDir = (vm.LadoP2 == "Direita") ? vm.Peca.LarguraP2 : (vm.Peca.LarguraP3 > LIMIAR_ACABAMENTO ? vm.Peca.LarguraP3 : 0);
+            bool p2Esquerda = vm.TemPernaEsquerda && vm.LadoP2 == "Esquerda";
+            bool p2Direita = vm.TemPernaDireita && vm.LadoP2 == "Direita";
+
+            bool p3Esquerda = vm.TemPernaEsquerda && vm.LadoP2 == "Direita" && vm.Peca.LarguraP3 > LIMIAR_ACABAMENTO;
+            bool p3Direita = vm.TemPernaDireita && vm.LadoP2 == "Esquerda" && vm.Peca.LarguraP3 > LIMIAR_ACABAMENTO;
+
+            double largEsq = 0;
+            double largDir = 0;
+
+            if (p2Esquerda) largEsq = vm.Peca.LarguraP2;
+            if (p3Esquerda) largEsq = vm.Peca.LarguraP3;
+
+            if (p2Direita) largDir = vm.Peca.LarguraP2;
+            if (p3Direita) largDir = vm.Peca.LarguraP3;
+
             double largTotReal = vm.Peca.Largura + largEsq + largDir;
-            double altMax = Math.Max(vm.Peca.Altura, Math.Max(vm.Peca.AlturaP2, vm.Peca.AlturaP3));
+
+            double altMax = Math.Max(vm.Peca.Altura,
+                Math.Max(vm.Peca.AlturaP2, vm.Peca.AlturaP3));
 
             float escala = CalcularEscalaUnida(dirtyRect, largTotReal, altMax);
-            float x0 = (dirtyRect.Width - (float)(largTotReal * escala)) / 2;
-            float y0 = (dirtyRect.Height - (float)(altMax * escala)) / 2;
+
+            float x0 = dirtyRect.X + (dirtyRect.Width - (float)(largTotReal * escala)) / 2;
+            float y0 = dirtyRect.Y + (dirtyRect.Height - (float)(altMax * escala)) / 2;
 
             float currentX = x0;
 
-            // Perna Esquerda (P2)
-            if (vm.TemPernaEsquerda)
+            // PERNA ESQUERDA
+            if (largEsq > 0)
             {
-                float wP2 = (float)(vm.Peca.LarguraP2 * escala);
-                float hP2 = (float)(vm.Peca.AlturaP2 * escala);
+                bool isP2 = p2Esquerda;
 
-                DesenharPecaUnica(canvas, currentX, y0, wP2, hP2, vm.Peca.LarguraP2, vm.Peca.AlturaP2,
-                    vm.RodobancaP2Esquerda, vm.RodobancaP2Direita, vm.RodobancaP2Frente, vm.RodobancaP2Tras,
-                    vm.SaiaP2Esquerda, vm.SaiaP2Direita, vm.SaiaP2Frente, vm.SaiaP2Tras, "P2", escala);
+                double l = isP2 ? vm.Peca.LarguraP2 : vm.Peca.LarguraP3;
+                double a = isP2 ? vm.Peca.AlturaP2 : vm.Peca.AlturaP3;
 
-                currentX += wP2;
-            }
+                float w = (float)(l * escala);
+                float h = (float)(a * escala);
 
-            // Peça Principal (P1)
-            float wP1 = (float)(vm.Peca.Largura * escala);
-            float hP1 = (float)(vm.Peca.Altura * escala);
+                DesenharPecaUnica(
+                    canvas,
+                    currentX,
+                    y0,
+                    w,
+                    h,
+                    l,
+                    a,
 
-            DesenharPecaUnica(canvas, currentX, y0, wP1, hP1, vm.Peca.Largura, vm.Peca.Altura,
-                vm.RodobancaP1Esquerda, vm.RodobancaP1Direita, vm.RodobancaP1Frente, vm.RodobancaP1Tras,
-                vm.SaiaP1Esquerda, vm.SaiaP1Direita, vm.SaiaP1Frente, vm.SaiaP1Tras, "P1", escala);
-
-            // Perna Direita (P2 ou P3)
-            if (vm.TemPernaDireita)
-            {
-                bool isP2 = vm.LadoP2 == "Direita";
-                double lD = isP2 ? vm.Peca.LarguraP2 : vm.Peca.LarguraP3;
-                double aD = isP2 ? vm.Peca.AlturaP2 : vm.Peca.AlturaP3;
-                float wD = (float)(lD * escala);
-                float hD = (float)(aD * escala);
-
-                DesenharPecaUnica(canvas, currentX, y0, wD, hD, lD, aD,
                     isP2 ? vm.RodobancaP2Esquerda : vm.RodobancaP3Esquerda,
                     isP2 ? vm.RodobancaP2Direita : vm.RodobancaP3Direita,
                     isP2 ? vm.RodobancaP2Frente : vm.RodobancaP3Frente,
                     isP2 ? vm.RodobancaP2Tras : vm.RodobancaP3Tras,
+
                     isP2 ? vm.SaiaP2Esquerda : vm.SaiaP3Esquerda,
                     isP2 ? vm.SaiaP2Direita : vm.SaiaP3Direita,
                     isP2 ? vm.SaiaP2Frente : vm.SaiaP3Frente,
                     isP2 ? vm.SaiaP2Tras : vm.SaiaP3Tras,
-                    isP2 ? "P2" : "P3", escala);
+
+                    isP2 ? "P2" : "P3",
+                    escala
+                );
+
+                currentX += w;
+            }
+
+            // P1
+            float wP1 = (float)(vm.Peca.Largura * escala);
+            float hP1 = (float)(vm.Peca.Altura * escala);
+
+            DesenharPecaUnica(
+                canvas,
+                currentX,
+                y0,
+                wP1,
+                hP1,
+                vm.Peca.Largura,
+                vm.Peca.Altura,
+
+                vm.RodobancaP1Esquerda,
+                vm.RodobancaP1Direita,
+                vm.RodobancaP1Frente,
+                vm.RodobancaP1Tras,
+
+                vm.SaiaP1Esquerda,
+                vm.SaiaP1Direita,
+                vm.SaiaP1Frente,
+                vm.SaiaP1Tras,
+
+                "P1",
+                escala
+            );
+
+            currentX += wP1;
+
+            // PERNA DIREITA
+            if (largDir > 0)
+            {
+                bool isP2 = p2Direita;
+
+                double l = isP2 ? vm.Peca.LarguraP2 : vm.Peca.LarguraP3;
+                double a = isP2 ? vm.Peca.AlturaP2 : vm.Peca.AlturaP3;
+
+                float w = (float)(l * escala);
+                float h = (float)(a * escala);
+
+                DesenharPecaUnica(
+                    canvas,
+                    currentX,
+                    y0,
+                    w,
+                    h,
+                    l,
+                    a,
+
+                    isP2 ? vm.RodobancaP2Esquerda : vm.RodobancaP3Esquerda,
+                    isP2 ? vm.RodobancaP2Direita : vm.RodobancaP3Direita,
+                    isP2 ? vm.RodobancaP2Frente : vm.RodobancaP3Frente,
+                    isP2 ? vm.RodobancaP2Tras : vm.RodobancaP3Tras,
+
+                    isP2 ? vm.SaiaP2Esquerda : vm.SaiaP3Esquerda,
+                    isP2 ? vm.SaiaP2Direita : vm.SaiaP3Direita,
+                    isP2 ? vm.SaiaP2Frente : vm.SaiaP3Frente,
+                    isP2 ? vm.SaiaP2Tras : vm.SaiaP3Tras,
+
+                    isP2 ? "P2" : "P3",
+                    escala
+                );
             }
         }
 
@@ -270,16 +354,15 @@ namespace Marmorariacentral.Drawables
             if (larguraTotal <= 0 || alturaMax <= 0)
                 return 1f;
 
-            float larguraDisponivel = dirtyRect.Width - (MARGEM * 2);
-            float alturaDisponivel = dirtyRect.Height - (MARGEM * 2);
+            float margem = 40f;
 
-            if (larguraDisponivel <= 0 || alturaDisponivel <= 0)
-                return 1f;
+            float larguraDisponivel = dirtyRect.Width - margem;
+            float alturaDisponivel = dirtyRect.Height - margem;
 
-            float escala = (float)Math.Min(
-                larguraDisponivel / larguraTotal,
-                alturaDisponivel / alturaMax
-            );
+            float escalaLargura = larguraDisponivel / (float)larguraTotal;
+            float escalaAltura = alturaDisponivel / (float)alturaMax;
+
+            float escala = Math.Min(escalaLargura, escalaAltura);
 
             return AjustarEscala(escala);
         }
@@ -289,27 +372,32 @@ namespace Marmorariacentral.Drawables
             if (larguraTotal <= 0 || alturaMax <= 0)
                 return 1f;
 
-            float larguraDisponivel = dirtyRect.Width - (MARGEM * 2) - espacosAdicionais;
-            float alturaDisponivel = dirtyRect.Height - (MARGEM * 2);
+            float margem = 40f;
 
-            if (larguraDisponivel <= 0 || alturaDisponivel <= 0)
-                return 1f;
+            float larguraDisponivel = dirtyRect.Width - margem - espacosAdicionais;
+            float alturaDisponivel = dirtyRect.Height - margem;
 
-            float escala = (float)Math.Min(
-                larguraDisponivel / larguraTotal,
-                alturaDisponivel / alturaMax
-            );
+            float escalaLargura = larguraDisponivel / (float)larguraTotal;
+            float escalaAltura = alturaDisponivel / (float)alturaMax;
+
+            float escala = Math.Min(escalaLargura, escalaAltura);
 
             return AjustarEscala(escala);
         }
 
         private float AjustarEscala(float escala)
         {
-            if (float.IsNaN(escala) || float.IsInfinity(escala) || escala <= 0)
+            if (float.IsNaN(escala) || float.IsInfinity(escala))
                 return 1f;
 
-            if (escala > 1000)
-                return 1000;
+            if (escala <= 0)
+                return 1f;
+
+            if (escala < 0.05f)
+                return 0.05f;
+
+            if (escala > 200f)
+                return 200f;
 
             return escala;
         }
@@ -345,8 +433,11 @@ namespace Marmorariacentral.Drawables
             DesenharAcabamentoColado(canvas, x, y, x, y + h, rbE, "E");
             DesenharAcabamentoColado(canvas, x + w, y, x + w, y + h, rbD, "D");
 
-            // Saia colada (apenas frente)
+            // Saia colada
             DesenharSaiaColada(canvas, x, y + h, x + w, y + h, sF, "F");
+            DesenharSaiaColada(canvas, x, y, x, y + h, sE, "E");
+            DesenharSaiaColada(canvas, x + w, y, x + w, y + h, sD, "D");
+            DesenharSaiaColada(canvas, x, y, x + w, y, sT, "T");
 
             // Recortes
             DesenharRecortes(canvas, x, y, escala, pecaId);
@@ -478,23 +569,13 @@ namespace Marmorariacentral.Drawables
             canvas.FontColor = CorRodobanca;
             canvas.FontSize = 8;
 
-            float midX = (x1 + x2) / 2;
-            float midY = (y1 + y2) / 2;
-
+            // Posiciona o texto no INÍCIO da linha para não bater no centro
             switch (pos)
             {
-                case "T":
-                    canvas.DrawString($"RB {valor:F2}m", midX - 20, midY - 15, 40, 12, HorizontalAlignment.Center, VerticalAlignment.Center);
-                    break;
-                case "F":
-                    canvas.DrawString($"RB {valor:F2}m", midX - 20, midY + 5, 40, 12, HorizontalAlignment.Center, VerticalAlignment.Center);
-                    break;
-                case "E":
-                    canvas.DrawString($"RB {valor:F2}m", midX - 35, midY - 5, 40, 12, HorizontalAlignment.Right, VerticalAlignment.Center);
-                    break;
-                case "D":
-                    canvas.DrawString($"RB {valor:F2}m", midX + 5, midY - 5, 40, 12, HorizontalAlignment.Left, VerticalAlignment.Center);
-                    break;
+                case "T": canvas.DrawString($"RB {valor:F2}m", x1 + 2, y1 - 12, 60, 10, HorizontalAlignment.Left, VerticalAlignment.Center); break;
+                case "F": canvas.DrawString($"RB {valor:F2}m", x1 + 2, y1 + 4, 60, 10, HorizontalAlignment.Left, VerticalAlignment.Center); break;
+                case "E": canvas.DrawString($"RB {valor:F2}m", x1 - 38, y1 + 5, 35, 10, HorizontalAlignment.Right, VerticalAlignment.Center); break;
+                case "D": canvas.DrawString($"RB {valor:F2}m", x1 + 4, y1 + 5, 35, 10, HorizontalAlignment.Left, VerticalAlignment.Center); break;
             }
         }
 
@@ -508,13 +589,9 @@ namespace Marmorariacentral.Drawables
 
             canvas.FontColor = CorSaia;
             canvas.FontSize = 8;
-
-            float midX = (x1 + x2) / 2;
-            float midY = (y1 + y2) / 2;
-
-            canvas.DrawString($"S {valor:F2}m", midX - 15, midY + 8, 40, 12, HorizontalAlignment.Center, VerticalAlignment.Center);
+            // Posiciona no FINAL da linha para evitar conflito com a medida central
+            canvas.DrawString($"S {valor:F2}m", x2 - 42, y1 + 4, 40, 10, HorizontalAlignment.Right, VerticalAlignment.Center);
         }
-
         private void DesenharRecortes(IDrawingCanvas canvas, float xPeca, float yPeca, float escala, string pecaId)
         {
 
@@ -525,7 +602,7 @@ namespace Marmorariacentral.Drawables
                 float w = (float)(ConverterParaDouble(vm.LarguraBojoInput) * escala);
                 float h = (float)(ConverterParaDouble(vm.AlturaBojoInput) * escala);
                 float x = xPeca + (float)(ConverterParaDouble(vm.BojoXInput) * escala);
-                float y = yPeca + (10 * escala);
+                float y = yPeca + (float)(ConverterParaDouble(vm.BojoYInput) * escala);
 
                 canvas.StrokeColor = CorRecorteBojo;
                 canvas.StrokeSize = 2;
@@ -535,9 +612,6 @@ namespace Marmorariacentral.Drawables
                 canvas.FontColor = CorRecorteBojo;
                 canvas.FontSize = 9;
                 canvas.DrawString("CUBA", x, y + (h / 2) - 10, w, 20, HorizontalAlignment.Center, VerticalAlignment.Center);
-                canvas.DrawString($"{ConverterParaDouble(vm.LarguraBojoInput):N2}x{ConverterParaDouble(vm.AlturaBojoInput):N2}",
-                    x, y + h + 2, w, 15, HorizontalAlignment.Center, VerticalAlignment.Top);
-                canvas.StrokeDashPattern = null;
             }
 
             // Cooktop
@@ -546,7 +620,7 @@ namespace Marmorariacentral.Drawables
                 float w = (float)(ConverterParaDouble(vm.LarguraCooktopInput) * escala);
                 float h = (float)(ConverterParaDouble(vm.AlturaCooktopInput) * escala);
                 float x = xPeca + (float)(ConverterParaDouble(vm.CooktopXInput) * escala);
-                float y = yPeca + (10 * escala);
+                float y = yPeca + (float)(ConverterParaDouble(vm.CooktopYInput) * escala);
 
                 canvas.StrokeColor = CorRecorteCooktop;
                 canvas.StrokeSize = 2;

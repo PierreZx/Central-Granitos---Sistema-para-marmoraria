@@ -55,6 +55,14 @@ namespace Marmorariacentral.ViewModels
         partial void OnValorMetroLinearInputChanged(string value) { Peca.ValorMetroLinear = ConverterParaDouble(value); NotificarMudanca(); }
         partial void OnQuantidadeInputChanged(string value) => NotificarMudanca();
         partial void OnPedraSelecionadaChanged(EstoqueItem? value) => NotificarMudanca();
+        partial void OnBojoXInputChanged(string value) => NotificarMudanca();
+        partial void OnBojoYInputChanged(string value) => NotificarMudanca();
+        partial void OnCooktopXInputChanged(string value) => NotificarMudanca();
+        partial void OnCooktopYInputChanged(string value) => NotificarMudanca();
+        partial void OnLarguraBojoInputChanged(string value) => NotificarMudanca();
+        partial void OnAlturaBojoInputChanged(string value) => NotificarMudanca();
+        partial void OnLarguraCooktopInputChanged(string value) => NotificarMudanca();
+        partial void OnAlturaCooktopInputChanged(string value) => NotificarMudanca();
 
         public int Quantidade => int.TryParse(QuantidadeInput, out int q) ? Math.Max(q, 1) : 1;
         public double ValorTotalPeca => TotalGeral;
@@ -65,39 +73,40 @@ namespace Marmorariacentral.ViewModels
         [ObservableProperty] private string larguraBojoInput = "0,60";
         [ObservableProperty] private string alturaBojoInput = "0,40";
         [ObservableProperty] private string bojoXInput = "0,50";
-
+        [ObservableProperty] private string bojoYInput = "0,30";
         [ObservableProperty] private bool temCooktop = false;
         [ObservableProperty] private string pecaDestinoCooktop = "P1";
         [ObservableProperty] private string larguraCooktopInput = "0,55";
         [ObservableProperty] private string alturaCooktopInput = "0,45";
         [ObservableProperty] private string cooktopXInput = "1,50";
+        [ObservableProperty] private string cooktopYInput = "1,30";
 
         // RODOBANCA
-        [ObservableProperty] private double rodobancaP1Esquerda = 0.10;
-        [ObservableProperty] private double rodobancaP1Direita = 0.10;
+        [ObservableProperty] private double rodobancaP1Esquerda = 0.00;
+        [ObservableProperty] private double rodobancaP1Direita = 0.00;
         [ObservableProperty] private double rodobancaP1Frente = 0.00;
-        [ObservableProperty] private double rodobancaP1Tras = 0.10;
-        [ObservableProperty] private double rodobancaP2Esquerda = 0.10;
-        [ObservableProperty] private double rodobancaP2Direita = 0.10;
+        [ObservableProperty] private double rodobancaP1Tras = 0.00;
+        [ObservableProperty] private double rodobancaP2Esquerda = 0.00;
+        [ObservableProperty] private double rodobancaP2Direita = 0.00;
         [ObservableProperty] private double rodobancaP2Frente = 0.00;
-        [ObservableProperty] private double rodobancaP2Tras = 0.10;
-        [ObservableProperty] private double rodobancaP3Esquerda = 0.10;
-        [ObservableProperty] private double rodobancaP3Direita = 0.10;
+        [ObservableProperty] private double rodobancaP2Tras = 0.00;
+        [ObservableProperty] private double rodobancaP3Esquerda = 0.00;
+        [ObservableProperty] private double rodobancaP3Direita = 0.00;
         [ObservableProperty] private double rodobancaP3Frente = 0.00;
-        [ObservableProperty] private double rodobancaP3Tras = 0.10;
+        [ObservableProperty] private double rodobancaP3Tras = 0.00;
 
         // SAIA
         [ObservableProperty] private double saiaP1Esquerda = 0.00;
         [ObservableProperty] private double saiaP1Direita = 0.00;
-        [ObservableProperty] private double saiaP1Frente = 0.04;
+        [ObservableProperty] private double saiaP1Frente = 0.00;
         [ObservableProperty] private double saiaP1Tras = 0.00;
         [ObservableProperty] private double saiaP2Esquerda = 0.00;
         [ObservableProperty] private double saiaP2Direita = 0.00;
-        [ObservableProperty] private double saiaP2Frente = 0.04;
+        [ObservableProperty] private double saiaP2Frente = 0.00;
         [ObservableProperty] private double saiaP2Tras = 0.00;
         [ObservableProperty] private double saiaP3Esquerda = 0.00;
         [ObservableProperty] private double saiaP3Direita = 0.00;
-        [ObservableProperty] private double saiaP3Frente = 0.04;
+        [ObservableProperty] private double saiaP3Frente = 0.00;
         [ObservableProperty] private double saiaP3Tras = 0.00;
 
         public bool TemPernaEsquerda => Peca.LarguraP2 > 0.01 && LadoP2 == "Esquerda";
@@ -160,8 +169,17 @@ namespace Marmorariacentral.ViewModels
 
         private double ConverterParaDouble(string valor)
         {
-            if (string.IsNullOrWhiteSpace(valor)) return 0;
-            return double.TryParse(valor.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out double result) ? result : 0;
+            if (string.IsNullOrWhiteSpace(valor))
+                return 0;
+
+            valor = valor.Replace(",", ".");
+
+            return double.TryParse(
+                valor,
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture,
+                out double result
+            ) ? result : 0;
         }
 
         private void CalcularTotal()
@@ -230,10 +248,12 @@ namespace Marmorariacentral.ViewModels
                 LarguraBojoInput = edicao.LarguraBojo.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 AlturaBojoInput = edicao.AlturaBojo.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 BojoXInput = edicao.BojoX.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                BojoYInput = edicao.BojoY.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 TemCooktop = edicao.TemCooktop; PecaDestinoCooktop = edicao.PecaDestinoCooktop ?? "P1";
                 LarguraCooktopInput = edicao.LarguraCooktop.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 AlturaCooktopInput = edicao.AlturaCooktop.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
                 CooktopXInput = edicao.CooktopX.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
+                CooktopYInput = edicao.CooktopY.ToString("F2", CultureInfo.GetCultureInfo("pt-BR"));
 
                 await Task.Delay(150);
                 NotificarMudanca();
@@ -259,10 +279,25 @@ namespace Marmorariacentral.ViewModels
             Peca.SaiaP3Esquerda = SaiaP3Esquerda; Peca.SaiaP3Direita = SaiaP3Direita;
             Peca.SaiaP3Frente = SaiaP3Frente; Peca.SaiaP3Tras = SaiaP3Tras;
 
-            Peca.LarguraBojo = ConverterParaDouble(LarguraBojoInput); Peca.AlturaBojo = ConverterParaDouble(AlturaBojoInput);
-            Peca.BojoX = ConverterParaDouble(BojoXInput); Peca.TemBojo = TemBojo; Peca.PecaDestinoBojo = PecaDestinoBojo;
-            Peca.LarguraCooktop = ConverterParaDouble(LarguraCooktopInput); Peca.AlturaCooktop = ConverterParaDouble(AlturaCooktopInput);
-            Peca.CooktopX = ConverterParaDouble(CooktopXInput); Peca.TemCooktop = TemCooktop; Peca.PecaDestinoCooktop = PecaDestinoCooktop;
+            // BOJO
+            Peca.LarguraBojo = ConverterParaDouble(LarguraBojoInput);
+            Peca.AlturaBojo = ConverterParaDouble(AlturaBojoInput);
+
+            Peca.BojoX = ConverterParaDouble(BojoXInput);
+            Peca.BojoY = ConverterParaDouble(BojoYInput);
+
+            Peca.TemBojo = TemBojo;
+            Peca.PecaDestinoBojo = PecaDestinoBojo;
+
+            // COOKTOP
+            Peca.LarguraCooktop = ConverterParaDouble(LarguraCooktopInput);
+            Peca.AlturaCooktop = ConverterParaDouble(AlturaCooktopInput);
+
+            Peca.CooktopX = ConverterParaDouble(CooktopXInput);
+            Peca.CooktopY = ConverterParaDouble(CooktopYInput);
+
+            Peca.TemCooktop = TemCooktop;
+            Peca.PecaDestinoCooktop = PecaDestinoCooktop;
 
             Peca.Quantidade = Quantidade; Peca.ValorTotalPeca = TotalGeral; Peca.ValorMetroLinear = ConverterParaDouble(ValorMetroLinearInput);
             await Shell.Current.GoToAsync("..", new Dictionary<string, object> { { "NovaPeca", Peca } });

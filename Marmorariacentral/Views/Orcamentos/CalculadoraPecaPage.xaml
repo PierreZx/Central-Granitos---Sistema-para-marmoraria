@@ -55,7 +55,7 @@
                 <VerticalStackLayout IsVisible="{Binding IsAbaPrincipalVisible}" Spacing="20">
                     <VerticalStackLayout Spacing="5">
                         <Label Text="Ambiente" FontSize="14" TextColor="#666"/>
-                        <Entry Text="{Binding Peca.Ambiente}" BackgroundColor="#F9F9F9" TextColor="Black"/>
+                        <Entry Text="{Binding Peca.Ambiente}" BackgroundColor="#F9F9F9" TextColor="Black" PlaceholderColor="#999"/>
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Spacing="5">
@@ -71,13 +71,13 @@
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
                         <VerticalStackLayout Grid.Column="0" Spacing="5">
                             <Label Text="Largura (m)" FontSize="12" TextColor="#666"/>
-                            <Entry Text="{Binding LarguraInput}" Keyboard="Numeric" BackgroundColor="#F9F9F9" TextColor="Black">
+                            <Entry Text="{Binding LarguraInput}" Keyboard="Chat" BackgroundColor="#F9F9F9" TextColor="Black" PlaceholderColor="#999">
                                 <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
                             </Entry>
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="5">
                             <Label Text="Altura (m)" FontSize="12" TextColor="#666"/>
-                            <Entry Text="{Binding AlturaInput}" Keyboard="Numeric" BackgroundColor="#F9F9F9" TextColor="Black">
+                            <Entry Text="{Binding AlturaInput}" Keyboard="Chat" BackgroundColor="#F9F9F9" TextColor="Black" PlaceholderColor="#999">
                                 <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
                             </Entry>
                         </VerticalStackLayout>
@@ -88,10 +88,10 @@
                         <Label Text="Posição do L" FontSize="13" TextColor="#666"/>
                         <Picker ItemsSource="{Binding LadosDisponiveis}" SelectedItem="{Binding LadoP2}" BackgroundColor="#F9F9F9" TextColor="Black" TitleColor="Black"/>
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
-                            <Entry Grid.Column="0" Text="{Binding LarguraP2Input}" Placeholder="Largura L" Keyboard="Numeric" TextColor="Black">
+                            <Entry Grid.Column="0" Text="{Binding LarguraP2Input}" Placeholder="Largura L" Keyboard="Chat" TextColor="Black" PlaceholderColor="#999" BackgroundColor="#F9F9F9">
                                 <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
                             </Entry>
-                            <Entry Grid.Column="1" Text="{Binding AlturaP2Input}" Placeholder="Altura L" Keyboard="Numeric" TextColor="Black">
+                            <Entry Grid.Column="1" Text="{Binding AlturaP2Input}" Placeholder="Altura L" Keyboard="Chat" TextColor="Black" PlaceholderColor="#999" BackgroundColor="#F9F9F9">
                                 <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
                             </Entry>
                         </Grid>
@@ -100,10 +100,10 @@
                     <VerticalStackLayout Spacing="10">
                         <Label Text="Bancada em U (Oposta ao L)" FontSize="13" TextColor="#666"/>
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
-                            <Entry Grid.Column="0" Text="{Binding LarguraP3Input}" Placeholder="Largura U" Keyboard="Numeric" TextColor="Black">
+                            <Entry Grid.Column="0" Text="{Binding LarguraP3Input}" Placeholder="Largura U" Keyboard="Chat" TextColor="Black" PlaceholderColor="#999" BackgroundColor="#F9F9F9">
                                 <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
                             </Entry>
-                            <Entry Grid.Column="1" Text="{Binding AlturaP3Input}" Placeholder="Altura U" Keyboard="Numeric" TextColor="Black">
+                            <Entry Grid.Column="1" Text="{Binding AlturaP3Input}" Placeholder="Altura U" Keyboard="Chat" TextColor="Black" PlaceholderColor="#999" BackgroundColor="#F9F9F9">
                                 <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
                             </Entry>
                         </Grid>
@@ -117,10 +117,18 @@
                         <VerticalStackLayout Spacing="10">
                             <Label Text="🏠 PEÇA PRINCIPAL (P1)" FontAttributes="Bold" TextColor="#8B1A1A"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda"/><Entry Text="{Binding RodobancaP1Esquerda}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita"/><Entry Text="{Binding RodobancaP1Direita}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente"/><Entry Text="{Binding RodobancaP1Frente}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás"/><Entry Text="{Binding RodobancaP1Tras}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" TextColor="#666"/><Entry Text="{Binding RodobancaP1Esquerda}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" TextColor="#666"/><Entry Text="{Binding RodobancaP1Direita}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" TextColor="#666"/><Entry Text="{Binding RodobancaP1Frente}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" TextColor="#666"/><Entry Text="{Binding RodobancaP1Tras}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
@@ -129,10 +137,18 @@
                         <VerticalStackLayout Spacing="10">
                             <Label Text="🔷 BANCADA EM L (P2)" FontAttributes="Bold" TextColor="#0066CC"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda"/><Entry Text="{Binding RodobancaP2Esquerda}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita"/><Entry Text="{Binding RodobancaP2Direita}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente"/><Entry Text="{Binding RodobancaP2Frente}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás"/><Entry Text="{Binding RodobancaP2Tras}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" TextColor="#666"/><Entry Text="{Binding RodobancaP2Esquerda}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" TextColor="#666"/><Entry Text="{Binding RodobancaP2Direita}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" TextColor="#666"/><Entry Text="{Binding RodobancaP2Frente}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" TextColor="#666"/><Entry Text="{Binding RodobancaP2Tras}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
@@ -141,10 +157,18 @@
                         <VerticalStackLayout Spacing="10">
                             <Label Text="🔷 BANCADA EM U (P3)" FontAttributes="Bold" TextColor="#0066CC"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda"/><Entry Text="{Binding RodobancaP3Esquerda}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita"/><Entry Text="{Binding RodobancaP3Direita}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente"/><Entry Text="{Binding RodobancaP3Frente}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás"/><Entry Text="{Binding RodobancaP3Tras}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" TextColor="#666"/><Entry Text="{Binding RodobancaP3Esquerda}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" TextColor="#666"/><Entry Text="{Binding RodobancaP3Direita}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" TextColor="#666"/><Entry Text="{Binding RodobancaP3Frente}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" TextColor="#666"/><Entry Text="{Binding RodobancaP3Tras}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
@@ -157,10 +181,18 @@
                         <VerticalStackLayout Spacing="10">
                             <Label Text="🏠 PEÇA PRINCIPAL (P1)" FontAttributes="Bold" TextColor="#8B1A1A"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda"/><Entry Text="{Binding SaiaP1Esquerda}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita"/><Entry Text="{Binding SaiaP1Direita}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente"/><Entry Text="{Binding SaiaP1Frente}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás"/><Entry Text="{Binding SaiaP1Tras}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" TextColor="#666"/><Entry Text="{Binding SaiaP1Esquerda}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" TextColor="#666"/><Entry Text="{Binding SaiaP1Direita}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" TextColor="#666"/><Entry Text="{Binding SaiaP1Frente}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" TextColor="#666"/><Entry Text="{Binding SaiaP1Tras}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
@@ -169,10 +201,18 @@
                         <VerticalStackLayout Spacing="10">
                             <Label Text="🔷 BANCADA EM L (P2)" FontAttributes="Bold" TextColor="#B76E00"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda"/><Entry Text="{Binding SaiaP2Esquerda}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita"/><Entry Text="{Binding SaiaP2Direita}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente"/><Entry Text="{Binding SaiaP2Frente}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás"/><Entry Text="{Binding SaiaP2Tras}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" TextColor="#666"/><Entry Text="{Binding SaiaP2Esquerda}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" TextColor="#666"/><Entry Text="{Binding SaiaP2Direita}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" TextColor="#666"/><Entry Text="{Binding SaiaP2Frente}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" TextColor="#666"/><Entry Text="{Binding SaiaP2Tras}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
@@ -181,10 +221,18 @@
                         <VerticalStackLayout Spacing="10">
                             <Label Text="🔷 BANCADA EM U (P3)" FontAttributes="Bold" TextColor="#B76E00"/>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda"/><Entry Text="{Binding SaiaP3Esquerda}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita"/><Entry Text="{Binding SaiaP3Direita}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente"/><Entry Text="{Binding SaiaP3Frente}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás"/><Entry Text="{Binding SaiaP3Tras}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0"><Label Text="Esquerda" TextColor="#666"/><Entry Text="{Binding SaiaP3Esquerda}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1"><Label Text="Direita" TextColor="#666"/><Entry Text="{Binding SaiaP3Direita}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="0"><Label Text="Frente" TextColor="#666"/><Entry Text="{Binding SaiaP3Frente}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Trás" TextColor="#666"/><Entry Text="{Binding SaiaP3Tras}" Keyboard="Chat" TextColor="Black" BackgroundColor="Transparent">
+                                    <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                </Entry></VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
@@ -196,16 +244,33 @@
                     <Frame BackgroundColor="#F0F4F8" Padding="15" CornerRadius="12" BorderColor="#D1D9E6">
                         <VerticalStackLayout Spacing="10">
                             <HorizontalStackLayout Spacing="10">
-                                <CheckBox IsChecked="{Binding TemBojo}" />
+                                <CheckBox IsChecked="{Binding TemBojo}" Visual="Material" Color="#2980B9">
+                                    <CheckBox.Behaviors><toolkit:EventToCommandBehavior EventName="CheckedChanged" Command="{Binding NotificarMudancaCommand}" /></CheckBox.Behaviors>
+                                </CheckBox>
                                 <Label Text="ADICIONAR CUBA (BOJO)" FontAttributes="Bold" VerticalOptions="Center" TextColor="#2980B9"/>
                             </HorizontalStackLayout>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="15" RowSpacing="10" IsEnabled="{Binding TemBojo}">
                                 <VerticalStackLayout Grid.Row="0" Grid.ColumnSpan="2">
-                                    <Label Text="Peça de Destino"/><Picker ItemsSource="{Binding PecasDisponiveis}" SelectedItem="{Binding PecaDestinoBojo}" TextColor="Black"/>
+                                    <Label Text="Peça de Destino" TextColor="Black"/><Picker ItemsSource="{Binding PecasDisponiveis}" SelectedItem="{Binding PecaDestinoBojo}" TextColor="Black" TitleColor="Black" BackgroundColor="#F9F9F9"/>
                                 </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1"><Label Text="Largura"/><Entry Text="{Binding LarguraBojoInput}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Altura"/><Entry Text="{Binding AlturaBojoInput}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="2" Grid.ColumnSpan="2"><Label Text="Posição X (Afastamento)"/><Entry Text="{Binding BojoXInput}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1">
+                                    <Label Text="Largura" TextColor="Black"/>
+                                    <Entry Text="{Binding LarguraBojoInput}" Keyboard="Chat" TextColor="Black" BackgroundColor="#F9F9F9">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1">
+                                    <Label Text="Altura" TextColor="Black"/>
+                                    <Entry Text="{Binding AlturaBojoInput}" Keyboard="Chat" TextColor="Black" BackgroundColor="#F9F9F9">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="2" Grid.ColumnSpan="2">
+                                    <Label Text="Posição X (Afastamento)" TextColor="Black"/>
+                                    <Entry Text="{Binding BojoXInput}" Keyboard="Chat" TextColor="Black" BackgroundColor="#F9F9F9">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
@@ -213,16 +278,33 @@
                     <Frame BackgroundColor="#FFF5F5" Padding="15" CornerRadius="12" BorderColor="#FADBD8">
                         <VerticalStackLayout Spacing="10">
                             <HorizontalStackLayout Spacing="10">
-                                <CheckBox IsChecked="{Binding TemCooktop}" />
+                                <CheckBox IsChecked="{Binding TemCooktop}" Visual="Material" Color="#C0392B">
+                                    <CheckBox.Behaviors><toolkit:EventToCommandBehavior EventName="CheckedChanged" Command="{Binding NotificarMudancaCommand}" /></CheckBox.Behaviors>
+                                </CheckBox>
                                 <Label Text="ADICIONAR COOKTOP" FontAttributes="Bold" VerticalOptions="Center" TextColor="#C0392B"/>
                             </HorizontalStackLayout>
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="15" RowSpacing="10" IsEnabled="{Binding TemCooktop}">
                                 <VerticalStackLayout Grid.Row="0" Grid.ColumnSpan="2">
-                                    <Label Text="Peça de Destino"/><Picker ItemsSource="{Binding PecasDisponiveis}" SelectedItem="{Binding PecaDestinoCooktop}" TextColor="Black"/>
+                                    <Label Text="Peça de Destino" TextColor="Black"/><Picker ItemsSource="{Binding PecasDisponiveis}" SelectedItem="{Binding PecaDestinoCooktop}" TextColor="Black" TitleColor="Black" BackgroundColor="#F9F9F9"/>
                                 </VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1"><Label Text="Largura"/><Entry Text="{Binding LarguraCooktopInput}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1"><Label Text="Altura"/><Entry Text="{Binding AlturaCooktopInput}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
-                                <VerticalStackLayout Grid.Row="2" Grid.ColumnSpan="2"><Label Text="Posição X (Afastamento)"/><Entry Text="{Binding CooktopXInput}" Keyboard="Numeric" TextColor="Black"/></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1">
+                                    <Label Text="Largura" TextColor="Black"/>
+                                    <Entry Text="{Binding LarguraCooktopInput}" Keyboard="Chat" TextColor="Black" BackgroundColor="#F9F9F9">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1">
+                                    <Label Text="Altura" TextColor="Black"/>
+                                    <Entry Text="{Binding AlturaCooktopInput}" Keyboard="Chat" TextColor="Black" BackgroundColor="#F9F9F9">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Row="2" Grid.ColumnSpan="2">
+                                    <Label Text="Posição X (Afastamento)" TextColor="Black"/>
+                                    <Entry Text="{Binding CooktopXInput}" Keyboard="Chat" TextColor="Black" BackgroundColor="#F9F9F9">
+                                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
+                                    </Entry>
+                                </VerticalStackLayout>
                             </Grid>
                         </VerticalStackLayout>
                     </Frame>
@@ -230,13 +312,8 @@
 
                 <VerticalStackLayout Spacing="5">
                     <Label Text="Quantidade de Peças" FontSize="14" TextColor="#666"/>
-                    <Entry Text="{Binding QuantidadeInput}" Keyboard="Numeric"
-                        BackgroundColor="#F9F9F9"
-                        TextColor="Black">
-                        <Entry.Behaviors>
-                            <toolkit:EventToCommandBehavior EventName="TextChanged"
-                                                            Command="{Binding NotificarMudancaCommand}" />
-                        </Entry.Behaviors>
+                    <Entry Text="{Binding QuantidadeInput}" Keyboard="Chat" BackgroundColor="#F9F9F9" TextColor="Black">
+                        <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>
                     </Entry>
                 </VerticalStackLayout>
 

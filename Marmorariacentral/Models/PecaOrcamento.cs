@@ -69,11 +69,13 @@ namespace Marmorariacentral.Models
         public double LarguraBojo { get; set; }
         public double AlturaBojo { get; set; }
         public double BojoX { get; set; }
+        public double BojoY { get; set; }
 
         public bool TemCooktop { get; set; }
         public string PecaDestinoCooktop { get; set; } = "P1";
         public double LarguraCooktop { get; set; }
         public double AlturaCooktop { get; set; }
         public double CooktopX { get; set; }
+        public double CooktopY { get; set; }
     }
 }

@@ -122,13 +122,18 @@ public class PdfService
 
         using var canvas = new SKCanvas(bitmap);
 
+        // Limpa o fundo para garantir que o desenho comece sobre branco
         canvas.Clear(SKColors.White);
 
+        // Cria uma ViewModel temporária para alimentar o PecaDrawable
         var vmTemp = new CalculadoraPecaViewModel(null, null);
 
+        // Mapeamento dos dados principais
         vmTemp.Peca = peca;
         vmTemp.LadoP2 = peca.LadoP2 ?? "Esquerda";
+        vmTemp.LadoP3 = peca.LadoP3 ?? "Direita";
 
+        // Mapeamento completo de Rodobancas (P1, P2 e P3)
         vmTemp.RodobancaP1Esquerda = peca.RodobancaP1Esquerda;
         vmTemp.RodobancaP1Direita = peca.RodobancaP1Direita;
         vmTemp.RodobancaP1Frente = peca.RodobancaP1Frente;
@@ -144,27 +149,44 @@ public class PdfService
         vmTemp.RodobancaP3Frente = peca.RodobancaP3Frente;
         vmTemp.RodobancaP3Tras = peca.RodobancaP3Tras;
 
+        // Mapeamento completo de Saias
+        vmTemp.SaiaP1Esquerda = peca.SaiaP1Esquerda;
+        vmTemp.SaiaP1Direita = peca.SaiaP1Direita;
         vmTemp.SaiaP1Frente = peca.SaiaP1Frente;
-        vmTemp.SaiaP2Frente = peca.SaiaP2Frente;
-        vmTemp.SaiaP3Frente = peca.SaiaP3Frente;
+        vmTemp.SaiaP1Tras = peca.SaiaP1Tras;
 
+        vmTemp.SaiaP2Esquerda = peca.SaiaP2Esquerda;
+        vmTemp.SaiaP2Direita = peca.SaiaP2Direita;
+        vmTemp.SaiaP2Frente = peca.SaiaP2Frente;
+        vmTemp.SaiaP2Tras = peca.SaiaP2Tras;
+
+        vmTemp.SaiaP3Esquerda = peca.SaiaP3Esquerda;
+        vmTemp.SaiaP3Direita = peca.SaiaP3Direita;
+        vmTemp.SaiaP3Frente = peca.SaiaP3Frente;
+        vmTemp.SaiaP3Tras = peca.SaiaP3Tras;
+
+        // Mapeamento de Recortes (Cuba/Bojo)
         vmTemp.TemBojo = peca.TemBojo;
         vmTemp.PecaDestinoBojo = peca.PecaDestinoBojo ?? "P1";
-        vmTemp.LarguraBojoInput = peca.LarguraBojo.ToString();
-        vmTemp.AlturaBojoInput = peca.AlturaBojo.ToString();
-        vmTemp.BojoXInput = peca.BojoX.ToString();
+        vmTemp.LarguraBojoInput = peca.LarguraBojo.ToString(CultureInfo.InvariantCulture);
+        vmTemp.AlturaBojoInput = peca.AlturaBojo.ToString(CultureInfo.InvariantCulture);
+        vmTemp.BojoXInput = peca.BojoX.ToString(CultureInfo.InvariantCulture);
 
+        // Mapeamento de Recortes (Cooktop)
         vmTemp.TemCooktop = peca.TemCooktop;
         vmTemp.PecaDestinoCooktop = peca.PecaDestinoCooktop ?? "P1";
-        vmTemp.LarguraCooktopInput = peca.LarguraCooktop.ToString();
-        vmTemp.AlturaCooktopInput = peca.AlturaCooktop.ToString();
-        vmTemp.CooktopXInput = peca.CooktopX.ToString();
+        vmTemp.LarguraCooktopInput = peca.LarguraCooktop.ToString(CultureInfo.InvariantCulture);
+        vmTemp.AlturaCooktopInput = peca.AlturaCooktop.ToString(CultureInfo.InvariantCulture);
+        vmTemp.CooktopXInput = peca.CooktopX.ToString(CultureInfo.InvariantCulture);
 
+        // Instancia o Drawable com a configuração de vista técnica ou comercial
         var drawable = new PecaDrawable(vmTemp);
         drawable.IsVistaExplodida = isTecnico;
 
+        // Utiliza o adaptador de Skia para realizar o desenho no canvas do bitmap
         var adapter = new SkiaCanvasAdapter(canvas);
 
+        // Renderiza o desenho na área total do bitmap
         drawable.Draw(adapter, new RectF(0, 0, largura, altura));
 
         return bitmap;
@@ -248,36 +270,38 @@ public class PdfService
 
                     foreach (var peca in pecas)
                     {
-                        // Controle de nova página
-                        if (yAtual > 600)
+                        // Define a altura do quadro e o espaço total que a peça ocupa
+                        float alturaQuadro = isTecnico ? 340 : 280; 
+                        float espacoNecessario = alturaQuadro + 110; 
+
+                        // CONTROLE DE NOVA PÁGINA: Se não couber a peça atual, pula para a próxima
+                        if (yAtual + espacoNecessario > alturaPagina - 80)
                         {
                             document.EndPage();
                             canvas = document.BeginPage(larguraPagina, alturaPagina);
                             yAtual = margem + 20;
+                            
                             paint.Color = CorPrimaria;
                             canvas.DrawRect(0, 0, 10, alturaPagina, paint);
                         }
 
+                        // Título da Peça
                         paint.Typeface = _fonteBold;
                         paint.TextSize = 13;
                         paint.Color = CorPrimaria;
-                        canvas.DrawText($"{(peca.Ambiente ?? "SEM AMBIENTE").ToUpper()} - {peca.PedraNome ?? "Pedra"} (x{peca.Quantidade})", margem, yAtual, paint);
+                        string tituloPeca = (peca.Ambiente ?? "SEM AMBIENTE").ToUpper() + " - " + (peca.PedraNome ?? "Pedra") + " (x" + peca.Quantidade + ")";
+                        canvas.DrawText(tituloPeca, margem, yAtual, paint);
                         
                         yAtual += 15;
 
-                        // Altura do quadro de desenho (Maior para o técnico devido à explosão)
-                        float alturaQuadro = isTecnico ? 280 : 200;
+                        // Quadro de Desenho
                         SKRect rectQuadro = new SKRect(margem, yAtual, larguraPagina - margem, yAtual + alturaQuadro);
-                        
                         paint.Style = SKPaintStyle.Fill;
                         paint.Color = CorFundoDesenho;
                         canvas.DrawRoundRect(rectQuadro, 10, 10, paint);
                         
-                        // Desenhar a peça usando o PecaDrawable
-                        int bitmapLargura = (int)(rectQuadro.Width - 20);
-                        int bitmapAltura = (int)(rectQuadro.Height - 20);
-                        
-                        using (var bitmapPeca = DesenharPecaEmBitmap(peca, isTecnico, bitmapLargura, bitmapAltura))
+                        // Renderização via Bitmap (PecaDrawable)
+                        using (var bitmapPeca = DesenharPecaEmBitmap(peca, isTecnico, (int)rectQuadro.Width - 20, (int)rectQuadro.Height - 20))
                         {
                             SKRect rectDesenho = new SKRect(
                                 rectQuadro.Left + 10, 
@@ -285,14 +309,13 @@ public class PdfService
                                 rectQuadro.Right - 10, 
                                 rectQuadro.Bottom - 10
                             );
-                            
                             canvas.DrawBitmap(bitmapPeca, rectDesenho);
                         }
                         
-                        // Adicionar lista de produção no canto inferior direito do quadro (apenas técnico)
+                        // Lista de Corte lateral (apenas técnico)
                         if (isTecnico)
                         {
-                            AdicionarListaProdução(canvas, paint, peca, rectQuadro.Right - 120, rectQuadro.Bottom - 70);
+                            AdicionarListaProdução(canvas, paint, peca, rectQuadro.Right - 130, rectQuadro.Bottom - 65);
                         }
                         
                         yAtual += alturaQuadro + 20;
@@ -303,33 +326,32 @@ public class PdfService
                             paint.Color = CorTextoEscuro;
                             paint.TextSize = 10;
                             
-                            // Melhor formatação das informações técnicas
-                            string detalhes = $"MEDIDAS BRUTAS: P1 [{peca.Largura:F2} x {peca.Altura:F2}]";
+                            // Montagem manual da string para evitar erro de interpretação de colchetes
+                            string d1 = "MEDIDAS BRUTAS: P1 [" + peca.Largura.ToString("F2") + " x " + peca.Altura.ToString("F2") + "]";
                             if (peca.LarguraP2 > 0.01) 
                             {
-                                string ladoP2 = string.IsNullOrEmpty(peca.LadoP2) ? "" : $" ({peca.LadoP2})";
-                                detalhes += $" | P2{ladoP2} [{peca.LarguraP2:F2} x {peca.AlturaP2:F2}]";
+                                string lado = string.IsNullOrEmpty(peca.LadoP2) ? "" : " (" + peca.LadoP2 + ")";
+                                d1 += " | P2" + lado + " [" + peca.LarguraP2.ToString("F2") + " x " + peca.AlturaP2.ToString("F2") + "]";
                             }
                             if (peca.LarguraP3 > 0.01) 
                             {
-                                string ladoP3 = string.IsNullOrEmpty(peca.LadoP3) ? "" : $" ({peca.LadoP3})";
-                                detalhes += $" | P3{ladoP3} [{peca.LarguraP3:F2} x {peca.AlturaP3:F2}]";
+                                string lado = string.IsNullOrEmpty(peca.LadoP3) ? "" : " (" + peca.LadoP3 + ")";
+                                d1 += " | P3" + lado + " [" + peca.LarguraP3.ToString("F2") + " x " + peca.AlturaP3.ToString("F2") + "]";
                             }
                             
-                            // Adicionar informações de acabamentos
-                            string acabamentos = "";
+                            canvas.DrawText(d1, margem + 10, yAtual, paint);
+                            
+                            string acab = "";
                             if (peca.RodobancaP1Tras > 0.01 || peca.RodobancaP1Frente > 0.01 || 
                                 peca.RodobancaP1Esquerda > 0.01 || peca.RodobancaP1Direita > 0.01)
-                                acabamentos += " RODOBANCA";
+                                acab += " RODOBANCA";
                             if (peca.SaiaP1Frente > 0.01 || peca.SaiaP2Frente > 0.01 || peca.SaiaP3Frente > 0.01)
-                                acabamentos += " SAIA";
+                                acab += " SAIA";
                             
-                            canvas.DrawText(detalhes, margem + 10, yAtual, paint);
-                            
-                            if (!string.IsNullOrEmpty(acabamentos))
+                            if (!string.IsNullOrEmpty(acab))
                             {
                                 yAtual += 15;
-                                canvas.DrawText($"ACABAMENTOS:{acabamentos}", margem + 10, yAtual, paint);
+                                canvas.DrawText("ACABAMENTOS:" + acab, margem + 10, yAtual, paint);
                             }
                         }
                         else
@@ -337,7 +359,7 @@ public class PdfService
                             paint.Typeface = _fonteBold;
                             paint.Color = CorPrimaria;
                             paint.TextSize = 12;
-                            string valorPeca = $"Subtotal da Peça: {peca.ValorTotalPeca:C}";
+                            string valorPeca = "Subtotal da Peça: " + peca.ValorTotalPeca.ToString("C");
                             canvas.DrawText(valorPeca, larguraPagina - margem - paint.MeasureText(valorPeca) - 10, yAtual, paint);
                             totalFinanceiro += peca.ValorTotalPeca;
                         }
