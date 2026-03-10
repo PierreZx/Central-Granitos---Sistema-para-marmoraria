@@ -184,11 +184,41 @@ namespace Marmorariacentral.ViewModels
 
         private void CalcularTotal()
         {
-            if (PedraSelecionada == null) { TotalGeral = 0; return; }
-            double areaTotal = (Peca.Largura * Peca.Altura) + (Peca.LarguraP2 * Peca.AlturaP2) + (Peca.LarguraP3 * Peca.AlturaP3);
-            double metrosLineares = Peca.Largura + (Peca.LarguraP2 > 0.01 ? Peca.LarguraP2 : 0) + (Peca.LarguraP3 > 0.01 ? Peca.LarguraP3 : 0);
+            if (PedraSelecionada == null)
+            {
+                TotalGeral = 0;
+                return;
+            }
+
+            double areaTotal =
+                (Peca.Largura * Peca.Altura) +
+                (Peca.LarguraP2 * Peca.AlturaP2) +
+                (Peca.LarguraP3 * Peca.AlturaP3);
+
+            double metrosLineares =
+                Peca.Largura +
+                (Peca.LarguraP2 > 0.01 ? Peca.LarguraP2 : 0) +
+                (Peca.LarguraP3 > 0.01 ? Peca.LarguraP3 : 0);
+
             double custoMaterial = areaTotal * PedraSelecionada.ValorPorMetro;
-            double custoMaoObra = metrosLineares * ConverterParaDouble(ValorMetroLinearInput);
+
+            // Verifica se existe algum acabamento
+            bool temAcabamento =
+                RodobancaP1Esquerda > 0 || RodobancaP1Direita > 0 || RodobancaP1Frente > 0 || RodobancaP1Tras > 0 ||
+                RodobancaP2Esquerda > 0 || RodobancaP2Direita > 0 || RodobancaP2Frente > 0 || RodobancaP2Tras > 0 ||
+                RodobancaP3Esquerda > 0 || RodobancaP3Direita > 0 || RodobancaP3Frente > 0 || RodobancaP3Tras > 0 ||
+
+                SaiaP1Esquerda > 0 || SaiaP1Direita > 0 || SaiaP1Frente > 0 || SaiaP1Tras > 0 ||
+                SaiaP2Esquerda > 0 || SaiaP2Direita > 0 || SaiaP2Frente > 0 || SaiaP2Tras > 0 ||
+                SaiaP3Esquerda > 0 || SaiaP3Direita > 0 || SaiaP3Frente > 0 || SaiaP3Tras > 0;
+
+            double custoMaoObra = 0;
+
+            if (temAcabamento)
+            {
+                custoMaoObra = metrosLineares * ConverterParaDouble(ValorMetroLinearInput);
+            }
+
             TotalGeral = (custoMaterial + custoMaoObra) * Quantidade;
         }
 

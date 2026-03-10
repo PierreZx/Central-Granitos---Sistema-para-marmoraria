@@ -311,6 +311,21 @@
                 </VerticalStackLayout>
 
                 <VerticalStackLayout Spacing="5">
+                    <Label Text="Valor do Metro Linear (Mão de Obra)" FontSize="14" TextColor="#666"/>
+                    <Entry Text="{Binding ValorMetroLinearInput}"
+                        Keyboard="Numeric"
+                        BackgroundColor="#F9F9F9"
+                        TextColor="Black"
+                        Placeholder="130,00">
+                        <Entry.Behaviors>
+                            <toolkit:EventToCommandBehavior
+                                EventName="TextChanged"
+                                Command="{Binding NotificarMudancaCommand}" />
+                        </Entry.Behaviors>
+                    </Entry>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="5">
                     <Label Text="Quantidade de Peças" FontSize="14" TextColor="#666"/>
                     <Entry Text="{Binding QuantidadeInput}" Keyboard="Chat" BackgroundColor="#F9F9F9" TextColor="Black">
                         <Entry.Behaviors><toolkit:EventToCommandBehavior EventName="TextChanged" Command="{Binding NotificarMudancaCommand}" /></Entry.Behaviors>

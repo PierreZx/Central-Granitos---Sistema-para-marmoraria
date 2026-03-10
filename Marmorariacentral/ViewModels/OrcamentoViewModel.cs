@@ -36,18 +36,46 @@ namespace Marmorariacentral.ViewModels
         {
             try
             {
+                // 1️⃣ Carrega clientes locais
                 var listaLocal = await _dbService.GetItemsAsync<Cliente>();
+
                 AtualizarListaUI(listaLocal);
 
+                // 2️⃣ Tenta buscar da nuvem
                 var listaFirebase = await _firebaseService.GetClientesAsync();
 
-                if (listaFirebase != null && listaFirebase.Any())
-                {
-                    foreach (var clienteNuvem in listaFirebase)
-                    {
-                        await _dbService.SaveItemAsync(clienteNuvem);
-                    }
+                if (listaFirebase == null || !listaFirebase.Any())
+                    return;
 
+                bool alterouBancoLocal = false;
+
+                foreach (var clienteNuvem in listaFirebase)
+                {
+                    // verifica se já existe no SQLite
+                    var existente = listaLocal.FirstOrDefault(x => x.Id == clienteNuvem.Id);
+
+                    if (existente == null)
+                    {
+                        // cliente novo da nuvem
+                        await _dbService.SaveItemAsync(clienteNuvem);
+                        alterouBancoLocal = true;
+                    }
+                    else
+                    {
+                        // atualiza dados se mudou
+                        if (existente.Nome != clienteNuvem.Nome ||
+                            existente.Contato != clienteNuvem.Contato ||
+                            existente.Endereco != clienteNuvem.Endereco)
+                        {
+                            await _dbService.SaveItemAsync(clienteNuvem);
+                            alterouBancoLocal = true;
+                        }
+                    }
+                }
+
+                // 3️⃣ Atualiza UI apenas se mudou algo
+                if (alterouBancoLocal)
+                {
                     var listaAtualizada = await _dbService.GetItemsAsync<Cliente>();
                     AtualizarListaUI(listaAtualizada);
                 }
@@ -133,10 +161,31 @@ namespace Marmorariacentral.ViewModels
                 "Sim",
                 "Não");
 
-            if (confirmar)
+            if (!confirmar) return;
+
+            try
             {
+                // remove local
                 await _dbService.DeleteItemAsync(cliente);
+
+                // remove da nuvem
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseService.DeleteClienteAsync(cliente.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Erro ao excluir do Firebase: {ex.Message}");
+                    }
+                });
+
                 await CarregarDados();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Erro ao excluir cliente: {ex.Message}");
             }
         }
 

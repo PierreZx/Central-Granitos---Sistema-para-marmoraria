@@ -279,6 +279,34 @@ namespace Marmorariacentral.Services
             await _db.Collection("financeiro").Document(financeiro.Id).SetAsync(data, SetOptions.MergeAll);
         }
 
+        public async Task DeleteClienteAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return;
+
+            await Init();
+            if (_db == null) return;
+
+            try
+            {
+                // deletar cliente
+                await _db.Collection("clientes").Document(id).DeleteAsync();
+
+                // deletar peças ligadas ao cliente
+                var query = _db.Collection("orcamentos_detalhes")
+                            .WhereEqualTo("cliente_id", id);
+
+                var snapshot = await query.GetSnapshotAsync();
+
+                foreach (var doc in snapshot.Documents)
+                {
+                    await doc.Reference.DeleteAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Erro ao excluir cliente: {ex.Message}");
+            }
+        }
         public async Task<List<FinanceiroRegistro>> GetFinanceiroAsync()
         {
             await Init();

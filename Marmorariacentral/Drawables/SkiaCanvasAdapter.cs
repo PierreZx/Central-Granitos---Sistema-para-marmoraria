@@ -8,9 +8,9 @@ namespace Marmorariacentral.Drawables
     {
         private readonly SKCanvas _canvas;
 
-        private SKPaint strokePaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke };
-        private SKPaint fillPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
-        private SKPaint textPaint = new SKPaint { IsAntialias = true };
+        private readonly SKPaint strokePaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke };
+        private readonly SKPaint fillPaint = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
+        private readonly SKPaint textPaint = new() { IsAntialias = true };
 
         public SkiaCanvasAdapter(SKCanvas canvas)
         {
@@ -75,23 +75,58 @@ namespace Marmorariacentral.Drawables
         public void DrawString(string value, float x, float y, float w, float h,
             HorizontalAlignment hAlign, VerticalAlignment vAlign)
         {
+            if (string.IsNullOrEmpty(value))
+                return;
+
             var bounds = new SKRect();
             textPaint.MeasureText(value, ref bounds);
 
-            float tx = x + (w - bounds.Width) / 2;
-            float ty = y + (h + bounds.Height) / 2;
+            float textX = x;
+            float textY = y;
 
-            _canvas.DrawText(value, tx, ty, textPaint);
+            if (hAlign == HorizontalAlignment.Center)
+                textX = x + (w - bounds.Width) / 2;
+
+            if (hAlign == HorizontalAlignment.Right)
+                textX = x + w - bounds.Width;
+
+            var metrics = textPaint.FontMetrics;
+            float textHeight = metrics.Descent - metrics.Ascent;
+
+            if (vAlign == VerticalAlignment.Center)
+                textY = y + (h / 2) + (textHeight / 2) - metrics.Descent;
+
+            else if (vAlign == VerticalAlignment.Bottom)
+                textY = y + h - metrics.Descent;
+
+            else
+                textY = y - metrics.Ascent;
+
+            _canvas.DrawText(value, textX, textY, textPaint);
         }
 
         public void DrawString(string value, float x, float y, HorizontalAlignment align)
         {
-            _canvas.DrawText(value, x, y, textPaint);
+            var bounds = new SKRect();
+            textPaint.MeasureText(value, ref bounds);
+
+            float textX = x;
+
+            if (align == HorizontalAlignment.Center)
+                textX = x - bounds.Width / 2;
+
+            if (align == HorizontalAlignment.Right)
+                textX = x - bounds.Width;
+
+            _canvas.DrawText(value, textX, y, textPaint);
         }
 
         public void SaveState() => _canvas.Save();
+
         public void RestoreState() => _canvas.Restore();
+
         public void Translate(float tx, float ty) => _canvas.Translate(tx, ty);
+
         public void Rotate(float degrees) => _canvas.RotateDegrees(degrees);
 
         private SKColor ConverterCor(Color cor)

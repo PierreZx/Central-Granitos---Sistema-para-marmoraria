@@ -1,193 +1,164 @@
 using SkiaSharp;
 using Microsoft.Maui.Graphics;
-using Marmorariacentral.Drawables;
 
 namespace Marmorariacentral.Drawables;
 
 public class SKCanvasWrapper : IDrawingCanvas
 {
     private readonly SKCanvas _canvas;
-    private SKPaint _currentPaint;
-    private Stack<SKMatrix> _matrixStack;
+    private readonly SKPaint _paint;
+    private readonly Stack<SKMatrix> _matrixStack = new();
 
-    // Propriedades necessárias pela interface
-    public bool Antialias 
-    { 
-        set 
-        { 
-            // SKCanvas não tem propriedade Antialias direta, usamos SKPaint para isso
-            if (_currentPaint != null)
-                _currentPaint.IsAntialias = value;
-        } 
-    }
+    private Color _strokeColor = Colors.Black;
+    private Color _fillColor = Colors.Transparent;
+    private Color _fontColor = Colors.Black;
 
-    private Color _strokeColor;
-    public Color StrokeColor 
-    { 
-        set 
-        {
-            _strokeColor = value;
-            if (_currentPaint != null)
-                _currentPaint.Color = ToSKColor(value);
-        } 
-    }
-
-    private Color _fillColor;
-    public Color FillColor 
-    { 
-        set 
-        {
-            _fillColor = value;
-            // Não aplicamos diretamente, será usado nos métodos Fill
-        } 
-    }
-
-    private Color _fontColor;
-    public Color FontColor 
-    { 
-        set 
-        {
-            _fontColor = value;
-            if (_currentPaint != null)
-                _currentPaint.Color = ToSKColor(value);
-        } 
-    }
-
-    private float _strokeSize;
-    public float StrokeSize 
-    { 
-        set 
-        {
-            _strokeSize = value;
-            if (_currentPaint != null)
-                _currentPaint.StrokeWidth = value;
-        } 
-    }
-
-    private float _fontSize;
-    public float FontSize 
-    { 
-        set 
-        {
-            _fontSize = value;
-            if (_currentPaint != null)
-                _currentPaint.TextSize = value;
-        } 
-    }
+    private float _strokeSize = 1;
+    private float _fontSize = 12;
 
     private float[] _strokeDashPattern;
-    public float[] StrokeDashPattern 
-    { 
-        set 
-        {
-            _strokeDashPattern = value;
-            if (_currentPaint != null && value != null)
-                _currentPaint.PathEffect = SKPathEffect.CreateDash(value, 0);
-            else if (_currentPaint != null)
-                _currentPaint.PathEffect = null;
-        } 
-    }
 
     public SKCanvasWrapper(SKCanvas canvas)
     {
         _canvas = canvas;
-        _currentPaint = new SKPaint { IsAntialias = true };
-        _matrixStack = new Stack<SKMatrix>();
-        
-        // Valores padrão
-        _strokeColor = Colors.Black;
-        _fillColor = Colors.White;
-        _fontColor = Colors.Black;
-        _strokeSize = 1;
-        _fontSize = 12;
+
+        _paint = new SKPaint
+        {
+            IsAntialias = true,
+            StrokeWidth = 1,
+            TextSize = 12
+        };
+    }
+
+    public bool Antialias
+    {
+        set => _paint.IsAntialias = value;
+    }
+
+    public Color StrokeColor
+    {
+        set => _strokeColor = value;
+    }
+
+    public Color FillColor
+    {
+        set => _fillColor = value;
+    }
+
+    public Color FontColor
+    {
+        set => _fontColor = value;
+    }
+
+    public float StrokeSize
+    {
+        set => _strokeSize = value;
+    }
+
+    public float FontSize
+    {
+        set => _fontSize = value;
+    }
+
+    public float[] StrokeDashPattern
+    {
+        set
+        {
+            _strokeDashPattern = value;
+
+            if (value == null)
+                _paint.PathEffect = null;
+            else
+                _paint.PathEffect = SKPathEffect.CreateDash(value, 0);
+        }
     }
 
     public void DrawLine(float x1, float y1, float x2, float y2)
     {
-        _currentPaint.Style = SKPaintStyle.Stroke;
-        _currentPaint.StrokeWidth = _strokeSize;
-        _currentPaint.Color = ToSKColor(_strokeColor);
-        
-        _canvas.DrawLine(x1, y1, x2, y2, _currentPaint);
+        _paint.Style = SKPaintStyle.Stroke;
+        _paint.StrokeWidth = _strokeSize;
+        _paint.Color = ToSKColor(_strokeColor);
+
+        _canvas.DrawLine(x1, y1, x2, y2, _paint);
     }
 
     public void DrawRectangle(float x, float y, float width, float height)
     {
         var rect = new SKRect(x, y, x + width, y + height);
-        
-        // Primeiro preenche se houver cor de preenchimento
-        if (_fillColor != null && _fillColor != Colors.Transparent)
+
+        if (_fillColor != Colors.Transparent)
         {
-            _currentPaint.Style = SKPaintStyle.Fill;
-            _currentPaint.Color = ToSKColor(_fillColor);
-            _canvas.DrawRect(rect, _currentPaint);
+            _paint.Style = SKPaintStyle.Fill;
+            _paint.Color = ToSKColor(_fillColor);
+            _canvas.DrawRect(rect, _paint);
         }
-        
-        // Depois desenha o contorno
-        if (_strokeColor != null && _strokeColor != Colors.Transparent)
+
+        if (_strokeColor != Colors.Transparent)
         {
-            _currentPaint.Style = SKPaintStyle.Stroke;
-            _currentPaint.StrokeWidth = _strokeSize;
-            _currentPaint.Color = ToSKColor(_strokeColor);
-            if (_strokeDashPattern != null)
-                _currentPaint.PathEffect = SKPathEffect.CreateDash(_strokeDashPattern, 0);
-            
-            _canvas.DrawRect(rect, _currentPaint);
-            
-            if (_strokeDashPattern != null)
-                _currentPaint.PathEffect = null;
+            _paint.Style = SKPaintStyle.Stroke;
+            _paint.StrokeWidth = _strokeSize;
+            _paint.Color = ToSKColor(_strokeColor);
+
+            _canvas.DrawRect(rect, _paint);
         }
     }
 
     public void FillRectangle(float x, float y, float width, float height)
     {
-        _currentPaint.Style = SKPaintStyle.Fill;
-        _currentPaint.Color = ToSKColor(_fillColor);
-        _canvas.DrawRect(new SKRect(x, y, x + width, y + height), _currentPaint);
+        _paint.Style = SKPaintStyle.Fill;
+        _paint.Color = ToSKColor(_fillColor);
+
+        _canvas.DrawRect(x, y, width, height, _paint);
     }
 
-    public void DrawString(string value, float x, float y, float width, float height, 
-        HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment)
+    public void DrawString(
+        string value,
+        float x,
+        float y,
+        float width,
+        float height,
+        HorizontalAlignment horizontalAlignment,
+        VerticalAlignment verticalAlignment)
     {
-        if (string.IsNullOrEmpty(value)) return;
+        if (string.IsNullOrEmpty(value))
+            return;
 
-        _currentPaint.Style = SKPaintStyle.Fill;
-        _currentPaint.Color = ToSKColor(_fontColor);
-        _currentPaint.TextSize = _fontSize;
-        _currentPaint.Typeface = SKTypeface.FromFamilyName("Arial");
+        _paint.Style = SKPaintStyle.Fill;
+        _paint.Color = ToSKColor(_fontColor);
+        _paint.TextSize = _fontSize;
+        _paint.Typeface = SKTypeface.FromFamilyName("Arial");
 
         var bounds = new SKRect();
-        _currentPaint.MeasureText(value, ref bounds);
+        _paint.MeasureText(value, ref bounds);
 
         float textX = x;
-        float textY = y;
 
-        switch (horizontalAlignment)
-        {
-            case HorizontalAlignment.Center:
-                textX = x + (width - bounds.Width) / 2;
-                break;
-            case HorizontalAlignment.Right:
-                textX = x + width - bounds.Width;
-                break;
-        }
+        if (horizontalAlignment == HorizontalAlignment.Center)
+            textX = x + (width - bounds.Width) / 2;
 
-        switch (verticalAlignment)
-        {
-            case VerticalAlignment.Center:
-                textY = y + (height + bounds.Height) / 2;
-                break;
-            case VerticalAlignment.Bottom:
-                textY = y + height;
-                break;
-        }
+        else if (horizontalAlignment == HorizontalAlignment.Right)
+            textX = x + width - bounds.Width;
 
-        _canvas.DrawText(value, textX, textY, _currentPaint);
+        var metrics = _paint.FontMetrics;
+        float textHeight = metrics.Descent - metrics.Ascent;
+
+        float textY;
+
+        if (verticalAlignment == VerticalAlignment.Center)
+            textY = y + (height / 2) + (textHeight / 2) - metrics.Descent;
+
+        else if (verticalAlignment == VerticalAlignment.Bottom)
+            textY = y + height - metrics.Descent;
+
+        else
+            textY = y - metrics.Ascent;
+
+        _canvas.DrawText(value, textX, textY, _paint);
     }
 
     public void DrawString(string value, float x, float y, HorizontalAlignment horizontalAlignment)
     {
-        DrawString(value, x, y, 100, 20, horizontalAlignment, VerticalAlignment.Top);
+        DrawString(value, x, y, 200, 40, horizontalAlignment, VerticalAlignment.Top);
     }
 
     public void SaveState()
@@ -199,6 +170,7 @@ public class SKCanvasWrapper : IDrawingCanvas
     public void RestoreState()
     {
         _canvas.Restore();
+
         if (_matrixStack.Count > 0)
         {
             _canvas.SetMatrix(_matrixStack.Pop());
@@ -215,14 +187,12 @@ public class SKCanvasWrapper : IDrawingCanvas
         _canvas.RotateDegrees(degrees);
     }
 
-    private SKColor ToSKColor(Color color)
+    private static SKColor ToSKColor(Color color)
     {
-        if (color == null) return SKColors.Black;
         return new SKColor(
             (byte)(color.Red * 255),
             (byte)(color.Green * 255),
             (byte)(color.Blue * 255),
-            (byte)(color.Alpha * 255)
-        );
+            (byte)(color.Alpha * 255));
     }
 }

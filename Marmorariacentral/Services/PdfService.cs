@@ -119,74 +119,71 @@ public class PdfService
     private SKBitmap DesenharPecaEmBitmap(PecaOrcamento peca, bool isTecnico, int largura, int altura)
     {
         var bitmap = new SKBitmap(largura, altura);
-
         using var canvas = new SKCanvas(bitmap);
 
-        // Limpa o fundo para garantir que o desenho comece sobre branco
         canvas.Clear(SKColors.White);
 
-        // Cria uma ViewModel temporária para alimentar o PecaDrawable
-        var vmTemp = new CalculadoraPecaViewModel(null, null);
+        // cria VM temporária
+        var vm = new CalculadoraPecaViewModel(null, null);
 
-        // Mapeamento dos dados principais
-        vmTemp.Peca = peca;
-        vmTemp.LadoP2 = peca.LadoP2 ?? "Esquerda";
-        vmTemp.LadoP3 = peca.LadoP3 ?? "Direita";
+        vm.Peca = peca;
 
-        // Mapeamento completo de Rodobancas (P1, P2 e P3)
-        vmTemp.RodobancaP1Esquerda = peca.RodobancaP1Esquerda;
-        vmTemp.RodobancaP1Direita = peca.RodobancaP1Direita;
-        vmTemp.RodobancaP1Frente = peca.RodobancaP1Frente;
-        vmTemp.RodobancaP1Tras = peca.RodobancaP1Tras;
+        vm.LadoP2 = peca.LadoP2 ?? "Esquerda";
+        vm.LadoP3 = peca.LadoP3 ?? "Direita";
 
-        vmTemp.RodobancaP2Esquerda = peca.RodobancaP2Esquerda;
-        vmTemp.RodobancaP2Direita = peca.RodobancaP2Direita;
-        vmTemp.RodobancaP2Frente = peca.RodobancaP2Frente;
-        vmTemp.RodobancaP2Tras = peca.RodobancaP2Tras;
+        // Rodobancas
+        vm.RodobancaP1Esquerda = peca.RodobancaP1Esquerda;
+        vm.RodobancaP1Direita = peca.RodobancaP1Direita;
+        vm.RodobancaP1Frente = peca.RodobancaP1Frente;
+        vm.RodobancaP1Tras = peca.RodobancaP1Tras;
 
-        vmTemp.RodobancaP3Esquerda = peca.RodobancaP3Esquerda;
-        vmTemp.RodobancaP3Direita = peca.RodobancaP3Direita;
-        vmTemp.RodobancaP3Frente = peca.RodobancaP3Frente;
-        vmTemp.RodobancaP3Tras = peca.RodobancaP3Tras;
+        vm.RodobancaP2Esquerda = peca.RodobancaP2Esquerda;
+        vm.RodobancaP2Direita = peca.RodobancaP2Direita;
+        vm.RodobancaP2Frente = peca.RodobancaP2Frente;
+        vm.RodobancaP2Tras = peca.RodobancaP2Tras;
 
-        // Mapeamento completo de Saias
-        vmTemp.SaiaP1Esquerda = peca.SaiaP1Esquerda;
-        vmTemp.SaiaP1Direita = peca.SaiaP1Direita;
-        vmTemp.SaiaP1Frente = peca.SaiaP1Frente;
-        vmTemp.SaiaP1Tras = peca.SaiaP1Tras;
+        vm.RodobancaP3Esquerda = peca.RodobancaP3Esquerda;
+        vm.RodobancaP3Direita = peca.RodobancaP3Direita;
+        vm.RodobancaP3Frente = peca.RodobancaP3Frente;
+        vm.RodobancaP3Tras = peca.RodobancaP3Tras;
 
-        vmTemp.SaiaP2Esquerda = peca.SaiaP2Esquerda;
-        vmTemp.SaiaP2Direita = peca.SaiaP2Direita;
-        vmTemp.SaiaP2Frente = peca.SaiaP2Frente;
-        vmTemp.SaiaP2Tras = peca.SaiaP2Tras;
+        // Saias
+        vm.SaiaP1Esquerda = peca.SaiaP1Esquerda;
+        vm.SaiaP1Direita = peca.SaiaP1Direita;
+        vm.SaiaP1Frente = peca.SaiaP1Frente;
+        vm.SaiaP1Tras = peca.SaiaP1Tras;
 
-        vmTemp.SaiaP3Esquerda = peca.SaiaP3Esquerda;
-        vmTemp.SaiaP3Direita = peca.SaiaP3Direita;
-        vmTemp.SaiaP3Frente = peca.SaiaP3Frente;
-        vmTemp.SaiaP3Tras = peca.SaiaP3Tras;
+        vm.SaiaP2Esquerda = peca.SaiaP2Esquerda;
+        vm.SaiaP2Direita = peca.SaiaP2Direita;
+        vm.SaiaP2Frente = peca.SaiaP2Frente;
+        vm.SaiaP2Tras = peca.SaiaP2Tras;
 
-        // Mapeamento de Recortes (Cuba/Bojo)
-        vmTemp.TemBojo = peca.TemBojo;
-        vmTemp.PecaDestinoBojo = peca.PecaDestinoBojo ?? "P1";
-        vmTemp.LarguraBojoInput = peca.LarguraBojo.ToString(CultureInfo.InvariantCulture);
-        vmTemp.AlturaBojoInput = peca.AlturaBojo.ToString(CultureInfo.InvariantCulture);
-        vmTemp.BojoXInput = peca.BojoX.ToString(CultureInfo.InvariantCulture);
+        vm.SaiaP3Esquerda = peca.SaiaP3Esquerda;
+        vm.SaiaP3Direita = peca.SaiaP3Direita;
+        vm.SaiaP3Frente = peca.SaiaP3Frente;
+        vm.SaiaP3Tras = peca.SaiaP3Tras;
 
-        // Mapeamento de Recortes (Cooktop)
-        vmTemp.TemCooktop = peca.TemCooktop;
-        vmTemp.PecaDestinoCooktop = peca.PecaDestinoCooktop ?? "P1";
-        vmTemp.LarguraCooktopInput = peca.LarguraCooktop.ToString(CultureInfo.InvariantCulture);
-        vmTemp.AlturaCooktopInput = peca.AlturaCooktop.ToString(CultureInfo.InvariantCulture);
-        vmTemp.CooktopXInput = peca.CooktopX.ToString(CultureInfo.InvariantCulture);
+        // BOJO
+        vm.TemBojo = peca.TemBojo;
+        vm.PecaDestinoBojo = peca.PecaDestinoBojo ?? "P1";
+        vm.LarguraBojoInput = peca.LarguraBojo.ToString(CultureInfo.InvariantCulture);
+        vm.AlturaBojoInput = peca.AlturaBojo.ToString(CultureInfo.InvariantCulture);
+        vm.BojoXInput = peca.BojoX.ToString(CultureInfo.InvariantCulture);
 
-        // Instancia o Drawable com a configuração de vista técnica ou comercial
-        var drawable = new PecaDrawable(vmTemp);
+        // COOKTOP
+        vm.TemCooktop = peca.TemCooktop;
+        vm.PecaDestinoCooktop = peca.PecaDestinoCooktop ?? "P1";
+        vm.LarguraCooktopInput = peca.LarguraCooktop.ToString(CultureInfo.InvariantCulture);
+        vm.AlturaCooktopInput = peca.AlturaCooktop.ToString(CultureInfo.InvariantCulture);
+        vm.CooktopXInput = peca.CooktopX.ToString(CultureInfo.InvariantCulture);
+
+        // Drawable usado na calculadora
+        var drawable = new PecaDrawable(vm);
+
         drawable.IsVistaExplodida = isTecnico;
 
-        // Utiliza o adaptador de Skia para realizar o desenho no canvas do bitmap
         var adapter = new SkiaCanvasAdapter(canvas);
 
-        // Renderiza o desenho na área total do bitmap
         drawable.Draw(adapter, new RectF(0, 0, largura, altura));
 
         return bitmap;
@@ -301,16 +298,21 @@ public class PdfService
                         canvas.DrawRoundRect(rectQuadro, 10, 10, paint);
                         
                         // Renderização via Bitmap (PecaDrawable)
-                        using (var bitmapPeca = DesenharPecaEmBitmap(peca, isTecnico, (int)rectQuadro.Width - 20, (int)rectQuadro.Height - 20))
-                        {
-                            SKRect rectDesenho = new SKRect(
-                                rectQuadro.Left + 10, 
-                                rectQuadro.Top + 10, 
-                                rectQuadro.Right - 10, 
-                                rectQuadro.Bottom - 10
-                            );
-                            canvas.DrawBitmap(bitmapPeca, rectDesenho);
-                        }
+                        using (var bitmapPeca = DesenharPecaEmBitmap(
+                        peca,
+                        isTecnico,
+                        (int)(rectQuadro.Width - 40),
+                        (int)(rectQuadro.Height - 40)))
+                    {
+                        SKRect destino = new SKRect(
+                            rectQuadro.Left + 20,
+                            rectQuadro.Top + 20,
+                            rectQuadro.Right - 20,
+                            rectQuadro.Bottom - 20
+                        );
+
+                        canvas.DrawBitmap(bitmapPeca, destino);
+                    }
                         
                         // Lista de Corte lateral (apenas técnico)
                         if (isTecnico)
